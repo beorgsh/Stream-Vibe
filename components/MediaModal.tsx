@@ -64,18 +64,20 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
           const epList = episodesData.episodes || [];
           setEpisodes(epList);
 
-          // Auto-resume logic for TV
-          if (initialResumeData?.episodeNumber && !hasAutoResumed.current) {
+          // Auto-resume logic for TV - only if it's watch mode
+          if (mode === 'watch' && initialResumeData?.episodeNumber && !hasAutoResumed.current) {
              const targetEp = epList.find((e: any) => e.episode_number.toString() === initialResumeData.episodeNumber?.toString());
              if (targetEp) {
                 hasAutoResumed.current = true;
-                handlePlay(targetEp);
+                // Note: Auto-resume from history DOES NOT trigger onPlay (history update) again 
+                // to prevent redundant timestamp updates just from opening
+                setPlayingEpisode(targetEp);
+                setIsPlaying(true);
              }
           }
-        } else if (type === 'movie' && initialResumeData && !hasAutoResumed.current) {
-          // Auto-resume logic for Movie
+        } else if (type === 'movie' && mode === 'watch' && initialResumeData && !hasAutoResumed.current) {
           hasAutoResumed.current = true;
-          handlePlay();
+          setIsPlaying(true);
         }
       } catch (error) {
         console.error("Error:", error);
@@ -84,7 +86,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
       }
     };
     fetchDetails();
-  }, [media.id, type, apiKey]);
+  }, [media.id, type, apiKey, mode]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -137,20 +139,37 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
     }
   };
 
-  const handlePlay = (episode?: TMDBEpisode) => {
+  const handleAction = (episode?: TMDBEpisode, isManual: boolean = true) => {
     if (mode === 'download') {
         if (type === 'tv' && episode) {
-            window.open(`https://vidsrc.to/embed/tv/${media.id}/${episode.season_number}/${episode.episode_number}`, '_blank');
+            window.open(`https://dl.vidsrc.vip/tv/${media.id}/${episode.season_number}/${episode.episode_number}`, '_blank');
         } else if (type === 'movie') {
-            window.open(`https://vidsrc.to/embed/movie/${media.id}`, '_blank');
+            window.open(`https://dl.vidsrc.vip/movie/${media.id}`, '_blank');
         }
+        // Always update history on download click
+        if (onPlay) onPlay(episode);
         return;
     }
 
+    // Watch Mode: History only updates when a user manually clicks to play/change server
+    if (isManual && onPlay) onPlay(episode);
+    
     if (episode) setPlayingEpisode(episode);
     else setPlayingEpisode(null);
     setIsPlaying(true);
-    if (onPlay) onPlay(episode);
+  };
+
+  const currentIndex = useMemo(() => {
+    if (!playingEpisode || episodes.length === 0) return -1;
+    return episodes.findIndex(e => e.episode_number === playingEpisode.episode_number);
+  }, [playingEpisode, episodes]);
+
+  const handleNavigateEpisode = (direction: 'prev' | 'next') => {
+    if (currentIndex === -1) return;
+    const nextIdx = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+    if (nextIdx >= 0 && nextIdx < episodes.length) {
+      handleAction(episodes[nextIdx], true);
+    }
   };
 
   const currentSeasonName = useMemo(() => {
@@ -171,20 +190,42 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
 
         {isPlaying ? (
             <div className="flex flex-col w-full bg-black animate-in fade-in">
-                <div className="flex items-center justify-between p-4 border-b border-white/5 bg-[#0a0a0a]">
-                    <button onClick={() => setIsPlaying(false)} className="flex items-center gap-2 text-white/50 hover:text-white transition-colors text-xs font-black uppercase tracking-widest">
-                        <ArrowLeft size={14} /> Back to Details
+                <div className="flex flex-col md:flex-row md:items-center justify-between p-3 md:p-4 border-b border-white/5 bg-[#0a0a0a] gap-3">
+                    <button onClick={() => setIsPlaying(false)} className="flex items-center gap-2 text-white/50 hover:text-white transition-colors text-[10px] font-black uppercase tracking-widest shrink-0">
+                        <ArrowLeft size={14} /> Details
                     </button>
-                    <span className="text-xs font-black uppercase tracking-widest text-primary truncate max-w-[200px] md:max-w-md text-right">
-                        {type === 'tv' && playingEpisode 
-                            ? `S${playingEpisode.season_number}:E${playingEpisode.episode_number} - ${playingEpisode.name}`
-                            : media.title || media.name}
-                    </span>
-                    <div className="w-4 hidden md:block" />
+                    
+                    <div className="flex flex-col items-center flex-1 min-w-0">
+                      <span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-primary truncate w-full text-center">
+                          {type === 'tv' && playingEpisode 
+                              ? `S${playingEpisode.season_number}:E${playingEpisode.episode_number} - ${playingEpisode.name}`
+                              : media.title || media.name}
+                      </span>
+                    </div>
+
+                    {type === 'tv' && (
+                      <div className="flex items-center justify-center gap-4 shrink-0">
+                        <button 
+                          disabled={currentIndex <= 0}
+                          onClick={() => handleNavigateEpisode('prev')}
+                          className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-white disabled:opacity-20 transition-all"
+                        >
+                          <ChevronLeft size={14} /> Prev
+                        </button>
+                        <button 
+                          disabled={currentIndex === -1 || currentIndex >= episodes.length - 1}
+                          onClick={() => handleNavigateEpisode('next')}
+                          className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-white disabled:opacity-20 transition-all"
+                        >
+                          Next <ChevronRight size={14} />
+                        </button>
+                      </div>
+                    )}
                 </div>
                 
                 <div className="w-full aspect-video bg-black relative group">
                      <iframe 
+                        key={`${playingEpisode?.season_number}-${playingEpisode?.episode_number}-${server}`}
                         src={getStreamUrl()} 
                         className="w-full h-full border-none"
                         allowFullScreen 
@@ -198,7 +239,11 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                         {SERVERS.map(srv => (
                             <button
                                 key={srv.id}
-                                onClick={() => setServer(srv.id)}
+                                onClick={() => {
+                                  setServer(srv.id);
+                                  // Update history when switching servers
+                                  if (onPlay) onPlay(playingEpisode || undefined);
+                                }}
                                 className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${server === srv.id ? 'bg-primary text-primary-content shadow-[0_0_15px_rgba(255,46,99,0.4)]' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white'}`}
                             >
                                 {srv.label}
@@ -254,7 +299,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                         
                         <div className="flex gap-3 pt-2">
                             <button 
-                                onClick={() => type === 'movie' ? handlePlay() : setActiveTab('episodes')}
+                                onClick={() => type === 'movie' ? handleAction() : setActiveTab('episodes')}
                                 className="btn btn-primary btn-sm rounded-full px-6 font-black uppercase text-[9px] tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
                             >
                                 {mode === 'download' ? <Download size={12} className="mr-1" /> : <Play size={12} className="fill-current mr-1" />}
@@ -310,7 +355,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                             <div 
                                 key={ep.id}
                                 id={`episode-${ep.episode_number}`}
-                                onClick={() => handlePlay(ep)}
+                                onClick={() => handleAction(ep)}
                                 className="group/item flex items-center gap-4 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all cursor-pointer border border-transparent hover:border-white/5"
                             >
                                 <div className="w-20 h-12 rounded-lg overflow-hidden shrink-0 border border-white/5 relative">

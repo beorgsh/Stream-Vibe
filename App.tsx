@@ -17,28 +17,23 @@ const App: React.FC = () => {
   const [showAdBlockModal, setShowAdBlockModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   
-  // Track specific episode to resume when modal opens
   const [resumeData, setResumeData] = useState<{
     episodeId?: string | number;
     seasonNumber?: number;
     episodeNumber?: string | number;
   } | null>(null);
 
-  // History State
   const [watchHistory, setWatchHistory] = useState<WatchHistoryItem[]>([]);
 
   const TMDB_KEY = "7519c82c82dd0265f5b5d599e59e972a";
 
-  // Initialize
   useEffect(() => {
-    // Adblock Reminder
     const hasSeenReminder = localStorage.getItem('sv_adblock_reminder_seen');
     if (!hasSeenReminder) {
       const timer = setTimeout(() => setShowAdBlockModal(true), 1500);
       return () => clearTimeout(timer);
     }
 
-    // Load History
     const savedHistory = localStorage.getItem('sv_watch_history_v2');
     if (savedHistory) {
       try {
@@ -49,14 +44,12 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Persist History
   useEffect(() => {
     localStorage.setItem('sv_watch_history_v2', JSON.stringify(watchHistory));
   }, [watchHistory]);
 
   const addToHistory = useCallback((item: WatchHistoryItem) => {
     setWatchHistory(prev => {
-      // Logic: For series (Anime/TV), we only want to keep the LATEST episode in history
       const filtered = prev.filter(h => h.id.toString() !== item.id.toString());
       const updated = [item, ...filtered];
       return updated.slice(0, 50);
@@ -80,7 +73,7 @@ const App: React.FC = () => {
       setSelectedAnime(media);
     } else {
       setActiveTab(AppTab.GLOBAL);
-      setMediaMode('watch');
+      setMediaMode(item.mode || 'watch');
       setSelectedMedia(item.fullMedia);
     }
     setShowHistoryModal(false);
@@ -94,7 +87,7 @@ const App: React.FC = () => {
   const handleCloseModals = () => {
     setSelectedAnime(null);
     setSelectedMedia(null);
-    setResumeData(null); // Clear resume intent when closing
+    setResumeData(null);
   };
 
   return (
@@ -187,6 +180,7 @@ const App: React.FC = () => {
               title: selectedMedia.title || selectedMedia.name || 'Untitled',
               image: `https://image.tmdb.org/t/p/w500${selectedMedia.backdrop_path || selectedMedia.poster_path}`,
               type: selectedMedia.media_type,
+              mode: mediaMode,
               episodeNumber: ep?.episode_number,
               episodeTitle: ep?.name,
               seasonNumber: ep?.season_number,

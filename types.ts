@@ -63,11 +63,11 @@ export interface WatchHistoryItem {
   type: 'anime' | 'movie' | 'tv';
   timestamp: number;
   source?: 'apex' | 'watch';
+  mode?: 'watch' | 'download';
   episodeNumber?: string | number;
   episodeTitle?: string;
   seasonNumber?: number;
   episodeId?: string | number;
-  // Extra data to reconstruct the media object
   fullMedia?: any; 
 }
 

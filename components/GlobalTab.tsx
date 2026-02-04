@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { TMDBMedia, WatchHistoryItem } from '../types';
 import { Search, Loader2 } from 'lucide-react';
 import MediaCard from './MediaCard';
@@ -31,6 +31,11 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
   const TMDB_KEY = "7519c82c82dd0265f5b5d599e59e972a";
   const BASE_URL = "https://api.themoviedb.org/3";
 
+  // Filter history based on viewMode
+  const filteredHistory = useMemo(() => {
+    return history.filter(h => (h.mode || 'watch') === viewMode);
+  }, [history, viewMode]);
+
   const fetchGlobalData = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -56,7 +61,6 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
     fetchGlobalData();
   }, [fetchGlobalData]);
 
-  // Spotlight Auto-play
   useEffect(() => {
     if (!trending.length || isSearching || viewMode === 'download') return;
     const interval = setInterval(() => {
@@ -167,7 +171,6 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
           
           {viewMode === 'watch' ? (
             <>
-              {/* Global Spotlight Carousel - Watch Mode Only */}
               {!isLoading && trending.length > 0 && (
                 <section className="space-y-3">
                   <div className="relative w-full rounded-2xl h-[250px] md:h-[400px] shadow-2xl border border-white/5 overflow-hidden group">
@@ -188,7 +191,6 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                       ))}
                     </div>
 
-                    {/* Static Overlay Content */}
                     <div className="absolute bottom-6 left-8 right-8 z-20 pointer-events-none">
                       {trending[spotlightIndex] && (
                         <div key={spotlightIndex} className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-700 fill-mode-both">
@@ -216,12 +218,12 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                 </section>
               )}
 
-              {/* Continue Watching moved below global spotlight */}
               <ContinueWatching 
-                history={history} 
+                history={filteredHistory} 
                 onSelect={onHistorySelect} 
                 onRemove={onHistoryRemove} 
                 onViewAll={onViewAllHistory}
+                title="Global Stream History"
               />
 
               <section className="space-y-4">
@@ -274,21 +276,30 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
               </section>
             </>
           ) : (
-            // Download Mode - Grid Layout
-            <section className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
-              <div className="flex items-center justify-between border-l-2 border-primary pl-3">
-                <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter">Top Downloads</h2>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                {isLoading ? (
-                  [...Array(12)].map((_, i) => <SkeletonCard key={i} />)
-                ) : (
-                  trending.map((media) => (
-                    <MediaCard key={media.id} media={media} onClick={() => onSelectMedia(media, viewMode)} />
-                  ))
-                )}
-              </div>
-            </section>
+            <div className="space-y-8 md:space-y-12">
+               <ContinueWatching 
+                history={filteredHistory} 
+                onSelect={onHistorySelect} 
+                onRemove={onHistoryRemove} 
+                onViewAll={onViewAllHistory}
+                title="Global Download History"
+              />
+              
+              <section className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+                <div className="flex items-center justify-between border-l-2 border-primary pl-3">
+                  <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter">Top Downloads</h2>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                  {isLoading ? (
+                    [...Array(12)].map((_, i) => <SkeletonCard key={i} />)
+                  ) : (
+                    trending.map((media) => (
+                      <MediaCard key={media.id} media={media} onClick={() => onSelectMedia(media, viewMode)} />
+                    ))
+                  )}
+                </div>
+              </section>
+            </div>
           )}
         </div>
       )}

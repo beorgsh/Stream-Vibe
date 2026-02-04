@@ -14,6 +14,22 @@ interface ContinueWatchingProps {
 const ContinueWatching: React.FC<ContinueWatchingProps> = ({ history, onSelect, onRemove, onViewAll, title = "Continue Watching" }) => {
   if (history.length === 0) return null;
 
+  const getSourceLabel = (item: WatchHistoryItem) => {
+    // Priority 1: Anime specific source
+    if (item.source === 'watch') return 'STREAM';
+    if (item.source === 'apex') return 'CLOUD';
+    
+    // Priority 2: Global mode
+    if (item.mode === 'watch') return 'STREAM';
+    if (item.mode === 'download') return 'CLOUD';
+    
+    return 'MEDIA';
+  };
+
+  const isStream = (item: WatchHistoryItem) => {
+    return item.source === 'watch' || item.mode === 'watch';
+  };
+
   return (
     <section className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-700">
       <div className="flex items-center justify-between border-l-2 border-primary pl-3">
@@ -40,6 +56,9 @@ const ContinueWatching: React.FC<ContinueWatchingProps> = ({ history, onSelect, 
                 src={item.image} 
                 alt={item.title} 
                 className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700" 
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "https://placehold.co/400x225/111/white?text=No+Preview";
+                }}
               />
             </div>
             
@@ -60,6 +79,11 @@ const ContinueWatching: React.FC<ContinueWatchingProps> = ({ history, onSelect, 
             </div>
 
             <div className="absolute bottom-3 left-3 right-3 pointer-events-none z-20">
+               <div className="flex items-center gap-2 mb-1">
+                 <span className={`px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-widest ${isStream(item) ? 'bg-primary text-primary-content' : 'bg-white/10 text-white'}`}>
+                   {getSourceLabel(item)}
+                 </span>
+               </div>
               <h4 className="text-[10px] md:text-xs font-black text-white uppercase truncate drop-shadow-lg">
                 {item.title}
               </h4>

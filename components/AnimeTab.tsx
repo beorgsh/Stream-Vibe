@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { AnimeSeries, WatchHistoryItem } from '../types';
 import { Search, Loader2, RefreshCw, Play } from 'lucide-react';
 import AnimeCard from './AnimeCard';
@@ -32,6 +32,13 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
   const [spotlightIndex, setSpotlightIndex] = useState(0);
   const carouselRef = useRef<HTMLDivElement>(null);
   const isAutoScrolling = useRef(false);
+
+  // Filter history based on searchMode (apex = download, watch = watch)
+  const filteredHistory = useMemo(() => {
+    return history.filter(h => 
+      searchMode === 'download' ? h.source === 'apex' : h.source === 'watch'
+    );
+  }, [history, searchMode]);
 
   const fetchAnimeList = useCallback(async () => {
     setIsLoading(true);
@@ -253,7 +260,6 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                         ))}
                       </div>
 
-                      {/* Static Content Overlay */}
                       <div className="absolute bottom-4 left-6 z-20 max-w-[80%] pointer-events-none">
                         {watchHome.spotlights[spotlightIndex] && (
                           <div key={spotlightIndex} className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-both">
@@ -289,12 +295,13 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                     </div>
                   </section>
 
-                  {/* Continue Watching moved below spotlight */}
+                  {/* Continue Watching filtered for Watch mode */}
                   <ContinueWatching 
-                    history={history} 
+                    history={filteredHistory} 
                     onSelect={onHistorySelect} 
                     onRemove={onHistoryRemove} 
                     onViewAll={onViewAllHistory}
+                    title="Stream History"
                   />
 
                   <section className="space-y-4">
@@ -307,44 +314,36 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                       ))}
                     </div>
                   </section>
-
-                  <section className="space-y-4">
-                    <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter border-l-2 border-primary pl-3">Ranking Top 10 Today</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3">
-                      {watchHome.topTenToday.map((anime, idx) => (
-                        <div key={idx} onClick={() => onSelectAnime(anime)} className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all cursor-pointer border border-white/5 group">
-                          <div className="text-4xl font-black text-white/5 group-hover:text-primary/20 italic w-10 shrink-0 transition-colors">{idx + 1}</div>
-                          <img src={anime.image} className="w-16 h-20 rounded-xl object-cover shadow-2xl transition-transform group-hover:scale-105" alt="" />
-                          <div className="flex-1 overflow-hidden">
-                            <h4 className="font-black text-xs md:text-sm text-white truncate uppercase tracking-tight mb-1">{anime.title}</h4>
-                            <div className="flex items-center gap-2">
-                              <span className="text-[9px] font-bold text-primary uppercase bg-primary/10 px-2 py-0.5 rounded">Active Stream</span>
-                              <span className="text-[9px] font-bold text-white/20 uppercase">{anime.type}</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
                 </>
               )}
             </>
           ) : (
-            <section className="space-y-4">
-              <div className="flex items-center justify-between border-l-2 border-primary pl-3">
-                <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter">Discovery</h2>
-                <RefreshCw onClick={fetchAnimeList} className={`${isLoading ? 'animate-spin' : ''} text-white/20 cursor-pointer`} size={14} />
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                {isLoading ? (
-                  [...Array(12)].map((_, i) => <SkeletonCard key={i} />)
-                ) : (
-                  animeList.map((anime, idx) => (
-                    <AnimeCard key={idx} anime={anime} onClick={() => onSelectAnime(anime)} />
-                  ))
-                )}
-              </div>
-            </section>
+            <div className="space-y-8 md:space-y-12">
+               {/* Continue Watching filtered for Download mode */}
+               <ContinueWatching 
+                history={filteredHistory} 
+                onSelect={onHistorySelect} 
+                onRemove={onHistoryRemove} 
+                onViewAll={onViewAllHistory}
+                title="Download History"
+              />
+
+              <section className="space-y-4">
+                <div className="flex items-center justify-between border-l-2 border-primary pl-3">
+                  <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter">Discovery</h2>
+                  <RefreshCw onClick={fetchAnimeList} className={`${isLoading ? 'animate-spin' : ''} text-white/20 cursor-pointer`} size={14} />
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                  {isLoading ? (
+                    [...Array(12)].map((_, i) => <SkeletonCard key={i} />)
+                  ) : (
+                    animeList.map((anime, idx) => (
+                      <AnimeCard key={idx} anime={anime} onClick={() => onSelectAnime(anime)} />
+                    ))
+                  )}
+                </div>
+              </section>
+            </div>
           )}
         </div>
       )}
