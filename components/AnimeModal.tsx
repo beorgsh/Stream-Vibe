@@ -40,13 +40,34 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
   const [groupedLinks, setGroupedLinks] = useState<LinkGroup[]>([]);
   const [activeLinkCategory, setActiveLinkCategory] = useState<'Sub' | 'Dub'>('Sub');
   const [isLinksLoading, setIsLinksLoading] = useState(false);
+  const [isIframeLoading, setIsIframeLoading] = useState(false);
 
   const [watchServers, setWatchServers] = useState<WatchServer[]>([]);
   const [activeWatchServer, setActiveWatchServer] = useState<string | null>(null);
   const [activeWatchType, setActiveWatchType] = useState<'sub' | 'dub'>('sub');
+  
+  // New state for server tab UI
+  const [serverCategory, setServerCategory] = useState<'sub' | 'dub'>('sub');
+  
   const [iframeUrl, setIframeUrl] = useState<string | null>(null);
 
   const hasAutoResumed = useRef(false);
+
+  // Sync server category tab with the active watch type (e.g. when switching episodes or auto-play)
+  useEffect(() => {
+    setServerCategory(activeWatchType);
+  }, [activeWatchType]);
+
+  // Failsafe: If iframe loading takes too long (>8s), dismiss loader
+  useEffect(() => {
+    let timeout: ReturnType<typeof setTimeout>;
+    if (isIframeLoading) {
+      timeout = setTimeout(() => {
+        setIsIframeLoading(false);
+      }, 8000);
+    }
+    return () => clearTimeout(timeout);
+  }, [isIframeLoading]);
 
   const handleClose = () => {
     setIsClosing(true);
@@ -117,9 +138,10 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
 
   const fetchStreamData = async (epId: string, serverName: string, type: 'sub' | 'dub', originalEp: AnimeEpisode, isManual: boolean = false) => {
     setIsLinksLoading(true);
+    setIsIframeLoading(true);
     setIframeUrl(null);
-    // Use a unique ID to prevent cross-tab highlighting (e.g., 'sub-hd-1' vs 'dub-hd-1')
     setActiveWatchServer(`${type}-${serverName}`);
+    setActiveWatchType(type); // Ensure type is updated
     
     if (isManual && onPlay) {
       onPlay(originalEp);
@@ -131,30 +153,66 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
       if (data.success && data.results) {
         setWatchServers(data.results.servers || []);
         if (data.results.streamingLink?.iframe) {
-          setIframeUrl(`${data.results.streamingLink.iframe}&_debug=true`);
+           const src = data.results.streamingLink.iframe;
+           const separator = src.includes('?') ? '&' : '?';
+           setIframeUrl(`${src}${separator}_debug=true`);
+        } else {
+          setIsIframeLoading(false);
         }
+      } else {
+        setIsIframeLoading(false);
       }
     } catch (error) {
       console.error("Error:", error);
+      setIsIframeLoading(false);
     } finally {
       setIsLinksLoading(false);
     }
   };
 
   const fetchEpisodeLinks = async (ep: AnimeEpisode) => {
-    setSelectedEpisode(ep);
     setIsLinksLoading(true);
+    setIsIframeLoading(true); 
+    setIframeUrl(null); 
+    setSelectedEpisode(ep);
     setGroupedLinks([]);
     setWatchServers([]);
-    setIframeUrl(null);
     setActiveWatchServer(null);
 
     try {
       if (anime.source === 'watch') {
+        // Fetch default HD-1 Sub
         const response = await fetch(`https://anime-api-iota-six.vercel.app/api/stream?id=${encodeURIComponent(ep.session)}&server=hd-1&type=sub`);
         const data = await response.json();
+        
         if (data.success && data.results) {
-          setWatchServers(data.results.servers || []);
+          const servers = data.results.servers || [];
+          setWatchServers(servers);
+          setActiveWatchType('sub');
+          
+          // Smart highlighting: find the server in the list that matches 'hd-1' or 'vidstreaming'
+          const match = servers.find((s: any) => {
+            const name = s.serverName.toLowerCase();
+            return name === 'hd-1' || name === 'vidstreaming';
+          });
+
+          if (match) {
+            setActiveWatchServer(`sub-${match.serverName}`);
+          } else {
+            // Fallback to strict expected default if not found (though less likely to highlight correctly)
+            setActiveWatchServer('sub-hd-1');
+          }
+
+          if (data.results.streamingLink?.iframe) {
+            const src = data.results.streamingLink.iframe;
+            const separator = src.includes('?') ? '&' : '?';
+            setIframeUrl(`${src}${separator}_debug=true`);
+            if (onPlay) onPlay(ep);
+          } else {
+            setIsIframeLoading(false);
+          }
+        } else {
+          setIsIframeLoading(false);
         }
       } else {
         const response = await fetch(`https://anime.apex-cloud.workers.dev/?method=episode&session=${anime.session}&ep=${ep.session}`);
@@ -190,11 +248,16 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
         
         setGroupedLinks(groups);
         setActiveLinkCategory(groups[0]?.category || 'Sub');
+        if (onPlay) onPlay(ep);
       }
     } catch (error) {
       console.error("Error:", error);
+      setIsIframeLoading(false);
     } finally {
       setIsLinksLoading(false);
+      if (anime.source !== 'watch') {
+        setIsIframeLoading(false);
+      }
     }
   };
 
@@ -219,13 +282,14 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
     dub: watchServers.filter(s => s.type === 'dub')
   }), [watchServers]);
 
-  const filteredEpisodes = useMemo(() => 
-    episodes.filter(ep => 
+  const filteredEpisodes = useMemo(() => {
+    return episodes.filter(ep => 
       ep.episode.toLowerCase().includes(epSearch.toLowerCase()) || 
       (ep.title && ep.title.toLowerCase().includes(epSearch.toLowerCase()))
-    ), [episodes, epSearch]);
+    );
+  }, [episodes, epSearch]);
 
-  const paginatedEpisodes = useMemo(() => {
+  const pagedEpisodes = useMemo(() => {
     const start = (epPage - 1) * EP_PER_PAGE;
     return filteredEpisodes.slice(start, start + EP_PER_PAGE);
   }, [filteredEpisodes, epPage]);
@@ -233,304 +297,274 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
   const totalPages = Math.ceil(filteredEpisodes.length / EP_PER_PAGE);
 
   return (
-    <div 
-      className={`fixed inset-0 z-[1000] flex items-center justify-center p-3 bg-black/80 backdrop-blur-2xl transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100 animate-in fade-in'}`}
-      onClick={(e) => e.target === e.currentTarget && handleClose()}
-    >
-      <div className={`bg-[#0a0a0a] border border-white/10 w-full max-w-5xl h-[85vh] rounded-2xl overflow-hidden relative flex flex-col shadow-2xl transition-all duration-300 ${isClosing ? 'scale-95 opacity-0' : 'scale-100 opacity-100 animate-in zoom-in-95'}`}>
+    <div className={`fixed inset-0 z-[1000] flex items-center justify-center p-3 bg-black/90 backdrop-blur-2xl transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100 animate-in fade-in'}`}>
+      <div className={`bg-[#0a0a0a] border border-white/10 w-full max-w-5xl ${selectedEpisode ? 'h-auto' : 'max-h-[85vh]'} rounded-2xl overflow-hidden relative flex flex-col shadow-2xl transition-all duration-300 ${isClosing ? 'scale-95 opacity-0' : 'scale-100 opacity-100 animate-in zoom-in-95'}`}>
         <button onClick={handleClose} className="absolute top-4 right-4 z-[60] btn btn-circle btn-xs btn-ghost bg-black/40 border border-white/10 text-white hover:bg-white/20">
           <X size={16} />
         </button>
 
-        {selectedEpisode && (iframeUrl || groupedLinks.length > 0 || watchServers.length > 0) ? (
-          <div className="flex flex-col w-full h-full bg-black animate-in fade-in overflow-hidden">
+        {selectedEpisode ? (
+          <div className="flex flex-col w-full bg-black animate-in fade-in overflow-hidden">
             <div className="flex flex-col md:flex-row md:items-center justify-between p-3 md:p-4 border-b border-white/5 bg-[#0a0a0a] gap-3">
               <button onClick={() => setSelectedEpisode(null)} className="flex items-center gap-2 text-white/50 hover:text-white transition-colors text-[10px] font-black uppercase tracking-widest shrink-0">
-                <ArrowLeft size={14} /> Details
+                <ArrowLeft size={14} /> Back to Hub
               </button>
               
               <div className="flex flex-col items-center flex-1 min-w-0">
-                <span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-primary truncate w-full text-center">
-                   Episode {selectedEpisode.episode} - {selectedEpisode.title || 'Untitled'}
+                <span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-primary truncate w-full text-center italic">
+                  Episode {selectedEpisode.episode} - {selectedEpisode.title || anime.title}
                 </span>
               </div>
 
-              {isSeries && (
-                <div className="flex items-center justify-center gap-4 shrink-0">
-                  <button 
-                    disabled={currentIndex <= 0}
-                    onClick={() => handleNavigateEpisode('prev')}
-                    className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-white disabled:opacity-20 transition-all"
-                  >
-                    <ChevronLeft size={14} /> Prev
-                  </button>
-                  <button 
-                    disabled={!hasNext}
-                    onClick={() => handleNavigateEpisode('next')}
-                    className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-white disabled:opacity-20 transition-all"
-                  >
-                    Next <ChevronRight size={14} />
-                  </button>
+              <div className="flex items-center justify-center gap-4 shrink-0">
+                <button 
+                  disabled={currentIndex <= 0}
+                  onClick={() => handleNavigateEpisode('prev')}
+                  className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-white disabled:opacity-20 transition-all"
+                >
+                  <ChevronLeft size={14} /> Prev
+                </button>
+                <button 
+                  disabled={!hasNext}
+                  onClick={() => handleNavigateEpisode('next')}
+                  className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-white disabled:opacity-20 transition-all"
+                >
+                  Next <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+
+            <div className="w-full aspect-video bg-black relative">
+              {iframeUrl ? (
+                <>
+                  {(isIframeLoading || isLinksLoading) && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md z-50 animate-in fade-in">
+                      <div className="relative">
+                           <div className="w-16 h-16 border-4 border-white/5 border-t-primary rounded-full animate-spin" />
+                           <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="w-8 h-8 bg-primary/20 blur-xl rounded-full animate-pulse" />
+                           </div>
+                       </div>
+                      <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-white/40 animate-pulse">Syncing Segment Data...</p>
+                    </div>
+                  )}
+                  <iframe 
+                    key={iframeUrl}
+                    src={iframeUrl}
+                    className={`w-full h-full border-none transition-opacity duration-700 ${isIframeLoading ? 'opacity-0' : 'opacity-100'}`}
+                    allowFullScreen
+                    onLoad={() => setIsIframeLoading(false)}
+                  />
+                </>
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center space-y-4 p-8 text-center bg-[#050505]">
+                  {isLinksLoading ? (
+                    <Loader2 size={32} className="text-primary animate-spin" />
+                  ) : (
+                    <>
+                      {anime.source === 'watch' ? (
+                        // Fallback UI if iframe is missing but we're in watch mode (rare case)
+                        <div className="space-y-6 w-full max-w-2xl">
+                          <p className="text-white/40 text-[10px] uppercase font-black tracking-widest">Select a server to initialize</p>
+                          <div className="flex flex-wrap justify-center gap-2">
+                             {/* Basic fallback listing if needed */}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-6 w-full max-w-2xl">
+                          {groupedLinks.map(group => (
+                            <div key={group.category} className="space-y-3">
+                              <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40">{group.category} Links</h3>
+                              <div className="flex flex-wrap justify-center gap-3">
+                                {group.links.map((link, idx) => (
+                                  <a
+                                    key={idx}
+                                    href={link.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-6 py-2.5 rounded-xl bg-white/5 border border-white/5 hover:border-primary/50 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all hover:bg-white/10"
+                                  >
+                                    <Download size={14} />
+                                    {link.quality} {link.size !== 'N/A' && <span className="opacity-40">{link.size}</span>}
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
             </div>
-            
-            <div className="flex-1 w-full bg-black relative flex flex-col overflow-hidden">
-                {isLinksLoading ? (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <Loader2 className="animate-spin text-primary" size={32} />
-                    </div>
-                ) : (
-                    <>
-                    {iframeUrl ? (
-                        <iframe 
-                            src={iframeUrl} 
-                            className="w-full h-full border-none"
-                            allowFullScreen 
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        />
+
+            {anime.source === 'watch' && iframeUrl && (
+              <div className="p-4 bg-[#0a0a0a] border-t border-white/5 flex flex-col items-center gap-4 animate-in fade-in slide-in-from-top-2">
+                 
+                 {/* Category Tabs */}
+                 {(watchServersByType.sub.length > 0 || watchServersByType.dub.length > 0) && (
+                   <div className="flex p-1 bg-white/5 rounded-full border border-white/10">
+                      {watchServersByType.sub.length > 0 && (
+                        <button 
+                          onClick={() => setServerCategory('sub')}
+                          className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${serverCategory === 'sub' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40 hover:text-white'}`}
+                        >
+                          Sub
+                        </button>
+                      )}
+                      {watchServersByType.dub.length > 0 && (
+                        <button 
+                           onClick={() => setServerCategory('dub')}
+                           className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${serverCategory === 'dub' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40 hover:text-white'}`}
+                        >
+                          Dub
+                        </button>
+                      )}
+                   </div>
+                 )}
+
+                 {/* Servers List for Active Category */}
+                 <div className="flex flex-wrap items-center justify-center gap-2 max-w-2xl">
+                    {watchServersByType[serverCategory]?.length > 0 ? (
+                      watchServersByType[serverCategory].map(srv => {
+                        const isActive = activeWatchServer?.toLowerCase() === `${serverCategory}-${srv.serverName}`.toLowerCase();
+                        return (
+                          <button
+                              key={`${serverCategory}-${srv.serverName}`}
+                              onClick={() => fetchStreamData(selectedEpisode.session, srv.serverName, serverCategory, selectedEpisode, true)}
+                              className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border ${isActive ? 'bg-primary text-primary-content border-primary shadow-[0_0_10px_rgba(255,46,99,0.3)]' : 'bg-white/5 text-white/40 border-transparent hover:bg-white/10 hover:border-white/10'}`}
+                          >
+                              {srv.serverName}
+                          </button>
+                        );
+                      })
                     ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center space-y-6 overflow-y-auto custom-scrollbar">
-                           <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4">
-                             <Play size={40} className="fill-current ml-2" />
-                           </div>
-                           <h2 className="text-xl font-black text-white uppercase tracking-tight">Select Link Category</h2>
-                           
-                           {groupedLinks.length > 0 ? (
-                               <div className="w-full max-w-md space-y-8">
-                                   <div className="flex justify-center gap-4">
-                                       {groupedLinks.map(group => (
-                                           <button 
-                                              key={group.category}
-                                              onClick={() => setActiveLinkCategory(group.category)}
-                                              className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeLinkCategory === group.category ? 'bg-primary text-primary-content' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
-                                           >
-                                               {group.category}
-                                           </button>
-                                       ))}
-                                   </div>
-
-                                   <div className="grid gap-2">
-                                       {groupedLinks.find(g => g.category === activeLinkCategory)?.links.map((link, idx) => (
-                                           <button 
-                                              key={idx}
-                                              onClick={() => {
-                                                if (onPlay) onPlay(selectedEpisode);
-                                                window.open(link.url, '_blank');
-                                              }}
-                                              className="w-full p-4 rounded-xl bg-white/5 border border-white/5 hover:border-primary/50 transition-all flex items-center justify-between group"
-                                           >
-                                               <div className="flex items-center gap-3">
-                                                   <Download size={14} className="text-primary" />
-                                                   <span className="text-[10px] font-black uppercase tracking-widest text-white/60 group-hover:text-white transition-colors">{link.quality}</span>
-                                               </div>
-                                               <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">{link.size}</span>
-                                           </button>
-                                       ))}
-                                   </div>
-                               </div>
-                           ) : (
-                               watchServers.length > 0 && (
-                                   <div className="w-full max-w-md space-y-4">
-                                       <div className="flex justify-center gap-2 mb-4">
-                                            {watchServersByType.sub.length > 0 && (
-                                                <button 
-                                                    onClick={() => setActiveWatchType('sub')}
-                                                    className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${activeWatchType === 'sub' ? 'bg-primary text-primary-content' : 'bg-white/5 text-white/40'}`}
-                                                >
-                                                    Sub
-                                                </button>
-                                            )}
-                                            {watchServersByType.dub.length > 0 && (
-                                                <button 
-                                                    onClick={() => setActiveWatchType('dub')}
-                                                    className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${activeWatchType === 'dub' ? 'bg-primary text-primary-content' : 'bg-white/5 text-white/40'}`}
-                                                >
-                                                    Dub
-                                                </button>
-                                            )}
-                                       </div>
-                                       <div className="grid grid-cols-2 gap-2">
-                                           {watchServersByType[activeWatchType].map((srv) => (
-                                               <button 
-                                                  key={srv.server_id}
-                                                  onClick={() => fetchStreamData(selectedEpisode.session, srv.serverName, activeWatchType, selectedEpisode, true)}
-                                                  className={`p-3 rounded-lg border text-[10px] font-black uppercase tracking-widest transition-all ${activeWatchServer === `${activeWatchType}-${srv.serverName}` ? 'bg-primary border-primary text-primary-content' : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10'}`}
-                                               >
-                                                   {srv.serverName}
-                                               </button>
-                                           ))}
-                                       </div>
-                                   </div>
-                               )
-                           )}
-                        </div>
+                      <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest italic py-2">
+                        No {serverCategory === 'sub' ? 'Subtitled' : 'Dubbed'} servers available
+                      </span>
                     )}
-                    </>
-                )}
-            </div>
+                 </div>
 
-            {iframeUrl && watchServers.length > 0 && (
-                <div className="p-3 bg-[#0a0a0a] border-t border-white/5">
-                    <div className="flex flex-wrap items-center justify-center gap-2">
-                        <div className="flex gap-1 mr-4">
-                            <button onClick={() => setActiveWatchType('sub')} className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest transition-all ${activeWatchType === 'sub' ? 'bg-primary text-primary-content' : 'bg-white/5 text-white/40'}`}>Sub</button>
-                            <button onClick={() => setActiveWatchType('dub')} className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest transition-all ${activeWatchType === 'dub' ? 'bg-primary text-primary-content' : 'bg-white/5 text-white/40'}`}>Dub</button>
-                        </div>
-                        {watchServersByType[activeWatchType].map(srv => (
-                            <button
-                                key={srv.server_id}
-                                onClick={() => fetchStreamData(selectedEpisode.session, srv.serverName, activeWatchType, selectedEpisode, true)}
-                                className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest transition-all ${activeWatchServer === `${activeWatchType}-${srv.serverName}` ? 'bg-primary text-primary-content shadow-lg' : 'bg-white/5 text-white/40 hover:text-white'}`}
-                            >
-                                {srv.serverName}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+              </div>
             )}
+
+            <div className="p-4 bg-[#0a0a0a] border-t border-white/5">
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <span className="text-[9px] font-black uppercase tracking-widest text-white/30 mr-2">Quick Switch</span>
+                {episodes.slice(Math.max(0, currentIndex - 2), Math.min(episodes.length, currentIndex + 3)).map(ep => (
+                  <button
+                    key={ep.session}
+                    onClick={() => fetchEpisodeLinks(ep)}
+                    className={`w-10 h-10 rounded-lg text-[10px] font-black flex items-center justify-center transition-all ${ep.session === selectedEpisode.session ? 'bg-primary text-primary-content' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
+                  >
+                    {ep.episode}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         ) : (
           <div className="flex flex-col md:flex-row h-full overflow-hidden">
-            <div className="w-full md:w-64 shrink-0 relative bg-[#0a0a0a]">
-              <img 
-                src={displayImage} 
-                alt={anime.title} 
-                className="w-full h-full object-cover hidden md:block" 
-                onError={handleMainImageError}
-              />
+            <div className="w-full md:w-64 shrink-0 relative bg-black/20">
+              <img src={displayImage} alt="" className="w-full h-full object-cover hidden md:block" onError={handleMainImageError} />
               <div className="md:hidden h-40 relative">
-                <img src={displayImage} className="w-full h-full object-cover" alt="" />
+                <img src={displayImage} className="w-full h-full object-cover" alt="" onError={handleMainImageError} />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] to-transparent" />
               </div>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent to-[#0a0a0a] hidden md:block w-1/4 right-0 left-auto" />
             </div>
 
             <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="p-4 md:p-8 pb-4">
+              <div className="p-6 md:p-8 pb-4">
                 <div className="flex items-center gap-2 mb-3">
                   <span className="badge badge-primary badge-xs font-bold uppercase text-[7px] tracking-widest px-2">{anime.type || 'TV'}</span>
                   <div className="flex items-center gap-1 text-yellow-500 font-bold text-[9px]">
                     <Star size={10} className="fill-current" />
                     {anime.score || 'N/A'}
                   </div>
-                  <span className="text-white/30 text-[9px] font-bold uppercase">{anime.status || 'Ongoing'}</span>
+                  <span className="text-white/30 text-[9px] font-bold uppercase tracking-widest">{anime.status || 'Ongoing'}</span>
                 </div>
-                
-                <h2 className="text-xl md:text-3xl font-black text-white mb-4 line-clamp-2 uppercase tracking-tighter italic leading-none">
+                <h2 className="text-xl md:text-3xl font-black text-white mb-4 line-clamp-1 uppercase tracking-tighter italic">
                   {anime.title}
                 </h2>
-
                 <div className="flex border-b border-white/5 gap-6">
-                  <button 
-                    onClick={() => setActiveTab('info')} 
-                    className={`pb-3 text-[9px] font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'info' ? 'border-primary text-primary' : 'border-transparent text-white/20 hover:text-white'}`}
-                  >
-                    Abstract
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab('episodes')} 
-                    className={`pb-3 text-[9px] font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'episodes' ? 'border-primary text-primary' : 'border-transparent text-white/20 hover:text-white'}`}
-                  >
-                    Episodes ({episodes.length})
-                  </button>
+                  <button onClick={() => setActiveTab('info')} className={`pb-3 text-[9px] font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'info' ? 'border-primary text-primary' : 'border-transparent text-white/20 hover:text-white'}`}>Intel</button>
+                  <button onClick={() => setActiveTab('episodes')} className={`pb-3 text-[9px] font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'episodes' ? 'border-primary text-primary' : 'border-transparent text-white/20 hover:text-white'}`}>Episodes</button>
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4 md:p-8 pt-0 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto p-6 md:p-8 pt-0 custom-scrollbar">
                 {activeTab === 'info' ? (
                   <div className="space-y-6 animate-in slide-in-from-left-2">
-                    <p className="text-white/60 text-xs md:text-sm leading-relaxed italic">
-                      {anime.description || "No transmission description available for this anime series. Accessing neural archives..."}
-                    </p>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="p-3 rounded-xl bg-white/5 border border-white/5">
-                            <span className="text-[8px] font-bold text-white/20 uppercase tracking-[0.2em] block mb-1">Status</span>
-                            <span className="text-[10px] font-black text-white uppercase">{anime.status || 'Unknown'}</span>
-                        </div>
-                        <div className="p-3 rounded-xl bg-white/5 border border-white/5">
-                            <span className="text-[8px] font-bold text-white/20 uppercase tracking-[0.2em] block mb-1">Episodes</span>
-                            <span className="text-[10px] font-black text-white uppercase">{episodes.length || anime.episodes || 'N/A'}</span>
-                        </div>
-                    </div>
+                    {isLoading ? (
+                      <SkeletonText lines={4} />
+                    ) : (
+                      <p className="text-white/60 text-xs md:text-sm leading-relaxed italic">{anime.description || "No classification data provided for this node."}</p>
+                    )}
                     <button 
                       onClick={() => setActiveTab('episodes')}
-                      className="btn btn-primary btn-sm rounded-full px-6 font-black uppercase text-[9px] tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
+                      className="btn btn-primary btn-sm rounded-full px-8 font-black uppercase text-[9px] tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
                     >
-                      <Play size={12} className="fill-current mr-2" />
                       Initialize Stream
                     </button>
                   </div>
                 ) : (
-                  <div className="space-y-4 animate-in slide-in-from-right-2 h-full flex flex-col">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-1 border-b border-white/5 pb-2">
-                      <div className="relative w-full md:w-48">
-                        <input 
-                          type="text" 
-                          placeholder="Filter episodes..." 
-                          className="w-full bg-white/5 border border-white/10 rounded-full py-1.5 pl-8 pr-4 text-[9px] font-bold uppercase tracking-widest focus:border-primary transition-all"
-                          value={epSearch}
-                          onChange={(e) => { setEpSearch(e.target.value); setEpPage(1); }}
-                        />
-                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/20" size={12} />
-                      </div>
-
-                      {totalPages > 1 && (
-                        <div className="flex items-center gap-2">
-                          <button 
-                            disabled={epPage === 1}
-                            onClick={() => setEpPage(p => Math.max(1, p - 1))}
-                            className="p-1.5 rounded-lg bg-white/5 text-white/40 hover:text-white disabled:opacity-20"
-                          >
-                            <ChevronLeft size={14} />
-                          </button>
-                          <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Page {epPage}/{totalPages}</span>
-                          <button 
-                            disabled={epPage === totalPages}
-                            onClick={() => setEpPage(p => Math.min(totalPages, p + 1))}
-                            className="p-1.5 rounded-lg bg-white/5 text-white/40 hover:text-white disabled:opacity-20"
-                          >
-                            <ChevronRight size={14} />
-                          </button>
-                        </div>
-                      )}
+                  <div className="space-y-6 animate-in slide-in-from-right-2">
+                    <div className="relative">
+                      <input 
+                        type="text" 
+                        placeholder="Search Episodes..." 
+                        className="w-full bg-white/5 border border-white/10 rounded-full py-2 px-10 text-[10px] font-bold uppercase tracking-widest focus:border-primary focus:outline-none transition-all"
+                        value={epSearch}
+                        onChange={(e) => { setEpSearch(e.target.value); setEpPage(1); }}
+                      />
+                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/20" size={14} />
                     </div>
 
-                    <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-2">
+                    <div className="grid grid-cols-1 gap-2">
                       {isLoading ? (
-                        <div className="space-y-2">
-                          {[...Array(6)].map((_, i) => <SkeletonRow key={i} />)}
-                        </div>
+                        [...Array(6)].map((_, i) => <SkeletonRow key={i} />)
                       ) : (
-                        paginatedEpisodes.map(ep => (
+                        pagedEpisodes.map(ep => (
                           <div 
                             key={ep.session}
                             onClick={() => fetchEpisodeLinks(ep)}
-                            className="group/item flex items-center gap-4 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all cursor-pointer border border-transparent hover:border-white/5"
+                            className="group flex items-center gap-4 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all cursor-pointer border border-transparent hover:border-white/5"
                           >
-                            <div className="w-20 h-12 rounded-lg overflow-hidden shrink-0 border border-white/5 relative">
-                              <img 
-                                src={ep.snapshot || anime.image} 
-                                className="w-full h-full object-cover opacity-60 group-hover/item:opacity-100 transition-opacity" 
-                                alt=""
-                                onError={(e) => { (e.target as HTMLImageElement).src = anime.image; }}
-                              />
-                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-opacity bg-black/40">
-                                <Play size={16} className="fill-white text-white drop-shadow-lg" />
-                              </div>
+                            <div className="w-12 h-12 rounded-lg bg-black flex items-center justify-center shrink-0 border border-white/5 group-hover:border-primary/50">
+                              <span className="text-[10px] font-black text-white/40 group-hover:text-primary transition-colors">{ep.episode}</span>
                             </div>
                             <div className="flex-1 min-w-0">
-                                <h4 className="font-bold text-[10px] md:text-xs text-white/80 group-hover/item:text-white truncate uppercase tracking-tight mb-0.5">
-                                    {ep.title || `Episode {ep.episode}`}
-                                </h4>
-                                <span className="text-[9px] text-white/30 font-bold uppercase tracking-widest">
-                                    Episode {ep.episode}
-                                </span>
+                              <h4 className="font-bold text-[10px] md:text-xs text-white/80 group-hover:text-white truncate uppercase tracking-tight mb-0.5">
+                                {ep.title || `Episode ${ep.episode}`}
+                              </h4>
+                              <span className="text-[8px] text-white/20 font-black uppercase tracking-widest">Access Node Available</span>
                             </div>
+                            <Play size={14} className="text-white/20 group-hover:text-primary group-hover:scale-110 transition-all" />
                           </div>
                         ))
                       )}
                     </div>
+
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-center gap-4 pt-4">
+                        <button 
+                          disabled={epPage === 1} 
+                          onClick={() => setEpPage(p => p - 1)}
+                          className="btn btn-circle btn-xs btn-ghost border border-white/10 disabled:opacity-20"
+                        >
+                          <ChevronLeft size={14} />
+                        </button>
+                        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Page {epPage} / {totalPages}</span>
+                        <button 
+                          disabled={epPage === totalPages} 
+                          onClick={() => setEpPage(p => p + 1)}
+                          className="btn btn-circle btn-xs btn-ghost border border-white/10 disabled:opacity-20"
+                        >
+                          <ChevronRight size={14} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

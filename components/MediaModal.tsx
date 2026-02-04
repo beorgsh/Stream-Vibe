@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { TMDBMedia, TMDBEpisode } from '../types';
 import { X, Play, Loader2, Star, Download, ArrowLeft, ChevronLeft, ChevronRight, Search, ChevronDown } from 'lucide-react';
@@ -27,6 +26,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
   const [isClosing, setIsClosing] = useState(false);
   const [episodes, setEpisodes] = useState<TMDBEpisode[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isIframeLoading, setIsIframeLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'info' | 'episodes'>('info');
   const [details, setDetails] = useState<any>(null);
   const [currentSeason, setCurrentSeason] = useState(1);
@@ -69,15 +69,15 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
              const targetEp = epList.find((e: any) => e.episode_number.toString() === initialResumeData.episodeNumber?.toString());
              if (targetEp) {
                 hasAutoResumed.current = true;
-                // Note: Auto-resume from history DOES NOT trigger onPlay (history update) again 
-                // to prevent redundant timestamp updates just from opening
                 setPlayingEpisode(targetEp);
                 setIsPlaying(true);
+                setIsIframeLoading(true);
              }
           }
         } else if (type === 'movie' && mode === 'watch' && initialResumeData && !hasAutoResumed.current) {
           hasAutoResumed.current = true;
           setIsPlaying(true);
+          setIsIframeLoading(true);
         }
       } catch (error) {
         console.error("Error:", error);
@@ -146,16 +146,20 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
         } else if (type === 'movie') {
             window.open(`https://dl.vidsrc.vip/movie/${media.id}`, '_blank');
         }
-        // Always update history on download click
         if (onPlay) onPlay(episode);
         return;
     }
 
-    // Watch Mode: History only updates when a user manually clicks to play/change server
     if (isManual && onPlay) onPlay(episode);
     
-    if (episode) setPlayingEpisode(episode);
-    else setPlayingEpisode(null);
+    // Smooth reset for player logic
+    setIsIframeLoading(true);
+    if (episode) {
+      setPlayingEpisode(episode);
+    } else {
+      setPlayingEpisode(null);
+    }
+    
     setIsPlaying(true);
   };
 
@@ -189,14 +193,14 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
         </button>
 
         {isPlaying ? (
-            <div className="flex flex-col w-full bg-black animate-in fade-in">
+            <div className="flex flex-col w-full bg-black animate-in fade-in overflow-hidden">
                 <div className="flex flex-col md:flex-row md:items-center justify-between p-3 md:p-4 border-b border-white/5 bg-[#0a0a0a] gap-3">
-                    <button onClick={() => setIsPlaying(false)} className="flex items-center gap-2 text-white/50 hover:text-white transition-colors text-[10px] font-black uppercase tracking-widest shrink-0">
+                    <button onClick={() => { setIsPlaying(false); setPlayingEpisode(null); }} className="flex items-center gap-2 text-white/50 hover:text-white transition-colors text-[10px] font-black uppercase tracking-widest shrink-0">
                         <ArrowLeft size={14} /> Details
                     </button>
                     
                     <div className="flex flex-col items-center flex-1 min-w-0">
-                      <span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-primary truncate w-full text-center">
+                      <span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-primary truncate w-full text-center italic">
                           {type === 'tv' && playingEpisode 
                               ? `S${playingEpisode.season_number}:E${playingEpisode.episode_number} - ${playingEpisode.name}`
                               : media.title || media.name}
@@ -223,25 +227,37 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                     )}
                 </div>
                 
-                <div className="w-full aspect-video bg-black relative group">
+                <div className="w-full aspect-video bg-black relative group overflow-hidden">
+                     {(isIframeLoading || isLoading) && (
+                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md z-50 animate-in fade-in duration-300">
+                             <div className="relative">
+                                 <div className="w-16 h-16 border-4 border-white/5 border-t-primary rounded-full animate-spin" />
+                                 <div className="absolute inset-0 flex items-center justify-center">
+                                    <div className="w-8 h-8 bg-primary/20 blur-xl rounded-full animate-pulse" />
+                                 </div>
+                             </div>
+                             <p className="mt-6 text-[10px] font-black uppercase tracking-[0.4em] text-white/40 animate-pulse">Syncing Player Node...</p>
+                         </div>
+                     )}
                      <iframe 
                         key={`${playingEpisode?.season_number}-${playingEpisode?.episode_number}-${server}`}
                         src={getStreamUrl()} 
-                        className="w-full h-full border-none"
+                        className={`w-full h-full border-none transition-opacity duration-700 ${isIframeLoading ? 'opacity-0' : 'opacity-100'}`}
                         allowFullScreen 
+                        onLoad={() => setIsIframeLoading(false)}
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                      />
                 </div>
 
                 <div className="p-4 bg-[#0a0a0a] border-t border-white/5">
                     <div className="flex flex-wrap items-center justify-center gap-3">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-white/30 mr-2">Stream Source</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-white/30 mr-2">Stream Node</span>
                         {SERVERS.map(srv => (
                             <button
                                 key={srv.id}
                                 onClick={() => {
                                   setServer(srv.id);
-                                  // Update history when switching servers
+                                  setIsIframeLoading(true);
                                   if (onPlay) onPlay(playingEpisode || undefined);
                                 }}
                                 className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${server === srv.id ? 'bg-primary text-primary-content shadow-[0_0_15px_rgba(255,46,99,0.4)]' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white'}`}
@@ -254,7 +270,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
             </div>
         ) : (
             <div className="flex flex-col md:flex-row h-full overflow-hidden">
-            <div className="w-full md:w-56 shrink-0 relative">
+            <div className="w-full md:w-56 shrink-0 relative bg-black/20">
                 <img src={`https://image.tmdb.org/t/p/w500${media.poster_path}`} alt="" className="w-full h-full object-cover hidden md:block" />
                 <div className="md:hidden h-32 relative">
                 <img src={`https://image.tmdb.org/t/p/original${media.backdrop_path || media.poster_path}`} className="w-full h-full object-cover" alt="" />
@@ -313,7 +329,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                          <div className="relative z-20" ref={dropdownRef}>
                             <button
                                 onClick={() => setIsSeasonDropdownOpen(!isSeasonDropdownOpen)}
-                                className="flex items-center gap-2 px-3 py-1.5 md:py-2 bg-[#111] border border-white/10 rounded-lg hover:border-primary/50 transition-all group min-w-[120px] justify-between"
+                                className="flex items-center gap-2 px-3 py-1.5 md:py-2 bg-[#111] border border-white/10 rounded-lg hover:border-primary/50 transition-all group min-w-[120px] justify-between shadow-lg"
                             >
                                 <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-white group-hover:text-primary transition-colors truncate max-w-[140px]">
                                     {currentSeasonName}
@@ -359,7 +375,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                                 className="group/item flex items-center gap-4 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all cursor-pointer border border-transparent hover:border-white/5"
                             >
                                 <div className="w-20 h-12 rounded-lg overflow-hidden shrink-0 border border-white/5 relative">
-                                <img src={ep.still_path ? `https://image.tmdb.org/t/p/w200${ep.still_path}` : `https://image.tmdb.org/t/p/w200${media.backdrop_path}`} className="w-full h-full object-cover opacity-60 group-hover/item:opacity-100 transition-opacity" />
+                                <img src={ep.still_path ? `https://image.tmdb.org/p/w200${ep.still_path}` : `https://image.tmdb.org/p/w200${media.backdrop_path}`} className="w-full h-full object-cover opacity-60 group-hover/item:opacity-100 transition-opacity" />
                                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-opacity bg-black/40">
                                     {mode === 'download' ? (
                                          <Download size={16} className="text-white drop-shadow-lg" />
