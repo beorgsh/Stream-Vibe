@@ -66,6 +66,7 @@ export interface WatchHistoryItem {
   episodeNumber?: string | number;
   episodeTitle?: string;
   seasonNumber?: number;
+  episodeId?: string | number;
   // Extra data to reconstruct the media object
   fullMedia?: any; 
 }

@@ -223,14 +223,6 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
         <div className="space-y-8 md:space-y-12">
           {searchMode === 'watch' ? (
             <>
-              {/* History always visible in Watch mode */}
-              <ContinueWatching 
-                history={history} 
-                onSelect={onHistorySelect} 
-                onRemove={onHistoryRemove} 
-                onViewAll={onViewAllHistory}
-              />
-
               {isLoading ? (
                 <div className="space-y-12">
                   <div className="w-full h-[250px] md:h-[350px] bg-white/5 rounded-2xl animate-pulse" />
@@ -296,6 +288,14 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                       ))}
                     </div>
                   </section>
+
+                  {/* Continue Watching moved below spotlight */}
+                  <ContinueWatching 
+                    history={history} 
+                    onSelect={onHistorySelect} 
+                    onRemove={onHistoryRemove} 
+                    onViewAll={onViewAllHistory}
+                  />
 
                   <section className="space-y-4">
                     <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter border-l-2 border-primary pl-3">Trending</h2>

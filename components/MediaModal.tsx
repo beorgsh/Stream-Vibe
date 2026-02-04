@@ -10,6 +10,10 @@ interface MediaModalProps {
   apiKey: string;
   mode?: 'watch' | 'download';
   onPlay?: (episode?: TMDBEpisode) => void;
+  initialResumeData?: {
+    seasonNumber?: number;
+    episodeNumber?: string | number;
+  } | null;
 }
 
 const SERVERS = [
@@ -19,7 +23,7 @@ const SERVERS = [
   { id: 'vidzee', label: 'Vidzee' },
 ];
 
-const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 'watch', onPlay }) => {
+const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 'watch', onPlay, initialResumeData }) => {
   const [isClosing, setIsClosing] = useState(false);
   const [episodes, setEpisodes] = useState<TMDBEpisode[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -30,15 +34,12 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const episodesContainerRef = useRef<HTMLDivElement>(null);
   
-  // Pagination State
-  const [episodePage, setEpisodePage] = useState(1);
-  const EPISODES_PER_PAGE = 30;
-  const [jumpEpNum, setJumpEpNum] = useState('');
-
   // Player state
   const [isPlaying, setIsPlaying] = useState(false);
   const [playingEpisode, setPlayingEpisode] = useState<TMDBEpisode | null>(null);
   const [server, setServer] = useState('vidsrcto');
+
+  const hasAutoResumed = useRef(false);
 
   const handleClose = () => {
     setIsClosing(true);
@@ -54,12 +55,27 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
         const res = await fetch(`https://api.themoviedb.org/3/${type}/${media.id}?api_key=${apiKey}&append_to_response=videos`);
         const data = await res.json();
         setDetails(data);
+        
         if (type === 'tv') {
-          setCurrentSeason(1);
-          setEpisodePage(1);
-          const episodesRes = await fetch(`https://api.themoviedb.org/3/tv/${media.id}/season/1?api_key=${apiKey}`);
+          const seasonToLoad = initialResumeData?.seasonNumber || 1;
+          setCurrentSeason(seasonToLoad);
+          const episodesRes = await fetch(`https://api.themoviedb.org/3/tv/${media.id}/season/${seasonToLoad}?api_key=${apiKey}`);
           const episodesData = await episodesRes.json();
-          setEpisodes(episodesData.episodes || []);
+          const epList = episodesData.episodes || [];
+          setEpisodes(epList);
+
+          // Auto-resume logic for TV
+          if (initialResumeData?.episodeNumber && !hasAutoResumed.current) {
+             const targetEp = epList.find((e: any) => e.episode_number.toString() === initialResumeData.episodeNumber?.toString());
+             if (targetEp) {
+                hasAutoResumed.current = true;
+                handlePlay(targetEp);
+             }
+          }
+        } else if (type === 'movie' && initialResumeData && !hasAutoResumed.current) {
+          // Auto-resume logic for Movie
+          hasAutoResumed.current = true;
+          handlePlay();
         }
       } catch (error) {
         console.error("Error:", error);
@@ -70,7 +86,6 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
     fetchDetails();
   }, [media.id, type, apiKey]);
 
-  // Handle click outside dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -85,7 +100,6 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
     if (newSeason < 1) return;
     setIsLoading(true);
     setCurrentSeason(newSeason);
-    setEpisodePage(1); // Reset to first page on season change
     try {
         const res = await fetch(`https://api.themoviedb.org/3/tv/${media.id}/season/${newSeason}?api_key=${apiKey}`);
         const data = await res.json();
@@ -95,33 +109,6 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
     } finally {
         setIsLoading(false);
     }
-  };
-
-  const handleJump = (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!jumpEpNum) return;
-      const target = parseInt(jumpEpNum);
-      const targetIndex = episodes.findIndex(ep => ep.episode_number === target);
-      if (targetIndex !== -1) {
-          const newPage = Math.floor(targetIndex / EPISODES_PER_PAGE) + 1;
-          setEpisodePage(newPage);
-          setJumpEpNum('');
-
-          // Allow DOM to update if page changes
-          setTimeout(() => {
-              const element = document.getElementById(`episode-${target}`);
-              if (element) {
-                  element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  // Visual highlight effect
-                  element.classList.remove('bg-white/5');
-                  element.classList.add('bg-primary/20', 'border-primary/50');
-                  setTimeout(() => {
-                      element.classList.remove('bg-primary/20', 'border-primary/50');
-                      element.classList.add('bg-white/5');
-                  }, 2000);
-              }
-          }, 150);
-      }
   };
 
   const getStreamUrl = () => {
@@ -151,7 +138,6 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
   };
 
   const handlePlay = (episode?: TMDBEpisode) => {
-    // If in download mode, intercept play action to open download link directly
     if (mode === 'download') {
         if (type === 'tv' && episode) {
             window.open(`https://vidsrc.to/embed/tv/${media.id}/${episode.season_number}/${episode.episode_number}`, '_blank');
@@ -166,14 +152,6 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
     setIsPlaying(true);
     if (onPlay) onPlay(episode);
   };
-
-  // Derived Pagination Data
-  const paginatedEpisodes = useMemo(() => {
-      const start = (episodePage - 1) * EPISODES_PER_PAGE;
-      return episodes.slice(start, start + EPISODES_PER_PAGE);
-  }, [episodes, episodePage]);
-
-  const totalPages = Math.ceil(episodes.length / EPISODES_PER_PAGE);
 
   const currentSeasonName = useMemo(() => {
     if (!details?.seasons) return `Season ${currentSeason}`;
@@ -202,7 +180,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                             ? `S${playingEpisode.season_number}:E${playingEpisode.episode_number} - ${playingEpisode.name}`
                             : media.title || media.name}
                     </span>
-                    <div className="w-4 hidden md:block" /> {/* Spacer */}
+                    <div className="w-4 hidden md:block" />
                 </div>
                 
                 <div className="w-full aspect-video bg-black relative group">
@@ -282,22 +260,10 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                                 {mode === 'download' ? <Download size={12} className="mr-1" /> : <Play size={12} className="fill-current mr-1" />}
                                 {type === 'movie' ? (mode === 'download' ? 'Download Film' : 'Play Film') : 'Browse Episodes'}
                             </button>
-                            
-                            {type === 'movie' && mode === 'watch' && (
-                                <button 
-                                    onClick={() => window.open(`https://vidsrc.to/embed/movie/${media.id}`, '_blank')}
-                                    className="btn btn-ghost btn-sm rounded-full px-6 font-black uppercase text-[9px] tracking-widest border border-white/10 hover:bg-white/10 hover:border-white/20"
-                                >
-                                    <Download size={12} className="mr-1" />
-                                    Download
-                                </button>
-                            )}
                         </div>
                     </div>
                 ) : (
                     <div className="space-y-4 animate-in slide-in-from-right-2 h-full flex flex-col">
-                    
-                    {/* Controls: Season Select & Jump */}
                     <div className="flex flex-wrap items-center justify-between gap-4 p-1 border-b border-white/5 pb-2">
                          <div className="relative z-20" ref={dropdownRef}>
                             <button
@@ -332,19 +298,6 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                                 </div>
                             )}
                          </div>
-
-                         <form onSubmit={handleJump} className="flex items-center gap-2">
-                            <input 
-                                type="number" 
-                                placeholder="Jump Ep..." 
-                                className="input input-xs md:input-sm w-20 md:w-24 bg-white/5 border border-white/10 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-widest focus:outline-none focus:border-primary text-white placeholder:text-white/20"
-                                value={jumpEpNum}
-                                onChange={(e) => setJumpEpNum(e.target.value)}
-                            />
-                            <button type="submit" className="btn btn-xs md:btn-sm btn-square btn-ghost border border-white/10 rounded-lg hover:bg-white/10">
-                                <Search size={12} />
-                            </button>
-                         </form>
                     </div>
 
                     <div ref={episodesContainerRef} className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-2">
@@ -353,7 +306,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                                 {[...Array(5)].map((_, i) => <SkeletonRow key={i} />)}
                             </div>
                         ) : (
-                            paginatedEpisodes.map(ep => (
+                            episodes.map(ep => (
                             <div 
                                 key={ep.id}
                                 id={`episode-${ep.episode_number}`}
@@ -378,51 +331,10 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                                         E{ep.episode_number} • {ep.season_number}S
                                     </span>
                                 </div>
-                                
-                                {mode === 'watch' && (
-                                    <button 
-                                        onClick={(e) => {
-                                        e.stopPropagation();
-                                        window.open(`https://vidsrc.to/embed/tv/${media.id}/${ep.season_number}/${ep.episode_number}`, '_blank');
-                                        }}
-                                        className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-white/20 hover:text-white transition-all z-10"
-                                        title="Download Episode"
-                                    >
-                                        <Download size={16} />
-                                    </button>
-                                )}
                             </div>
                             ))
                         )}
-                        {!isLoading && episodes.length === 0 && (
-                            <div className="text-center py-10 text-[10px] font-black text-white/20 uppercase tracking-widest">
-                                No episodes found for Season {currentSeason}
-                            </div>
-                        )}
                     </div>
-                    
-                    {/* Pagination */}
-                    {totalPages > 1 && (
-                       <div className="flex items-center justify-center gap-4 pt-4 border-t border-white/5 shrink-0">
-                          <button 
-                            disabled={episodePage === 1} 
-                            onClick={() => setEpisodePage(p => p - 1)}
-                            className="btn btn-circle btn-xs btn-ghost border border-white/10 disabled:opacity-20 hover:bg-white/10"
-                          >
-                            <ChevronLeft size={14} />
-                          </button>
-                          <span className="text-[10px] font-black uppercase tracking-widest text-white/40">
-                            Page {episodePage} <span className="mx-1 text-white/10">/</span> {totalPages}
-                          </span>
-                          <button 
-                            disabled={episodePage === totalPages} 
-                            onClick={() => setEpisodePage(p => p + 1)}
-                            className="btn btn-circle btn-xs btn-ghost border border-white/10 disabled:opacity-20 hover:bg-white/10"
-                          >
-                            <ChevronRight size={14} />
-                          </button>
-                       </div>
-                    )}
                     </div>
                 )}
                 </div>

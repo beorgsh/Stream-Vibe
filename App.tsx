@@ -17,6 +17,13 @@ const App: React.FC = () => {
   const [showAdBlockModal, setShowAdBlockModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   
+  // Track specific episode to resume when modal opens
+  const [resumeData, setResumeData] = useState<{
+    episodeId?: string | number;
+    seasonNumber?: number;
+    episodeNumber?: string | number;
+  } | null>(null);
+
   // History State
   const [watchHistory, setWatchHistory] = useState<WatchHistoryItem[]>([]);
 
@@ -49,24 +56,28 @@ const App: React.FC = () => {
 
   const addToHistory = useCallback((item: WatchHistoryItem) => {
     setWatchHistory(prev => {
-      // For series (Anime/TV), we only want to keep the LATEST episode in the history list
-      // Filter out previous instances of this series
-      const filtered = prev.filter(h => h.id !== item.id);
-      // Add new item to the top
+      // Logic: For series (Anime/TV), we only want to keep the LATEST episode in history
+      const filtered = prev.filter(h => h.id.toString() !== item.id.toString());
       const updated = [item, ...filtered];
-      // Keep only last 50 items
       return updated.slice(0, 50);
     });
   }, []);
 
   const removeFromHistory = useCallback((id: string | number) => {
-    setWatchHistory(prev => prev.filter(item => item.id !== id));
+    setWatchHistory(prev => prev.filter(item => item.id.toString() !== id.toString()));
   }, []);
 
   const handleSelectFromHistory = (item: WatchHistoryItem) => {
+    setResumeData({
+      episodeId: item.episodeId,
+      seasonNumber: item.seasonNumber,
+      episodeNumber: item.episodeNumber
+    });
+
     if (item.type === 'anime') {
       setActiveTab(AppTab.ANIME);
-      setSelectedAnime(item.fullMedia);
+      const media = { ...item.fullMedia, source: item.source };
+      setSelectedAnime(media);
     } else {
       setActiveTab(AppTab.GLOBAL);
       setMediaMode('watch');
@@ -80,6 +91,12 @@ const App: React.FC = () => {
     setShowAdBlockModal(false);
   };
 
+  const handleCloseModals = () => {
+    setSelectedAnime(null);
+    setSelectedMedia(null);
+    setResumeData(null); // Clear resume intent when closing
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-[#0c0c0c] relative">
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -87,7 +104,7 @@ const App: React.FC = () => {
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-4 md:py-8">
         {activeTab === AppTab.ANIME ? (
           <AnimeTab 
-            onSelectAnime={setSelectedAnime} 
+            onSelectAnime={(anime) => { setResumeData(null); setSelectedAnime(anime); }} 
             history={watchHistory.filter(h => h.type === 'anime')}
             onHistorySelect={handleSelectFromHistory}
             onHistoryRemove={removeFromHistory}
@@ -96,6 +113,7 @@ const App: React.FC = () => {
         ) : ( activeTab === AppTab.GLOBAL ? (
           <GlobalTab 
             onSelectMedia={(media, mode) => {
+              setResumeData(null);
               setSelectedMedia(media);
               setMediaMode(mode);
             }} 
@@ -137,7 +155,8 @@ const App: React.FC = () => {
       {selectedAnime && (
         <AnimeModal 
           anime={selectedAnime} 
-          onClose={() => setSelectedAnime(null)} 
+          onClose={handleCloseModals} 
+          initialEpisodeId={resumeData?.episodeId as string}
           onPlay={(ep) => {
             addToHistory({
               id: selectedAnime.session,
@@ -147,6 +166,7 @@ const App: React.FC = () => {
               source: selectedAnime.source,
               episodeNumber: ep.episode,
               episodeTitle: ep.title,
+              episodeId: ep.session,
               timestamp: Date.now(),
               fullMedia: selectedAnime
             });
@@ -157,9 +177,10 @@ const App: React.FC = () => {
       {selectedMedia && (
         <MediaModal 
           media={selectedMedia} 
-          onClose={() => setSelectedMedia(null)} 
+          onClose={handleCloseModals} 
           apiKey={TMDB_KEY}
           mode={mediaMode}
+          initialResumeData={resumeData}
           onPlay={(ep) => {
             addToHistory({
               id: selectedMedia.id,
@@ -169,6 +190,7 @@ const App: React.FC = () => {
               episodeNumber: ep?.episode_number,
               episodeTitle: ep?.name,
               seasonNumber: ep?.season_number,
+              episodeId: ep?.id,
               timestamp: Date.now(),
               fullMedia: selectedMedia
             });

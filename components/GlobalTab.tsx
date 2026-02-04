@@ -167,13 +167,6 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
           
           {viewMode === 'watch' ? (
             <>
-              <ContinueWatching 
-                history={history} 
-                onSelect={onHistorySelect} 
-                onRemove={onHistoryRemove} 
-                onViewAll={onViewAllHistory}
-              />
-
               {/* Global Spotlight Carousel - Watch Mode Only */}
               {!isLoading && trending.length > 0 && (
                 <section className="space-y-3">
@@ -222,6 +215,14 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                   </div>
                 </section>
               )}
+
+              {/* Continue Watching moved below global spotlight */}
+              <ContinueWatching 
+                history={history} 
+                onSelect={onHistorySelect} 
+                onRemove={onHistoryRemove} 
+                onViewAll={onViewAllHistory}
+              />
 
               <section className="space-y-4">
                 <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter border-l-2 border-primary pl-3">Trending Now</h2>

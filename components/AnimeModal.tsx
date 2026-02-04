@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AnimeSeries, AnimeEpisode, AnimeLink } from '../types';
 import { X, Play, Loader2, ExternalLink, ArrowLeft, Search, ChevronLeft, ChevronRight, SkipForward } from 'lucide-react';
 import { SkeletonRow, SkeletonText } from './Skeleton';
@@ -8,6 +8,7 @@ interface AnimeModalProps {
   anime: AnimeSeries;
   onClose: () => void;
   onPlay?: (episode: AnimeEpisode) => void;
+  initialEpisodeId?: string;
 }
 
 interface LinkGroup {
@@ -22,7 +23,7 @@ interface WatchServer {
   serverName: string;
 }
 
-const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay }) => {
+const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initialEpisodeId }) => {
   const [isClosing, setIsClosing] = useState(false);
   const [episodes, setEpisodes] = useState<AnimeEpisode[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -40,6 +41,8 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay }) => {
   const [activeWatchServer, setActiveWatchServer] = useState<string>('hd-1');
   const [activeWatchType, setActiveWatchType] = useState<'sub' | 'dub'>('sub');
   const [iframeUrl, setIframeUrl] = useState<string | null>(null);
+
+  const hasAutoResumed = useRef(false);
 
   const handleClose = () => {
     setIsClosing(true);
@@ -117,6 +120,17 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay }) => {
     fetchEpisodes();
   }, [anime.session]);
 
+  // Handle auto-resume once episodes load
+  useEffect(() => {
+    if (episodes.length > 0 && initialEpisodeId && !hasAutoResumed.current) {
+      const targetEp = episodes.find(e => e.session === initialEpisodeId);
+      if (targetEp) {
+        hasAutoResumed.current = true;
+        fetchEpisodeLinks(targetEp);
+      }
+    }
+  }, [episodes, initialEpisodeId]);
+
   const filteredEpisodes = useMemo(() => {
     return episodes.filter(ep => 
       ep.episode.toLowerCase().includes(epSearch.toLowerCase()) || 
@@ -131,7 +145,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay }) => {
 
   const totalPages = Math.ceil(filteredEpisodes.length / EP_PER_PAGE);
 
-  const fetchStreamData = async (epId: string, serverName: string, type: 'sub' | 'dub') => {
+  const fetchStreamData = async (epId: string, serverName: string, type: 'sub' | 'dub', originalEp: AnimeEpisode) => {
     setIsLinksLoading(true);
     setIframeUrl(null);
     setActiveWatchServer(serverName);
@@ -143,7 +157,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay }) => {
         setWatchServers(data.results.servers || []);
         if (data.results.streamingLink?.iframe) {
           setIframeUrl(`${data.results.streamingLink.iframe}&_debug=true`);
-          if (onPlay && selectedEpisode) onPlay(selectedEpisode);
+          if (onPlay) onPlay(originalEp);
         }
       }
     } catch (error) {
@@ -163,7 +177,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay }) => {
 
     try {
       if (anime.source === 'watch') {
-        await fetchStreamData(ep.session, 'hd-1', 'sub');
+        await fetchStreamData(ep.session, 'hd-1', 'sub', ep);
       } else {
         const response = await fetch(`https://anime.apex-cloud.workers.dev/?method=episode&session=${anime.session}&ep=${ep.session}`);
         const data = await response.json();
@@ -219,8 +233,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay }) => {
 
     const availableServers = type === 'sub' ? watchServersByType.sub : watchServersByType.dub;
     if (availableServers.length > 0) {
-      // Pick the first server of that category to ensure visual highlighting stays in sync with actual playback
-      fetchStreamData(selectedEpisode.session, availableServers[0].serverName, type);
+      fetchStreamData(selectedEpisode.session, availableServers[0].serverName, type, selectedEpisode);
     } else {
       setActiveWatchType(type);
     }
@@ -331,12 +344,11 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay }) => {
                        </div>
                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                           {(activeWatchType === 'sub' ? watchServersByType.sub : watchServersByType.dub).map((server, i) => {
-                             // Correct highlight logic: must match both server name and type to be considered active
                              const isActive = activeWatchServer.toLowerCase() === server.serverName.toLowerCase() && activeWatchType === server.type;
                              return (
                                <button 
                                  key={i} 
-                                 onClick={() => fetchStreamData(selectedEpisode.session, server.serverName, server.type)} 
+                                 onClick={() => fetchStreamData(selectedEpisode.session, server.serverName, server.type, selectedEpisode)} 
                                  className={`group relative p-2.5 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all overflow-hidden ${isActive ? 'bg-primary border-primary text-primary-content shadow-[0_0_15px_rgba(255,46,99,0.5)]' : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10 hover:text-white'}`}
                                >
                                  <div className="relative z-10 flex items-center justify-center gap-2">
@@ -402,7 +414,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay }) => {
                           <img src={ep.snapshot || anime.image} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" loading="lazy" />
                         </div>
                         <div className="flex-1 overflow-hidden">
-                          <h4 className="font-black text-[10px] md:text-[11px] text-white/90 group-hover:text-white truncate uppercase tracking-tight">
+                          <h4 className="font-black text-[10px] md:text-[11px] text-white/90 group-hover:text-white truncate uppercase tracking-tight mb-0.5">
                             {ep.title || `Segment ${ep.episode}`}
                           </h4>
                           <div className="text-[7px] font-bold text-primary/60 uppercase tracking-widest group-hover:text-primary transition-colors">Neural Stream Active</div>

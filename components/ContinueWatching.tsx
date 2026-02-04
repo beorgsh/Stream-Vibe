@@ -29,31 +29,37 @@ const ContinueWatching: React.FC<ContinueWatchingProps> = ({ history, onSelect, 
         </button>
       </div>
 
-      <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar snap-x snap-mandatory">
+      <div className="flex flex-nowrap gap-4 overflow-x-auto pb-4 no-scrollbar snap-x snap-mandatory">
         {history.slice(0, 10).map((item) => (
           <div 
             key={item.id} 
-            className="group relative w-[200px] md:w-[280px] shrink-0 aspect-video rounded-xl md:rounded-2xl overflow-hidden bg-white/5 border border-white/5 cursor-pointer snap-start"
+            className="group relative w-[180px] md:w-[260px] shrink-0 aspect-video rounded-xl md:rounded-2xl overflow-hidden bg-white/5 border border-white/10 cursor-pointer snap-start"
           >
-            <img 
-              src={item.image} 
-              alt={item.title} 
-              className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700" 
-              onClick={() => onSelect(item)}
-            />
+            <div className="w-full h-full" onClick={() => onSelect(item)}>
+              <img 
+                src={item.image} 
+                alt={item.title} 
+                className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700" 
+              />
+            </div>
             
             <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent pointer-events-none" />
             
-            <div className="absolute top-2 right-2 flex gap-1">
+            <div className="absolute top-2 right-2 flex gap-1 z-30">
               <button 
-                onClick={(e) => { e.stopPropagation(); onRemove(item.id); }}
-                className="w-7 h-7 flex items-center justify-center rounded-full bg-black/60 backdrop-blur-md text-white/40 hover:text-red-500 border border-white/10 opacity-0 group-hover:opacity-100 transition-all"
+                onClick={(e) => { 
+                  e.preventDefault();
+                  e.stopPropagation(); 
+                  onRemove(item.id); 
+                }}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-black/60 backdrop-blur-md text-white/60 hover:text-red-500 hover:bg-red-500/20 border border-white/10 transition-all pointer-events-auto"
+                title="Remove from history"
               >
-                <Trash2 size={12} />
+                <Trash2 size={14} />
               </button>
             </div>
 
-            <div className="absolute bottom-3 left-3 right-3 pointer-events-none">
+            <div className="absolute bottom-3 left-3 right-3 pointer-events-none z-20">
               <h4 className="text-[10px] md:text-xs font-black text-white uppercase truncate drop-shadow-lg">
                 {item.title}
               </h4>
@@ -66,8 +72,7 @@ const ContinueWatching: React.FC<ContinueWatchingProps> = ({ history, onSelect, 
             </div>
 
             <div 
-              className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={() => onSelect(item)}
+              className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none"
             >
               <div className="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center shadow-2xl scale-75 group-hover:scale-100 transition-transform">
                 <Play className="fill-current ml-1" size={16} />
@@ -75,8 +80,7 @@ const ContinueWatching: React.FC<ContinueWatchingProps> = ({ history, onSelect, 
             </div>
           </div>
         ))}
-        {/* Placeholder to prevent items from sticking to the edge on mobile */}
-        <div className="w-4 shrink-0" />
+        <div className="w-2 md:w-4 shrink-0" />
       </div>
     </section>
   );
