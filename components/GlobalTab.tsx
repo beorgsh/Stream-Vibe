@@ -1,15 +1,20 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { TMDBMedia } from '../types';
+import { TMDBMedia, WatchHistoryItem } from '../types';
 import { Search, Loader2 } from 'lucide-react';
 import MediaCard from './MediaCard';
 import { SkeletonCard } from './Skeleton';
+import ContinueWatching from './ContinueWatching';
 
 interface GlobalTabProps {
   onSelectMedia: (media: TMDBMedia, mode: 'watch' | 'download') => void;
+  history: WatchHistoryItem[];
+  onHistorySelect: (item: WatchHistoryItem) => void;
+  onHistoryRemove: (id: string | number) => void;
+  onViewAllHistory: () => void;
 }
 
-const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia }) => {
+const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistorySelect, onHistoryRemove, onViewAllHistory }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'watch' | 'download'>('download');
   const [trending, setTrending] = useState<TMDBMedia[]>([]);
@@ -162,6 +167,13 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia }) => {
           
           {viewMode === 'watch' ? (
             <>
+              <ContinueWatching 
+                history={history} 
+                onSelect={onHistorySelect} 
+                onRemove={onHistoryRemove} 
+                onViewAll={onViewAllHistory}
+              />
+
               {/* Global Spotlight Carousel - Watch Mode Only */}
               {!isLoading && trending.length > 0 && (
                 <section className="space-y-3">

@@ -56,6 +56,20 @@ export interface TMDBEpisode {
   overview: string;
 }
 
+export interface WatchHistoryItem {
+  id: string | number;
+  title: string;
+  image: string;
+  type: 'anime' | 'movie' | 'tv';
+  timestamp: number;
+  source?: 'apex' | 'watch';
+  episodeNumber?: string | number;
+  episodeTitle?: string;
+  seasonNumber?: number;
+  // Extra data to reconstruct the media object
+  fullMedia?: any; 
+}
+
 export enum AppTab {
   ANIME = 'anime',
   GLOBAL = 'global'

@@ -9,6 +9,7 @@ interface MediaModalProps {
   onClose: () => void;
   apiKey: string;
   mode?: 'watch' | 'download';
+  onPlay?: (episode?: TMDBEpisode) => void;
 }
 
 const SERVERS = [
@@ -18,7 +19,7 @@ const SERVERS = [
   { id: 'vidzee', label: 'Vidzee' },
 ];
 
-const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 'watch' }) => {
+const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 'watch', onPlay }) => {
   const [isClosing, setIsClosing] = useState(false);
   const [episodes, setEpisodes] = useState<TMDBEpisode[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -163,6 +164,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
     if (episode) setPlayingEpisode(episode);
     else setPlayingEpisode(null);
     setIsPlaying(true);
+    if (onPlay) onPlay(episode);
   };
 
   // Derived Pagination Data

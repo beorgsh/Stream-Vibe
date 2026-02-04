@@ -1,15 +1,20 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { AnimeSeries } from '../types';
+import { AnimeSeries, WatchHistoryItem } from '../types';
 import { Search, Loader2, RefreshCw, Play } from 'lucide-react';
 import AnimeCard from './AnimeCard';
 import { SkeletonCard } from './Skeleton';
+import ContinueWatching from './ContinueWatching';
 
 interface AnimeTabProps {
   onSelectAnime: (anime: AnimeSeries) => void;
+  history: WatchHistoryItem[];
+  onHistorySelect: (item: WatchHistoryItem) => void;
+  onHistoryRemove: (id: string | number) => void;
+  onViewAllHistory: () => void;
 }
 
-const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime }) => {
+const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySelect, onHistoryRemove, onViewAllHistory }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState<'download' | 'watch'>('download');
   const [animeList, setAnimeList] = useState<AnimeSeries[]>([]);
@@ -226,6 +231,13 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime }) => {
                </div>
             ) : watchHome && (
               <>
+                <ContinueWatching 
+                  history={history} 
+                  onSelect={onHistorySelect} 
+                  onRemove={onHistoryRemove} 
+                  onViewAll={onViewAllHistory}
+                />
+
                 <section className="space-y-3">
                   <div className="relative w-full rounded-2xl h-[250px] md:h-[350px] shadow-xl border border-white/5 overflow-hidden group">
                     <div 

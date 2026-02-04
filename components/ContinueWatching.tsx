@@ -1,0 +1,83 @@
+
+import React from 'react';
+import { WatchHistoryItem } from '../types';
+import { Play, Trash2, History, ChevronRight } from 'lucide-react';
+
+interface ContinueWatchingProps {
+  history: WatchHistoryItem[];
+  onSelect: (item: WatchHistoryItem) => void;
+  onRemove: (id: string | number) => void;
+  onViewAll: () => void;
+  title?: string;
+}
+
+const ContinueWatching: React.FC<ContinueWatchingProps> = ({ history, onSelect, onRemove, onViewAll, title = "Continue Watching" }) => {
+  if (history.length === 0) return null;
+
+  return (
+    <section className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-700">
+      <div className="flex items-center justify-between border-l-2 border-primary pl-3">
+        <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter flex items-center gap-2">
+          <History size={16} className="text-primary" />
+          {title}
+        </h2>
+        <button 
+          onClick={onViewAll}
+          className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-primary transition-colors"
+        >
+          View All <ChevronRight size={12} />
+        </button>
+      </div>
+
+      <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar snap-x snap-mandatory">
+        {history.slice(0, 10).map((item) => (
+          <div 
+            key={item.id} 
+            className="group relative min-w-[160px] md:min-w-[220px] aspect-video rounded-xl md:rounded-2xl overflow-hidden bg-white/5 border border-white/5 cursor-pointer snap-start"
+          >
+            <img 
+              src={item.image} 
+              alt={item.title} 
+              className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700" 
+              onClick={() => onSelect(item)}
+            />
+            
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent pointer-events-none" />
+            
+            <div className="absolute top-2 right-2 flex gap-1">
+              <button 
+                onClick={(e) => { e.stopPropagation(); onRemove(item.id); }}
+                className="w-7 h-7 flex items-center justify-center rounded-full bg-black/60 backdrop-blur-md text-white/40 hover:text-red-500 border border-white/10 opacity-0 group-hover:opacity-100 transition-all"
+              >
+                <Trash2 size={12} />
+              </button>
+            </div>
+
+            <div className="absolute bottom-3 left-3 right-3 pointer-events-none">
+              <h4 className="text-[10px] md:text-xs font-black text-white uppercase truncate drop-shadow-lg">
+                {item.title}
+              </h4>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                <span className="text-[8px] font-bold text-primary uppercase tracking-widest">
+                  {item.type === 'movie' ? 'Resume' : `S${item.seasonNumber || 1}:E${item.episodeNumber}`}
+                </span>
+              </div>
+            </div>
+
+            <div 
+              className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={() => onSelect(item)}
+            >
+              <div className="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center shadow-2xl scale-75 group-hover:scale-100 transition-transform">
+                <Play className="fill-current ml-1" size={16} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+};
+
+export default ContinueWatching;

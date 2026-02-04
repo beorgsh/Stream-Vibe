@@ -7,6 +7,7 @@ import { SkeletonRow, SkeletonText } from './Skeleton';
 interface AnimeModalProps {
   anime: AnimeSeries;
   onClose: () => void;
+  onPlay?: (episode: AnimeEpisode) => void;
 }
 
 interface LinkGroup {
@@ -21,7 +22,7 @@ interface WatchServer {
   serverName: string;
 }
 
-const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose }) => {
+const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay }) => {
   const [isClosing, setIsClosing] = useState(false);
   const [episodes, setEpisodes] = useState<AnimeEpisode[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -142,6 +143,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose }) => {
         setWatchServers(data.results.servers || []);
         if (data.results.streamingLink?.iframe) {
           setIframeUrl(`${data.results.streamingLink.iframe}&_debug=true`);
+          if (onPlay && selectedEpisode) onPlay(selectedEpisode);
         }
       }
     } catch (error) {
@@ -176,6 +178,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose }) => {
           { category: 'Dub', links: rawLinks.slice(Math.ceil(rawLinks.length/2)).map(mapItem) }
         ];
         setGroupedLinks(groups.filter(g => g.links.length > 0));
+        if (onPlay) onPlay(ep);
       }
     } catch (error) {
       console.error("Error:", error);
