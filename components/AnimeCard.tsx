@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { AnimeSeries } from '../types';
 import { Play, Star } from 'lucide-react';
 
@@ -9,18 +9,21 @@ interface AnimeCardProps {
 }
 
 const AnimeCard: React.FC<AnimeCardProps> = ({ anime, onClick }) => {
+  const [imgError, setImgError] = useState(false);
+
   return (
     <div 
       className="group relative cursor-pointer bg-[#111] rounded-[1rem] md:rounded-[1.5rem] overflow-hidden border border-white/5 transition-all duration-500 hover:scale-[1.03] hover:z-20"
       onClick={onClick}
     >
       <div className="aspect-[2/3] overflow-hidden relative">
-        {anime.image ? (
+        {anime.image && !imgError ? (
           <img 
             src={anime.image} 
             alt={anime.title}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             loading="lazy"
+            onError={() => setImgError(true)}
           />
         ) : (
           <div className="w-full h-full bg-white/5 flex flex-col items-center justify-center p-4 text-center">
