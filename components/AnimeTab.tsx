@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { AnimeSeries, WatchHistoryItem } from '../types';
-import { Search, Loader2, RefreshCw, Play } from 'lucide-react';
+import { Search, Loader2, RefreshCw, Play, Trophy, Zap, Flame, Heart, Star, Activity, CheckCircle } from 'lucide-react';
 import AnimeCard from './AnimeCard';
 import { SkeletonCard } from './Skeleton';
 import ContinueWatching from './ContinueWatching';
@@ -26,7 +25,11 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
     spotlights: any[];
     trending: AnimeSeries[];
     topTenToday: AnimeSeries[];
-    latest: AnimeSeries[];
+    topAiring: AnimeSeries[];
+    mostPopular: AnimeSeries[];
+    mostFavorite: AnimeSeries[];
+    latestCompleted: AnimeSeries[];
+    latestEpisode: AnimeSeries[];
   } | null>(null);
 
   const [spotlightIndex, setSpotlightIndex] = useState(0);
@@ -43,6 +46,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
   const fetchAnimeList = useCallback(async () => {
     setIsLoading(true);
     try {
+      // Download Mode Source
       const response = await fetch(`https://anime.apex-cloud.workers.dev/?method=search&query=a`);
       const data = await response.json();
       const results = data.data || [];
@@ -58,6 +62,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
       }));
       setAnimeList(mapped.sort(() => 0.5 - Math.random()).slice(0, 18));
 
+      // Watch Mode Source (Iota API)
       const watchRes = await fetch(`https://anime-api-iota-six.vercel.app/api/`);
       const watchData = await watchRes.json();
       if (watchData.success && watchData.results) {
@@ -65,6 +70,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
           title: item.title,
           image: item.poster || "",
           session: item.id,
+          description: item.description || "",
           type: item.tvInfo?.showType || "TV",
           episodes: item.tvInfo?.episodeInfo?.sub || item.tvInfo?.sub || item.tvInfo?.eps,
           score: item.tvInfo?.rating || "N/A",
@@ -75,11 +81,15 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
           spotlights: watchData.results.spotlights || [],
           trending: (watchData.results.trending || []).map(mapIota),
           topTenToday: (watchData.results.topTen?.today || []).map(mapIota),
-          latest: (watchData.results.latestEpisodeAnimes || []).map(mapIota),
+          topAiring: (watchData.results.topAiring || []).map(mapIota),
+          mostPopular: (watchData.results.mostPopular || []).map(mapIota),
+          mostFavorite: (watchData.results.mostFavorite || []).map(mapIota),
+          latestCompleted: (watchData.results.latestCompleted || []).map(mapIota),
+          latestEpisode: (watchData.results.latestEpisode || []).map(mapIota),
         });
       }
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error fetching anime data:", error);
     } finally {
       setIsLoading(false);
     }
@@ -160,10 +170,29 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
         }
       }
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Search failed:", error);
     } finally {
       setIsSearching(false);
     }
+  };
+
+  const renderHorizontalSection = (title: string, items: AnimeSeries[], icon: React.ReactNode) => {
+    if (!items.length) return null;
+    return (
+      <section className="space-y-4">
+        <div className="flex items-center gap-2 border-l-2 border-primary pl-3">
+          {icon}
+          <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter">{title}</h2>
+        </div>
+        <div className="flex gap-3 overflow-x-auto pb-6 no-scrollbar snap-x snap-mandatory">
+          {items.map((anime, idx) => (
+            <div key={idx} className="min-w-[140px] md:min-w-[180px] snap-start">
+              <AnimeCard anime={anime} onClick={() => onSelectAnime(anime)} />
+            </div>
+          ))}
+        </div>
+      </section>
+    );
   };
 
   return (
@@ -195,7 +224,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
           <input 
             type="text" 
             placeholder="Quick Find..."
-            className="input input-sm h-10 md:h-12 w-full bg-white/5 border-white/10 rounded-full pl-10 pr-24 text-xs font-medium"
+            className="input input-sm h-10 md:h-12 w-full bg-white/5 border-white/10 rounded-full pl-10 pr-24 text-xs font-medium focus:border-primary transition-all"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -295,7 +324,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                     </div>
                   </section>
 
-                  {/* Continue Watching filtered for Watch mode */}
+                  {/* Continue Watching */}
                   <ContinueWatching 
                     history={filteredHistory} 
                     onSelect={onHistorySelect} 
@@ -304,16 +333,44 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                     title="Stream History"
                   />
 
+                  {/* Trending Section */}
+                  {renderHorizontalSection("Trending Now", watchHome.trending, <Flame size={18} className="text-orange-500" />)}
+
+                  {/* Top 10 Today Section */}
                   <section className="space-y-4">
-                    <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter border-l-2 border-primary pl-3">Trending</h2>
-                    <div className="flex gap-3 overflow-x-auto pb-6 no-scrollbar snap-x snap-mandatory">
-                      {watchHome.trending.map((anime, idx) => (
-                        <div key={idx} className="min-w-[140px] md:min-w-[180px] snap-start">
-                          <AnimeCard anime={anime} onClick={() => onSelectAnime(anime)} />
+                    <div className="flex items-center gap-2 border-l-2 border-primary pl-3">
+                      <Trophy size={18} className="text-yellow-500" />
+                      <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter">Top 10 Today</h2>
+                    </div>
+                    <div className="flex gap-6 overflow-x-auto pb-10 pt-4 no-scrollbar snap-x snap-mandatory px-4">
+                      {watchHome.topTenToday.map((anime, idx) => (
+                        <div key={idx} className="relative min-w-[160px] md:min-w-[200px] snap-start group">
+                           {/* Giant Ranking Number */}
+                           <div className="absolute -left-6 -bottom-4 z-10 select-none pointer-events-none">
+                              <span className="text-7xl md:text-9xl font-black italic text-white/10 group-hover:text-primary/20 transition-colors duration-500" style={{ WebkitTextStroke: '2px rgba(255,255,255,0.1)' }}>
+                                {idx + 1}
+                              </span>
+                           </div>
+                           <AnimeCard anime={anime} onClick={() => onSelectAnime(anime)} />
                         </div>
                       ))}
                     </div>
                   </section>
+
+                  {/* Top Airing */}
+                  {renderHorizontalSection("Top Airing", watchHome.topAiring, <Activity size={18} className="text-emerald-400" />)}
+
+                  {/* Most Popular */}
+                  {renderHorizontalSection("Most Popular", watchHome.mostPopular, <Star size={18} className="text-yellow-400" />)}
+
+                  {/* Most Favorite */}
+                  {renderHorizontalSection("Most Favorite", watchHome.mostFavorite, <Heart size={18} className="text-rose-500" />)}
+
+                  {/* Latest Releases */}
+                  {renderHorizontalSection("Latest Episodes", watchHome.latestEpisode, <Zap size={18} className="text-blue-400" />)}
+
+                  {/* Just Completed */}
+                  {renderHorizontalSection("Just Completed", watchHome.latestCompleted, <CheckCircle size={18} className="text-indigo-400" />)}
                 </>
               )}
             </>

@@ -375,7 +375,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                                 className="group/item flex items-center gap-4 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all cursor-pointer border border-transparent hover:border-white/5"
                             >
                                 <div className="w-20 h-12 rounded-lg overflow-hidden shrink-0 border border-white/5 relative">
-                                <img src={ep.still_path ? `https://image.tmdb.org/p/w200${ep.still_path}` : `https://image.tmdb.org/p/w200${media.backdrop_path}`} className="w-full h-full object-cover opacity-60 group-hover/item:opacity-100 transition-opacity" />
+                                <img src={ep.still_path ? `https://image.tmdb.org/t/p/w200${ep.still_path}` : `https://image.tmdb.org/t/p/w200${media.backdrop_path}`} className="w-full h-full object-cover opacity-60 group-hover/item:opacity-100 transition-opacity" />
                                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-opacity bg-black/40">
                                     {mode === 'download' ? (
                                          <Download size={16} className="text-white drop-shadow-lg" />
