@@ -1,15 +1,61 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AnimeSeries } from '../types';
-import { Play, Star } from 'lucide-react';
+import { Play, Star, Loader2 } from 'lucide-react';
 
 interface AnimeCardProps {
   anime: AnimeSeries;
   onClick: () => void;
 }
 
+const TMDB_KEY = "7519c82c82dd0265f5b5d599e59e972a";
+
 const AnimeCard: React.FC<AnimeCardProps> = ({ anime, onClick }) => {
-  const [imgError, setImgError] = useState(false);
+  const [displayImage, setDisplayImage] = useState<string>(anime.image);
+  const [isFinalError, setIsFinalError] = useState(false);
+  const [hasAttemptedTMDB, setHasAttemptedTMDB] = useState(false);
+  const [isSearchingFallback, setIsSearchingFallback] = useState(false);
+
+  // If the prop image changes (e.g. on search refresh), reset states
+  useEffect(() => {
+    setDisplayImage(anime.image);
+    setIsFinalError(false);
+    setHasAttemptedTMDB(false);
+    setIsSearchingFallback(false);
+  }, [anime.image, anime.title]);
+
+  const handleImageError = async () => {
+    // If we haven't tried TMDB yet, try searching for a high-quality poster there
+    if (!hasAttemptedTMDB && anime.title) {
+      setHasAttemptedTMDB(true);
+      setIsSearchingFallback(true);
+      
+      try {
+        const response = await fetch(
+          `https://api.themoviedb.org/3/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(anime.title)}`
+        );
+        const data = await response.json();
+        
+        // Find the first result that has a poster_path
+        const match = data.results?.find((item: any) => item.poster_path);
+        
+        if (match) {
+          setDisplayImage(`https://image.tmdb.org/t/p/w500${match.poster_path}`);
+        } else {
+          setIsFinalError(true);
+        }
+      } catch (error) {
+        console.error("TMDB Fallback search failed:", error);
+        setIsFinalError(true);
+      } finally {
+        setIsSearchingFallback(false);
+      }
+    } else {
+      // If TMDB also failed or we already tried, show the final fallback
+      setIsFinalError(true);
+      setIsSearchingFallback(false);
+    }
+  };
 
   return (
     <div 
@@ -17,18 +63,28 @@ const AnimeCard: React.FC<AnimeCardProps> = ({ anime, onClick }) => {
       onClick={onClick}
     >
       <div className="aspect-[2/3] overflow-hidden relative">
-        {anime.image && !imgError ? (
-          <img 
-            src={anime.image} 
-            alt={anime.title}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-            loading="lazy"
-            onError={() => setImgError(true)}
-          />
+        {(!isFinalError && displayImage) ? (
+          <>
+            <img 
+              src={displayImage} 
+              alt={anime.title}
+              className={`w-full h-full object-cover transition-all duration-700 ${isSearchingFallback ? 'blur-sm grayscale opacity-50' : 'group-hover:scale-105'}`}
+              loading="lazy"
+              onError={handleImageError}
+            />
+            {isSearchingFallback && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                <Loader2 size={16} className="text-primary animate-spin" />
+              </div>
+            )}
+          </>
         ) : (
           <div className="w-full h-full bg-white/5 flex flex-col items-center justify-center p-4 text-center">
-            <Star size={14} className="text-white/10" />
-            <span className="text-[7px] font-black text-white/20 uppercase mt-2">No Poster</span>
+            <div className="relative">
+              <Star size={18} className="text-white/10" />
+              <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
+            </div>
+            <span className="text-[7px] font-black text-white/20 uppercase mt-3 tracking-[0.2em]">No Poster Available</span>
           </div>
         )}
         
@@ -41,12 +97,12 @@ const AnimeCard: React.FC<AnimeCardProps> = ({ anime, onClick }) => {
         </div>
       </div>
       
-      <div className="p-2.5 space-y-0.5">
+      <div className="p-2.5 space-y-0.5 bg-gradient-to-b from-transparent to-black/40">
         <div className="flex items-center gap-1 opacity-40">
-           <div className="w-1 h-1 rounded-full bg-primary" />
-           <span className="text-[7px] font-black uppercase tracking-widest text-primary">Live</span>
+           <div className="w-1 h-1 rounded-full bg-primary animate-pulse" />
+           <span className="text-[7px] font-black uppercase tracking-widest text-primary">Live Node</span>
         </div>
-        <h3 className="font-bold text-[9px] md:text-[11px] leading-tight text-white/90 line-clamp-2 uppercase tracking-tight">
+        <h3 className="font-bold text-[9px] md:text-[11px] leading-tight text-white/90 line-clamp-2 uppercase tracking-tight group-hover:text-white transition-colors">
           {anime.title}
         </h3>
       </div>
