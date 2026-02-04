@@ -222,110 +222,113 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
       {!searchResults.length && !isSearching && (
         <div className="space-y-8 md:space-y-12">
           {searchMode === 'watch' ? (
-            isLoading ? (
-               <div className="space-y-12">
-                 <div className="w-full h-[250px] md:h-[350px] bg-white/5 rounded-2xl animate-pulse" />
-                 <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                    {[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}
-                 </div>
-               </div>
-            ) : watchHome && (
-              <>
-                <ContinueWatching 
-                  history={history} 
-                  onSelect={onHistorySelect} 
-                  onRemove={onHistoryRemove} 
-                  onViewAll={onViewAllHistory}
-                />
+            <>
+              {/* History always visible in Watch mode */}
+              <ContinueWatching 
+                history={history} 
+                onSelect={onHistorySelect} 
+                onRemove={onHistoryRemove} 
+                onViewAll={onViewAllHistory}
+              />
 
-                <section className="space-y-3">
-                  <div className="relative w-full rounded-2xl h-[250px] md:h-[350px] shadow-xl border border-white/5 overflow-hidden group">
-                    <div 
-                      ref={carouselRef} 
-                      onScroll={handleScroll}
-                      className="carousel w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar scroll-smooth"
-                    >
-                      {watchHome.spotlights.map((item, idx) => (
-                        <div 
-                          key={idx} 
-                          className="carousel-item relative w-full h-full cursor-pointer snap-start shrink-0" 
-                          onClick={() => onSelectAnime({
-                            title: item.title, image: item.poster, session: item.id, description: item.description, source: 'watch'
-                          })}
-                        >
-                          <img src={item.poster} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={item.title} />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90" />
+              {isLoading ? (
+                <div className="space-y-12">
+                  <div className="w-full h-[250px] md:h-[350px] bg-white/5 rounded-2xl animate-pulse" />
+                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                      {[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}
+                  </div>
+                </div>
+              ) : watchHome && (
+                <>
+                  <section className="space-y-3">
+                    <div className="relative w-full rounded-2xl h-[250px] md:h-[350px] shadow-xl border border-white/5 overflow-hidden group">
+                      <div 
+                        ref={carouselRef} 
+                        onScroll={handleScroll}
+                        className="carousel w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar scroll-smooth"
+                      >
+                        {watchHome.spotlights.map((item, idx) => (
+                          <div 
+                            key={idx} 
+                            className="carousel-item relative w-full h-full cursor-pointer snap-start shrink-0" 
+                            onClick={() => onSelectAnime({
+                              title: item.title, image: item.poster, session: item.id, description: item.description, source: 'watch'
+                            })}
+                          >
+                            <img src={item.poster} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={item.title} />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90" />
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Static Content Overlay */}
+                      <div className="absolute bottom-4 left-6 z-20 max-w-[80%] pointer-events-none">
+                        {watchHome.spotlights[spotlightIndex] && (
+                          <div key={spotlightIndex} className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-both">
+                            <h1 className="text-lg md:text-3xl font-black text-white uppercase line-clamp-1 drop-shadow-md">
+                              {watchHome.spotlights[spotlightIndex].title}
+                            </h1>
+                            <div className="flex gap-2">
+                              <button 
+                                className="btn btn-primary btn-xs rounded-full px-4 text-[8px] font-black uppercase pointer-events-auto shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
+                                onClick={() => {
+                                  const item = watchHome.spotlights[spotlightIndex];
+                                  onSelectAnime({
+                                    title: item.title, image: item.poster, session: item.id, description: item.description, source: 'watch'
+                                  });
+                                }}
+                              >
+                                Play Now
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-center gap-1.5 py-1">
+                      {watchHome.spotlights.map((_, i) => (
+                        <button 
+                          key={i} 
+                          onClick={() => setSpotlightIndex(i)}
+                          className={`h-1 rounded-full transition-all duration-300 ${i === spotlightIndex ? 'w-6 bg-primary' : 'w-2 bg-white/20 hover:bg-white/40'}`} 
+                        />
+                      ))}
+                    </div>
+                  </section>
+
+                  <section className="space-y-4">
+                    <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter border-l-2 border-primary pl-3">Trending</h2>
+                    <div className="flex gap-3 overflow-x-auto pb-6 no-scrollbar snap-x snap-mandatory">
+                      {watchHome.trending.map((anime, idx) => (
+                        <div key={idx} className="min-w-[140px] md:min-w-[180px] snap-start">
+                          <AnimeCard anime={anime} onClick={() => onSelectAnime(anime)} />
                         </div>
                       ))}
                     </div>
+                  </section>
 
-                    {/* Static Content Overlay */}
-                    <div className="absolute bottom-4 left-6 z-20 max-w-[80%] pointer-events-none">
-                      {watchHome.spotlights[spotlightIndex] && (
-                        <div key={spotlightIndex} className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-both">
-                           <h1 className="text-lg md:text-3xl font-black text-white uppercase line-clamp-1 drop-shadow-md">
-                             {watchHome.spotlights[spotlightIndex].title}
-                           </h1>
-                           <div className="flex gap-2">
-                             <button 
-                               className="btn btn-primary btn-xs rounded-full px-4 text-[8px] font-black uppercase pointer-events-auto shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
-                               onClick={() => {
-                                 const item = watchHome.spotlights[spotlightIndex];
-                                 onSelectAnime({
-                                   title: item.title, image: item.poster, session: item.id, description: item.description, source: 'watch'
-                                 });
-                               }}
-                             >
-                               Play Now
-                             </button>
-                           </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex justify-center gap-1.5 py-1">
-                    {watchHome.spotlights.map((_, i) => (
-                      <button 
-                        key={i} 
-                        onClick={() => setSpotlightIndex(i)}
-                        className={`h-1 rounded-full transition-all duration-300 ${i === spotlightIndex ? 'w-6 bg-primary' : 'w-2 bg-white/20 hover:bg-white/40'}`} 
-                      />
-                    ))}
-                  </div>
-                </section>
-
-                <section className="space-y-4">
-                  <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter border-l-2 border-primary pl-3">Trending</h2>
-                  <div className="flex gap-3 overflow-x-auto pb-6 no-scrollbar snap-x snap-mandatory">
-                    {watchHome.trending.map((anime, idx) => (
-                      <div key={idx} className="min-w-[140px] md:min-w-[180px] snap-start">
-                        <AnimeCard anime={anime} onClick={() => onSelectAnime(anime)} />
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="space-y-4">
-                  <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter border-l-2 border-primary pl-3">Ranking Top 10 Today</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3">
-                    {watchHome.topTenToday.map((anime, idx) => (
-                      <div key={idx} onClick={() => onSelectAnime(anime)} className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all cursor-pointer border border-white/5 group">
-                        <div className="text-4xl font-black text-white/5 group-hover:text-primary/20 italic w-10 shrink-0 transition-colors">{idx + 1}</div>
-                        <img src={anime.image} className="w-16 h-20 rounded-xl object-cover shadow-2xl transition-transform group-hover:scale-105" alt="" />
-                        <div className="flex-1 overflow-hidden">
-                          <h4 className="font-black text-xs md:text-sm text-white truncate uppercase tracking-tight mb-1">{anime.title}</h4>
-                          <div className="flex items-center gap-2">
-                             <span className="text-[9px] font-bold text-primary uppercase bg-primary/10 px-2 py-0.5 rounded">Active Stream</span>
-                             <span className="text-[9px] font-bold text-white/20 uppercase">{anime.type}</span>
+                  <section className="space-y-4">
+                    <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter border-l-2 border-primary pl-3">Ranking Top 10 Today</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3">
+                      {watchHome.topTenToday.map((anime, idx) => (
+                        <div key={idx} onClick={() => onSelectAnime(anime)} className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all cursor-pointer border border-white/5 group">
+                          <div className="text-4xl font-black text-white/5 group-hover:text-primary/20 italic w-10 shrink-0 transition-colors">{idx + 1}</div>
+                          <img src={anime.image} className="w-16 h-20 rounded-xl object-cover shadow-2xl transition-transform group-hover:scale-105" alt="" />
+                          <div className="flex-1 overflow-hidden">
+                            <h4 className="font-black text-xs md:text-sm text-white truncate uppercase tracking-tight mb-1">{anime.title}</h4>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[9px] font-bold text-primary uppercase bg-primary/10 px-2 py-0.5 rounded">Active Stream</span>
+                              <span className="text-[9px] font-bold text-white/20 uppercase">{anime.type}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              </>
-            )
+                      ))}
+                    </div>
+                  </section>
+                </>
+              )}
+            </>
           ) : (
             <section className="space-y-4">
               <div className="flex items-center justify-between border-l-2 border-primary pl-3">

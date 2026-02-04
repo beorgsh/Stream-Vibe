@@ -210,6 +210,22 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay }) => {
     };
   }, [watchServers]);
 
+  const handleToggleWatchType = (type: 'sub' | 'dub') => {
+    if (type === activeWatchType) return;
+    if (!selectedEpisode) {
+      setActiveWatchType(type);
+      return;
+    }
+
+    const availableServers = type === 'sub' ? watchServersByType.sub : watchServersByType.dub;
+    if (availableServers.length > 0) {
+      // Pick the first server of that category to ensure visual highlighting stays in sync with actual playback
+      fetchStreamData(selectedEpisode.session, availableServers[0].serverName, type);
+    } else {
+      setActiveWatchType(type);
+    }
+  };
+
   return (
     <div 
       className={`fixed inset-0 z-[1000] flex items-center justify-center p-3 bg-black/80 backdrop-blur-2xl transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100 animate-in fade-in'}`}
@@ -307,15 +323,16 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay }) => {
                     <div className="space-y-4">
                        <div className="flex gap-2 p-1 bg-white/5 rounded-full w-fit">
                           {watchServersByType.sub.length > 0 && (
-                             <button onClick={() => setActiveWatchType('sub')} className={`px-6 py-1 rounded-full font-black text-[9px] uppercase tracking-widest transition-all ${activeWatchType === 'sub' ? 'bg-primary text-primary-content' : 'text-white/40'}`}>Sub</button>
+                             <button onClick={() => handleToggleWatchType('sub')} className={`px-6 py-1 rounded-full font-black text-[9px] uppercase tracking-widest transition-all ${activeWatchType === 'sub' ? 'bg-primary text-primary-content shadow-lg shadow-primary/20' : 'text-white/40 hover:text-white'}`}>Sub</button>
                           )}
                           {watchServersByType.dub.length > 0 && (
-                             <button onClick={() => setActiveWatchType('dub')} className={`px-6 py-1 rounded-full font-black text-[9px] uppercase tracking-widest transition-all ${activeWatchType === 'dub' ? 'bg-primary text-primary-content' : 'text-white/40'}`}>Dub</button>
+                             <button onClick={() => handleToggleWatchType('dub')} className={`px-6 py-1 rounded-full font-black text-[9px] uppercase tracking-widest transition-all ${activeWatchType === 'dub' ? 'bg-primary text-primary-content shadow-lg shadow-primary/20' : 'text-white/40 hover:text-white'}`}>Dub</button>
                           )}
                        </div>
                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                           {(activeWatchType === 'sub' ? watchServersByType.sub : watchServersByType.dub).map((server, i) => {
-                             const isActive = activeWatchServer.toLowerCase() === server.serverName.toLowerCase();
+                             // Correct highlight logic: must match both server name and type to be considered active
+                             const isActive = activeWatchServer.toLowerCase() === server.serverName.toLowerCase() && activeWatchType === server.type;
                              return (
                                <button 
                                  key={i} 

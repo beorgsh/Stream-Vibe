@@ -33,7 +33,7 @@ const ContinueWatching: React.FC<ContinueWatchingProps> = ({ history, onSelect, 
         {history.slice(0, 10).map((item) => (
           <div 
             key={item.id} 
-            className="group relative min-w-[160px] md:min-w-[220px] aspect-video rounded-xl md:rounded-2xl overflow-hidden bg-white/5 border border-white/5 cursor-pointer snap-start"
+            className="group relative w-[200px] md:w-[280px] shrink-0 aspect-video rounded-xl md:rounded-2xl overflow-hidden bg-white/5 border border-white/5 cursor-pointer snap-start"
           >
             <img 
               src={item.image} 
@@ -75,6 +75,8 @@ const ContinueWatching: React.FC<ContinueWatchingProps> = ({ history, onSelect, 
             </div>
           </div>
         ))}
+        {/* Placeholder to prevent items from sticking to the edge on mobile */}
+        <div className="w-4 shrink-0" />
       </div>
     </section>
   );
