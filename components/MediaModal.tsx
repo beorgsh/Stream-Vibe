@@ -323,7 +323,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                 <div className="p-4 bg-base-100 border-t border-base-content/5 flex flex-wrap justify-center gap-3 md:gap-4">
                     {/* Season Selector (TV Only) */}
                     {type === 'tv' && (
-                        <div className="relative z-[71] w-full md:w-auto md:min-w-[140px]" ref={playerSeasonDropdownRef}>
+                        <div className="relative z-[110] w-full md:w-auto md:min-w-[140px]" ref={playerSeasonDropdownRef}>
                              <button
                                 onClick={() => setIsPlayerSeasonDropdownOpen(!isPlayerSeasonDropdownOpen)}
                                 className="w-full flex items-center justify-between gap-3 px-4 py-2 bg-base-content/5 border border-base-content/10 rounded-xl hover:border-primary/50 transition-all group shadow-xl"
@@ -342,12 +342,12 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                         animate={{ opacity: 1, y: 0, scale: 1 }}
                                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                        className="absolute bottom-full left-0 mb-3 w-56 bg-base-100 border border-base-content/10 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 backdrop-blur-xl"
+                                        className="absolute bottom-full left-0 mb-3 w-56 bg-base-100 border border-base-content/10 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 backdrop-blur-xl z-[120]"
                                     >
-                                        <div className="px-3 py-2 border-b border-base-content/5 mb-1">
+                                        <div className="px-3 py-2 border-b border-base-content/5 mb-1 bg-base-100/50">
                                             <span className="text-[9px] font-black uppercase tracking-widest text-base-content/30">Switch Season</span>
                                         </div>
-                                        <div className="max-h-64 overflow-y-auto custom-scrollbar">
+                                        <div className="max-h-64 overflow-y-auto custom-scrollbar bg-base-100">
                                             {details?.seasons?.filter((s: any) => s.season_number > 0 && s.episode_count > 0).map((s: any) => (
                                                 <button
                                                     key={s.id}
@@ -370,7 +370,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
 
                     {/* Episode Selector (TV Only) */}
                     {type === 'tv' && (
-                        <div className="relative z-[71] w-full md:w-auto md:min-w-[140px]" ref={playerEpDropdownRef}>
+                        <div className="relative z-[110] w-full md:w-auto md:min-w-[140px]" ref={playerEpDropdownRef}>
                              <button
                                 onClick={() => setIsPlayerEpDropdownOpen(!isPlayerEpDropdownOpen)}
                                 className="w-full flex items-center justify-between gap-3 px-4 py-2 bg-base-content/5 border border-base-content/10 rounded-xl hover:border-primary/50 transition-all group shadow-xl"
@@ -389,12 +389,12 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                         animate={{ opacity: 1, y: 0, scale: 1 }}
                                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                        className="absolute bottom-full left-0 mb-3 w-56 bg-base-100 border border-base-content/10 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 backdrop-blur-xl"
+                                        className="absolute bottom-full left-0 mb-3 w-56 bg-base-100 border border-base-content/10 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 backdrop-blur-xl z-[120]"
                                     >
-                                        <div className="px-3 py-2 border-b border-base-content/5 mb-1">
+                                        <div className="px-3 py-2 border-b border-base-content/5 mb-1 bg-base-100/50">
                                             <span className="text-[9px] font-black uppercase tracking-widest text-base-content/30">Jump to Episode</span>
                                         </div>
-                                        <div className="max-h-64 overflow-y-auto custom-scrollbar">
+                                        <div className="max-h-64 overflow-y-auto custom-scrollbar bg-base-100">
                                             {episodes.map(ep => (
                                                 <button
                                                     key={ep.id}
@@ -416,7 +416,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                     )}
 
                     {/* Server Dropdown */}
-                    <div className="relative z-[70] w-full md:w-auto md:min-w-[180px]" ref={serverDropdownRef}>
+                    <div className="relative z-[100] w-full md:w-auto md:min-w-[180px]" ref={serverDropdownRef}>
                         <button
                           onClick={() => setIsServerDropdownOpen(!isServerDropdownOpen)}
                           className="w-full flex items-center justify-between gap-3 px-4 py-2 bg-base-content/5 border border-base-content/10 rounded-xl hover:border-primary/50 transition-all group shadow-xl"
@@ -436,12 +436,12 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                               initial={{ opacity: 0, y: 10, scale: 0.95 }}
                               animate={{ opacity: 1, y: 0, scale: 1 }}
                               exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                              className="absolute bottom-full left-0 mb-3 w-full bg-base-100 border border-base-content/10 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 backdrop-blur-xl"
+                              className="absolute bottom-full left-0 mb-3 w-full bg-base-100 border border-base-content/10 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 backdrop-blur-xl z-[120]"
                             >
-                               <div className="px-3 py-2 border-b border-base-content/5 mb-1">
+                               <div className="px-3 py-2 border-b border-base-content/5 mb-1 bg-base-100/50">
                                   <span className="text-[9px] font-black uppercase tracking-widest text-base-content/30">Select Stream Node</span>
                                </div>
-                               <div className="max-h-64 overflow-y-auto custom-scrollbar">
+                               <div className="max-h-64 overflow-y-auto custom-scrollbar bg-base-100">
                                   {SERVERS.map(srv => (
                                       <button
                                           key={srv.id}
@@ -545,7 +545,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                             </button>
 
                             {isSeasonDropdownOpen && (
-                                <div className="absolute top-full left-0 mt-2 w-56 max-h-60 overflow-y-auto custom-scrollbar bg-base-100 border border-base-content/10 rounded-xl shadow-2xl p-1 flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-200">
+                                <div className="absolute top-full left-0 mt-2 w-56 max-h-60 overflow-y-auto custom-scrollbar bg-base-100 border border-base-content/10 rounded-xl shadow-2xl p-1 flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-200 z-[120]">
                                     {details?.seasons ? (
                                         details.seasons.filter((s: any) => s.season_number > 0 && s.episode_count > 0).map((s: any) => (
                                             <button

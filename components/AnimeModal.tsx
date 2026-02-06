@@ -470,7 +470,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                     )}
 
                     {/* Server Dropdown */}
-                    <div className="relative z-[70] flex-1 max-w-[220px]" ref={serverDropdownRef}>
+                    <div className="relative z-[110] flex-1 max-w-[220px]" ref={serverDropdownRef}>
                         <button
                           onClick={() => setIsServerDropdownOpen(!isServerDropdownOpen)}
                           className="w-full flex items-center justify-between px-4 py-2 bg-base-content/5 border border-base-content/10 rounded-xl hover:border-primary/50 transition-all group shadow-xl"
@@ -490,12 +490,12 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                               initial={{ opacity: 0, y: 10, scale: 0.95 }}
                               animate={{ opacity: 1, y: 0, scale: 1 }}
                               exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                              className="absolute bottom-full left-0 mb-3 w-full bg-base-100 border border-base-content/10 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 backdrop-blur-xl"
+                              className="absolute bottom-full left-0 mb-3 w-full bg-base-100 border border-base-content/10 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 backdrop-blur-xl z-[120]"
                             >
-                               <div className="px-3 py-2 border-b border-base-content/5 mb-1">
+                               <div className="px-3 py-2 border-b border-base-content/5 mb-1 bg-base-100/50">
                                   <span className="text-[9px] font-black uppercase tracking-widest text-base-content/30">Available Nodes</span>
                                </div>
-                               <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                               <div className="max-h-60 overflow-y-auto custom-scrollbar bg-base-100">
                                   {watchServersByType[serverCategory]?.length > 0 ? (
                                     watchServersByType[serverCategory].map(srv => {
                                       const isActive = activeWatchServer?.toLowerCase() === `${serverCategory}-${srv.serverName}`.toLowerCase();
@@ -514,7 +514,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                                       );
                                     })
                                   ) : (
-                                    <div className="px-3 py-4 text-center">
+                                    <div className="px-3 py-4 text-center bg-base-100">
                                        <span className="text-[9px] font-black text-base-content/20 uppercase tracking-widest italic">No Nodes Active</span>
                                     </div>
                                   )}
