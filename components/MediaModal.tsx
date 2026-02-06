@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { TMDBMedia, TMDBEpisode } from '../types';
 import { X, Play, Loader2, Star, Download, ArrowLeft, ChevronLeft, ChevronRight, Search, ChevronDown, Server, CheckCircle2 } from 'lucide-react';
@@ -133,6 +134,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
     setCurrentSeason(newSeason);
     try {
         const res = await fetch(`https://api.themoviedb.org/3/tv/${media.id}/season/${newSeason}?api_key=${apiKey}`);
+        // Fix: corrected 'response' to 'res' to match defined fetch result variable
         const data = await res.json();
         setEpisodes(data.episodes || []);
     } catch (e) {
@@ -271,14 +273,14 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                         <button 
                           disabled={currentIndex <= 0}
                           onClick={() => handleNavigateEpisode('prev')}
-                          className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-base-content/40 hover:text-base-content disabled:opacity-20 transition-all"
+                          className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-base-content/80 hover:text-base-content hover:scale-110 focus:outline-none focus:text-base-content disabled:opacity-20 transition-all"
                         >
                           <ChevronLeft size={14} /> Prev
                         </button>
                         <button 
                           disabled={currentIndex === -1 || currentIndex >= episodes.length - 1}
                           onClick={() => handleNavigateEpisode('next')}
-                          className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-base-content/40 hover:text-base-content disabled:opacity-20 transition-all"
+                          className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-base-content/80 hover:text-base-content hover:scale-110 focus:outline-none focus:text-base-content disabled:opacity-20 transition-all"
                         >
                           Next <ChevronRight size={14} />
                         </button>

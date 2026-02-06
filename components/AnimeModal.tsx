@@ -369,14 +369,14 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                 <button 
                   disabled={currentIndex <= 0}
                   onClick={() => handleNavigateEpisode('prev')}
-                  className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-base-content/40 hover:text-base-content disabled:opacity-20 transition-all"
+                  className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-base-content/80 hover:text-base-content hover:scale-110 focus:outline-none focus:text-base-content disabled:opacity-20 transition-all"
                 >
                   <ChevronLeft size={14} /> Prev
                 </button>
                 <button 
                   disabled={!hasNext}
                   onClick={() => handleNavigateEpisode('next')}
-                  className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-base-content/40 hover:text-base-content disabled:opacity-20 transition-all"
+                  className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-base-content/80 hover:text-base-content hover:scale-110 focus:outline-none focus:text-base-content disabled:opacity-20 transition-all"
                 >
                   Next <ChevronRight size={14} />
                 </button>
