@@ -27,10 +27,18 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isPWA, current
           className="flex items-center gap-3 cursor-pointer group"
           onClick={() => !isPWA && setActiveTab(AppTab.HOME)}
         >
-          <img 
-            src="https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png" 
-            alt="SV" 
-            className="w-8 h-8 md:w-10 md:h-10 shadow-lg shadow-base-content/10 group-hover:rotate-12 transition-transform duration-500 invert dark:invert-0"
+          <div 
+            className="w-8 h-8 md:w-10 md:h-10 bg-primary shadow-lg shadow-primary/20 group-hover:rotate-12 transition-transform duration-500"
+            style={{
+              maskImage: 'url(https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png)',
+              maskSize: 'contain',
+              maskRepeat: 'no-repeat',
+              maskPosition: 'center',
+              WebkitMaskImage: 'url(https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png)',
+              WebkitMaskSize: 'contain',
+              WebkitMaskRepeat: 'no-repeat',
+              WebkitMaskPosition: 'center'
+            }}
           />
           <span className="text-lg md:text-xl font-black tracking-tighter text-base-content group-hover:opacity-80 transition-colors">
             <span className="md:hidden">SV</span>

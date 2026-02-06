@@ -208,16 +208,16 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
         animate={{ scale: 1, y: 0, opacity: 1 }}
         exit={{ scale: 0.9, y: 30, opacity: 0 }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className={`bg-[#0a0a0a] border border-white/10 w-full max-w-5xl ${isPlaying ? 'h-auto' : 'max-h-[85vh]'} rounded-2xl overflow-hidden relative flex flex-col shadow-2xl`}
+        className={`bg-base-100 border border-base-content/10 w-full max-w-5xl ${isPlaying ? 'h-auto' : 'max-h-[85vh]'} rounded-2xl overflow-hidden relative flex flex-col shadow-2xl`}
       >
-        <button onClick={onClose} className="absolute top-4 right-4 z-[60] btn btn-circle btn-xs btn-ghost bg-black/40 border border-white/10 text-white hover:bg-white/20">
+        <button onClick={onClose} className="absolute top-4 right-4 z-[60] btn btn-circle btn-xs btn-ghost bg-base-100/40 border border-base-content/10 text-base-content hover:bg-base-content/20">
           <X size={16} />
         </button>
 
         {isPlaying ? (
-            <div className="flex flex-col w-full bg-black animate-in fade-in overflow-hidden">
-                <div className="flex flex-col md:flex-row md:items-center justify-between p-3 md:p-4 border-b border-white/5 bg-[#0a0a0a] gap-3">
-                    <button onClick={() => { setIsPlaying(false); setPlayingEpisode(null); }} className="flex items-center gap-2 text-white/50 hover:text-white transition-colors text-[10px] font-black uppercase tracking-widest shrink-0">
+            <div className="flex flex-col w-full bg-base-100 animate-in fade-in overflow-hidden">
+                <div className="flex flex-col md:flex-row md:items-center justify-between p-3 md:p-4 border-b border-base-content/5 bg-base-100 gap-3">
+                    <button onClick={() => { setIsPlaying(false); setPlayingEpisode(null); }} className="flex items-center gap-2 text-base-content/50 hover:text-base-content transition-colors text-[10px] font-black uppercase tracking-widest shrink-0">
                         <ArrowLeft size={14} /> Details
                     </button>
                     
@@ -234,14 +234,14 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                         <button 
                           disabled={currentIndex <= 0}
                           onClick={() => handleNavigateEpisode('prev')}
-                          className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-white disabled:opacity-20 transition-all"
+                          className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-base-content/40 hover:text-base-content disabled:opacity-20 transition-all"
                         >
                           <ChevronLeft size={14} /> Prev
                         </button>
                         <button 
                           disabled={currentIndex === -1 || currentIndex >= episodes.length - 1}
                           onClick={() => handleNavigateEpisode('next')}
-                          className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-white disabled:opacity-20 transition-all"
+                          className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-base-content/40 hover:text-base-content disabled:opacity-20 transition-all"
                         >
                           Next <ChevronRight size={14} />
                         </button>
@@ -271,9 +271,9 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                      />
                 </div>
 
-                <div className="p-4 bg-[#0a0a0a] border-t border-white/5">
+                <div className="p-4 bg-base-100 border-t border-base-content/5">
                     <div className="flex flex-wrap items-center justify-center gap-3">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-white/30 mr-2">Stream Node</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-base-content/30 mr-2">Stream Node</span>
                         {SERVERS.map(srv => (
                             <button
                                 key={srv.id}
@@ -282,7 +282,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                                   setIsIframeLoading(true);
                                   if (onPlay) onPlay(playingEpisode || undefined);
                                 }}
-                                className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 ${server === srv.id ? 'bg-primary text-primary-content shadow-[0_0_15px_rgba(255,46,99,0.4)]' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white'}`}
+                                className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 ${server === srv.id ? 'bg-primary text-primary-content shadow-[0_0_15px_rgba(255,46,99,0.4)]' : 'bg-base-content/5 text-base-content/40 hover:bg-base-content/10 hover:text-base-content'}`}
                             >
                                 {srv.id === 'rivestream' && (
                                   <Star size={8} className={server === srv.id ? "fill-current" : "fill-yellow-500 text-yellow-500"} />
@@ -295,11 +295,11 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
             </div>
         ) : (
             <div className="flex flex-col md:flex-row h-full overflow-hidden">
-            <div className="w-full md:w-56 shrink-0 relative bg-black/20">
+            <div className="w-full md:w-56 shrink-0 relative bg-base-300">
                 <img src={`https://image.tmdb.org/t/p/w500${media.poster_path}`} alt="" className="w-full h-full object-cover hidden md:block" />
                 <div className="md:hidden h-32 relative">
                 <img src={`https://image.tmdb.org/t/p/original${media.backdrop_path || media.poster_path}`} className="w-full h-full object-cover" alt="" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-base-100 to-transparent" />
                 </div>
             </div>
 
@@ -311,15 +311,15 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                     <Star size={10} className="fill-current" />
                     {media.vote_average.toFixed(1)}
                     </div>
-                    <span className="text-white/30 text-[9px] font-bold">{(media.release_date || media.first_air_date)?.split('-')[0]}</span>
+                    <span className="text-base-content/30 text-[9px] font-bold">{(media.release_date || media.first_air_date)?.split('-')[0]}</span>
                 </div>
-                <h2 className="text-xl md:text-3xl font-black text-white mb-4 line-clamp-1 uppercase tracking-tighter italic">
+                <h2 className="text-xl md:text-3xl font-black text-base-content mb-4 line-clamp-1 uppercase tracking-tighter italic">
                     {media.title || media.name}
                 </h2>
-                <div className="flex border-b border-white/5 gap-6">
-                    <button onClick={() => setActiveTab('info')} className={`pb-3 text-[9px] font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'info' ? 'border-primary text-primary' : 'border-transparent text-white/20 hover:text-white'}`}>Abstract</button>
+                <div className="flex border-b border-base-content/5 gap-6">
+                    <button onClick={() => setActiveTab('info')} className={`pb-3 text-[9px] font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'info' ? 'border-primary text-primary' : 'border-transparent text-base-content/20 hover:text-base-content'}`}>Abstract</button>
                     {type === 'tv' && (
-                    <button onClick={() => setActiveTab('episodes')} className={`pb-3 text-[9px] font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'episodes' ? 'border-primary text-primary' : 'border-transparent text-white/20 hover:text-white'}`}>Episodes</button>
+                    <button onClick={() => setActiveTab('episodes')} className={`pb-3 text-[9px] font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'episodes' ? 'border-primary text-primary' : 'border-transparent text-base-content/20 hover:text-base-content'}`}>Episodes</button>
                     )}
                 </div>
                 </div>
@@ -334,11 +334,11 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                         {isLoading ? (
                         <SkeletonText lines={4} />
                         ) : (
-                        <p className="text-white/60 text-xs md:text-sm leading-relaxed italic">{media.overview || "No abstract available for this media."}</p>
+                        <p className="text-base-content/60 text-xs md:text-sm leading-relaxed italic">{media.overview || "No abstract available for this media."}</p>
                         )}
                         <div className="flex flex-wrap gap-2">
                         {details?.genres?.slice(0, 4).map((g: any) => (
-                            <span key={g.id} className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[8px] font-black uppercase tracking-wider text-white/70">{g.name}</span>
+                            <span key={g.id} className="px-3 py-1 rounded-full bg-base-content/5 border border-base-content/10 text-[8px] font-black uppercase tracking-wider text-base-content/70">{g.name}</span>
                         ))}
                         </div>
                         
@@ -358,20 +358,20 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                         animate={{ opacity: 1, x: 0 }}
                         className="space-y-4 h-full flex flex-col"
                     >
-                    <div className="flex flex-wrap items-center justify-between gap-4 p-1 border-b border-white/5 pb-2">
+                    <div className="flex flex-wrap items-center justify-between gap-4 p-1 border-b border-base-content/5 pb-2">
                          <div className="relative z-20" ref={dropdownRef}>
                             <button
                                 onClick={() => setIsSeasonDropdownOpen(!isSeasonDropdownOpen)}
-                                className="flex items-center gap-2 px-3 py-1.5 md:py-2 bg-[#111] border border-white/10 rounded-lg hover:border-primary/50 transition-all group min-w-[120px] justify-between shadow-lg"
+                                className="flex items-center gap-2 px-3 py-1.5 md:py-2 bg-base-100 border border-base-content/10 rounded-lg hover:border-primary/50 transition-all group min-w-[120px] justify-between shadow-lg"
                             >
-                                <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-white group-hover:text-primary transition-colors truncate max-w-[140px]">
+                                <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-base-content group-hover:text-primary transition-colors truncate max-w-[140px]">
                                     {currentSeasonName}
                                 </span>
-                                <ChevronDown size={12} className={`text-white/40 group-hover:text-primary transition-all duration-300 ${isSeasonDropdownOpen ? 'rotate-180' : ''}`} />
+                                <ChevronDown size={12} className={`text-base-content/40 group-hover:text-primary transition-all duration-300 ${isSeasonDropdownOpen ? 'rotate-180' : ''}`} />
                             </button>
 
                             {isSeasonDropdownOpen && (
-                                <div className="absolute top-full left-0 mt-2 w-56 max-h-60 overflow-y-auto custom-scrollbar bg-[#0a0a0a] border border-white/10 rounded-xl shadow-2xl p-1 flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-200">
+                                <div className="absolute top-full left-0 mt-2 w-56 max-h-60 overflow-y-auto custom-scrollbar bg-base-100 border border-base-content/10 rounded-xl shadow-2xl p-1 flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-200">
                                     {details?.seasons ? (
                                         details.seasons.filter((s: any) => s.season_number > 0 && s.episode_count > 0).map((s: any) => (
                                             <button
@@ -380,14 +380,14 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                                                     handleSeasonChange(s.season_number);
                                                     setIsSeasonDropdownOpen(false);
                                                 }}
-                                                className={`w-full text-left px-3 py-2 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all flex items-center justify-between ${currentSeason === s.season_number ? 'bg-white/10 text-primary' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+                                                className={`w-full text-left px-3 py-2 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all flex items-center justify-between ${currentSeason === s.season_number ? 'bg-base-content/10 text-primary' : 'text-base-content/60 hover:bg-base-content/5 hover:text-base-content'}`}
                                             >
                                                 <span className="truncate flex-1 pr-2">{s.name && s.name !== `Season ${s.season_number}` ? `S${s.season_number} - ${s.name}` : `Season ${s.season_number}`}</span>
                                                 <span className="text-[8px] opacity-50 shrink-0">{s.episode_count} Eps</span>
                                             </button>
                                         ))
                                     ) : (
-                                        <div className="px-3 py-2 text-[9px] text-white/30 text-center uppercase">No Seasons Found</div>
+                                        <div className="px-3 py-2 text-[9px] text-base-content/30 text-center uppercase">No Seasons Found</div>
                                     )}
                                 </div>
                             )}
@@ -405,9 +405,9 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                                 key={ep.id}
                                 id={`episode-${ep.episode_number}`}
                                 onClick={() => handleAction(ep)}
-                                className="group/item flex items-center gap-4 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all cursor-pointer border border-transparent hover:border-white/5"
+                                className="group/item flex items-center gap-4 p-3 rounded-xl bg-base-content/5 hover:bg-base-content/10 transition-all cursor-pointer border border-transparent hover:border-base-content/5"
                             >
-                                <div className="w-20 h-12 rounded-lg overflow-hidden shrink-0 border border-white/5 relative">
+                                <div className="w-20 h-12 rounded-lg overflow-hidden shrink-0 border border-base-content/5 relative">
                                 <img src={ep.still_path ? `https://image.tmdb.org/t/p/w200${ep.still_path}` : `https://image.tmdb.org/t/p/w200${media.backdrop_path}`} className="w-full h-full object-cover opacity-60 group-hover/item:opacity-100 transition-opacity" />
                                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-opacity bg-black/40">
                                     {mode === 'download' ? (
@@ -418,10 +418,10 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                                 </div>
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h4 className="font-bold text-[10px] md:text-xs text-white/80 group-hover/item:text-white truncate uppercase tracking-tight mb-0.5">
+                                    <h4 className="font-bold text-[10px] md:text-xs text-base-content/80 group-hover/item:text-base-content truncate uppercase tracking-tight mb-0.5">
                                         {ep.name || `Episode ${ep.episode_number}`}
                                     </h4>
-                                    <span className="text-[9px] text-white/30 font-bold uppercase tracking-widest">
+                                    <span className="text-[9px] text-base-content/30 font-bold uppercase tracking-widest">
                                         E{ep.episode_number} • {ep.season_number}S
                                     </span>
                                 </div>

@@ -291,7 +291,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
-      className="fixed inset-0 z-[1000] flex items-center justify-center p-3 bg-black/90 backdrop-blur-2xl"
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-3 bg-black/80 backdrop-blur-2xl"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <motion.div 
@@ -299,16 +299,16 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
         animate={{ scale: 1, y: 0, opacity: 1 }}
         exit={{ scale: 0.9, y: 30, opacity: 0 }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className={`bg-[#0a0a0a] border border-white/10 w-full max-w-5xl ${selectedEpisode ? 'h-auto' : 'max-h-[85vh]'} rounded-2xl overflow-hidden relative flex flex-col shadow-2xl`}
+        className={`bg-base-100 border border-base-content/10 w-full max-w-5xl ${selectedEpisode ? 'h-auto' : 'max-h-[85vh]'} rounded-2xl overflow-hidden relative flex flex-col shadow-2xl`}
       >
-        <button onClick={onClose} className="absolute top-4 right-4 z-[60] btn btn-circle btn-xs btn-ghost bg-black/40 border border-white/10 text-white hover:bg-white/20">
+        <button onClick={onClose} className="absolute top-4 right-4 z-[60] btn btn-circle btn-xs btn-ghost bg-base-100/40 border border-base-content/10 text-base-content hover:bg-base-content/20">
           <X size={16} />
         </button>
 
         {selectedEpisode ? (
-          <div className="flex flex-col w-full bg-black animate-in fade-in overflow-hidden">
-            <div className="flex flex-col md:flex-row md:items-center justify-between p-3 md:p-4 border-b border-white/5 bg-[#0a0a0a] gap-3">
-              <button onClick={() => setSelectedEpisode(null)} className="flex items-center gap-2 text-white/50 hover:text-white transition-colors text-[10px] font-black uppercase tracking-widest shrink-0">
+          <div className="flex flex-col w-full bg-base-100 animate-in fade-in overflow-hidden">
+            <div className="flex flex-col md:flex-row md:items-center justify-between p-3 md:p-4 border-b border-base-content/5 bg-base-100 gap-3">
+              <button onClick={() => setSelectedEpisode(null)} className="flex items-center gap-2 text-base-content/50 hover:text-base-content transition-colors text-[10px] font-black uppercase tracking-widest shrink-0">
                 <ArrowLeft size={14} /> Back to Hub
               </button>
               
@@ -322,14 +322,14 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                 <button 
                   disabled={currentIndex <= 0}
                   onClick={() => handleNavigateEpisode('prev')}
-                  className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-white disabled:opacity-20 transition-all"
+                  className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-base-content/40 hover:text-base-content disabled:opacity-20 transition-all"
                 >
                   <ChevronLeft size={14} /> Prev
                 </button>
                 <button 
                   disabled={!hasNext}
                   onClick={() => handleNavigateEpisode('next')}
-                  className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-white disabled:opacity-20 transition-all"
+                  className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-base-content/40 hover:text-base-content disabled:opacity-20 transition-all"
                 >
                   Next <ChevronRight size={14} />
                 </button>
@@ -382,7 +382,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                                     href={link.url}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="px-6 py-2.5 rounded-xl bg-white/5 border border-white/5 hover:border-primary/50 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all hover:bg-white/10"
+                                    className="px-6 py-2.5 rounded-xl bg-white/5 border border-white/5 hover:border-primary/50 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all hover:bg-white/10 text-white"
                                   >
                                     <Download size={14} />
                                     {link.quality} {link.size !== 'N/A' && <span className="opacity-40">{link.size}</span>}
@@ -400,14 +400,14 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
             </div>
 
             {anime.source === 'watch' && iframeUrl && (
-              <div className="p-4 bg-[#0a0a0a] border-t border-white/5 flex flex-col items-center gap-4 animate-in fade-in slide-in-from-top-2">
+              <div className="p-4 bg-base-100 border-t border-base-content/5 flex flex-col items-center gap-4 animate-in fade-in slide-in-from-top-2">
                  
                  {(watchServersByType.sub.length > 0 || watchServersByType.dub.length > 0) && (
-                   <div className="flex p-1 bg-white/5 rounded-full border border-white/10">
+                   <div className="flex p-1 bg-base-content/5 rounded-full border border-base-content/10">
                       {watchServersByType.sub.length > 0 && (
                         <button 
                           onClick={() => setServerCategory('sub')}
-                          className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${serverCategory === 'sub' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40 hover:text-white'}`}
+                          className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${serverCategory === 'sub' ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/40 hover:text-base-content'}`}
                         >
                           Sub
                         </button>
@@ -415,7 +415,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                       {watchServersByType.dub.length > 0 && (
                         <button 
                            onClick={() => setServerCategory('dub')}
-                           className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${serverCategory === 'dub' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40 hover:text-white'}`}
+                           className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${serverCategory === 'dub' ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/40 hover:text-base-content'}`}
                         >
                           Dub
                         </button>
@@ -431,14 +431,14 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                           <button
                               key={`${serverCategory}-${srv.serverName}`}
                               onClick={() => fetchStreamData(selectedEpisode.session, srv.serverName, serverCategory, selectedEpisode, true)}
-                              className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border ${isActive ? 'bg-primary text-primary-content border-primary shadow-[0_0_10px_rgba(255,46,99,0.3)]' : 'bg-white/5 text-white/40 border-transparent hover:bg-white/10 hover:border-white/10'}`}
+                              className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border ${isActive ? 'bg-primary text-primary-content border-primary shadow-[0_0_10px_rgba(255,46,99,0.3)]' : 'bg-base-content/5 text-base-content/40 border-transparent hover:bg-base-content/10 hover:border-base-content/10'}`}
                           >
                               {srv.serverName}
                           </button>
                         );
                       })
                     ) : (
-                      <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest italic py-2">
+                      <span className="text-[9px] font-bold text-base-content/20 uppercase tracking-widest italic py-2">
                         No {serverCategory === 'sub' ? 'Subtitled' : 'Dubbed'} servers available
                       </span>
                     )}
@@ -447,14 +447,14 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
               </div>
             )}
 
-            <div className="p-4 bg-[#0a0a0a] border-t border-white/5">
+            <div className="p-4 bg-base-100 border-t border-base-content/5">
               <div className="flex flex-wrap items-center justify-center gap-3">
-                <span className="text-[9px] font-black uppercase tracking-widest text-white/30 mr-2">Quick Switch</span>
+                <span className="text-[9px] font-black uppercase tracking-widest text-base-content/30 mr-2">Quick Switch</span>
                 {episodes.slice(Math.max(0, currentIndex - 2), Math.min(episodes.length, currentIndex + 3)).map(ep => (
                   <button
                     key={ep.session}
                     onClick={() => fetchEpisodeLinks(ep)}
-                    className={`w-10 h-10 rounded-lg text-[10px] font-black flex items-center justify-center transition-all ${ep.session === selectedEpisode.session ? 'bg-primary text-primary-content' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
+                    className={`w-10 h-10 rounded-lg text-[10px] font-black flex items-center justify-center transition-all ${ep.session === selectedEpisode.session ? 'bg-primary text-primary-content' : 'bg-base-content/5 text-base-content/40 hover:bg-base-content/10'}`}
                   >
                     {ep.episode}
                   </button>
@@ -464,11 +464,11 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
           </div>
         ) : (
           <div className="flex flex-col md:flex-row h-full overflow-hidden">
-            <div className="w-full md:w-64 shrink-0 relative bg-black/20">
+            <div className="w-full md:w-64 shrink-0 relative bg-base-300">
               <img src={displayImage} alt="" className="w-full h-full object-cover hidden md:block" onError={handleMainImageError} />
               <div className="md:hidden h-40 relative">
                 <img src={displayImage} className="w-full h-full object-cover" alt="" onError={handleMainImageError} />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-base-100 to-transparent" />
               </div>
             </div>
 
@@ -480,14 +480,14 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                     <Star size={10} className="fill-current" />
                     {anime.score || 'N/A'}
                   </div>
-                  <span className="text-white/30 text-[9px] font-bold uppercase tracking-widest">{anime.status || 'Ongoing'}</span>
+                  <span className="text-base-content/30 text-[9px] font-bold uppercase tracking-widest">{anime.status || 'Ongoing'}</span>
                 </div>
-                <h2 className="text-xl md:text-3xl font-black text-white mb-4 line-clamp-1 uppercase tracking-tighter italic">
+                <h2 className="text-xl md:text-3xl font-black text-base-content mb-4 line-clamp-1 uppercase tracking-tighter italic">
                   {anime.title}
                 </h2>
-                <div className="flex border-b border-white/5 gap-6">
-                  <button onClick={() => setActiveTab('info')} className={`pb-3 text-[9px] font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'info' ? 'border-primary text-primary' : 'border-transparent text-white/20 hover:text-white'}`}>Intel</button>
-                  <button onClick={() => setActiveTab('episodes')} className={`pb-3 text-[9px] font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'episodes' ? 'border-primary text-primary' : 'border-transparent text-white/20 hover:text-white'}`}>Episodes</button>
+                <div className="flex border-b border-base-content/5 gap-6">
+                  <button onClick={() => setActiveTab('info')} className={`pb-3 text-[9px] font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'info' ? 'border-primary text-primary' : 'border-transparent text-base-content/20 hover:text-base-content'}`}>Intel</button>
+                  <button onClick={() => setActiveTab('episodes')} className={`pb-3 text-[9px] font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'episodes' ? 'border-primary text-primary' : 'border-transparent text-base-content/20 hover:text-base-content'}`}>Episodes</button>
                 </div>
               </div>
 
@@ -501,7 +501,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                     {isLoading ? (
                       <SkeletonText lines={4} />
                     ) : (
-                      <p className="text-white/60 text-xs md:text-sm leading-relaxed italic">{anime.description || "No classification data provided for this node."}</p>
+                      <p className="text-base-content/60 text-xs md:text-sm leading-relaxed italic">{anime.description || "No classification data provided for this node."}</p>
                     )}
                     <button 
                       onClick={() => setActiveTab('episodes')}
@@ -520,11 +520,11 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                       <input 
                         type="text" 
                         placeholder="Search Episodes..." 
-                        className="w-full bg-white/5 border border-white/10 rounded-full py-2 px-10 text-[10px] font-bold uppercase tracking-widest focus:border-primary focus:outline-none transition-all"
+                        className="w-full bg-base-content/5 border border-base-content/10 rounded-full py-2 px-10 text-[10px] font-bold uppercase tracking-widest focus:border-primary focus:outline-none transition-all placeholder:text-base-content/30 text-base-content"
                         value={epSearch}
                         onChange={(e) => { setEpSearch(e.target.value); setEpPage(1); }}
                       />
-                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/20" size={14} />
+                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/20" size={14} />
                     </div>
 
                     <div className="grid grid-cols-1 gap-2">
@@ -535,18 +535,18 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                           <div 
                             key={ep.session}
                             onClick={() => fetchEpisodeLinks(ep)}
-                            className="group flex items-center gap-4 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all cursor-pointer border border-transparent hover:border-white/5"
+                            className="group flex items-center gap-4 p-3 rounded-xl bg-base-content/5 hover:bg-base-content/10 transition-all cursor-pointer border border-transparent hover:border-base-content/5"
                           >
-                            <div className="w-12 h-12 rounded-lg bg-black flex items-center justify-center shrink-0 border border-white/5 group-hover:border-primary/50">
-                              <span className="text-[10px] font-black text-white/40 group-hover:text-primary transition-colors">{ep.episode}</span>
+                            <div className="w-12 h-12 rounded-lg bg-base-300 flex items-center justify-center shrink-0 border border-base-content/5 group-hover:border-primary/50">
+                              <span className="text-[10px] font-black text-base-content/40 group-hover:text-primary transition-colors">{ep.episode}</span>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-bold text-[10px] md:text-xs text-white/80 group-hover:text-white truncate uppercase tracking-tight mb-0.5">
+                              <h4 className="font-bold text-[10px] md:text-xs text-base-content/80 group-hover:text-base-content truncate uppercase tracking-tight mb-0.5">
                                 {ep.title || `Episode ${ep.episode}`}
                               </h4>
-                              <span className="text-[8px] text-white/20 font-black uppercase tracking-widest">Access Node Available</span>
+                              <span className="text-[8px] text-base-content/20 font-black uppercase tracking-widest">Access Node Available</span>
                             </div>
-                            <Play size={14} className="text-white/20 group-hover:text-primary group-hover:scale-110 transition-all" />
+                            <Play size={14} className="text-base-content/20 group-hover:text-primary group-hover:scale-110 transition-all" />
                           </div>
                         ))
                       )}
@@ -557,15 +557,15 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                         <button 
                           disabled={epPage === 1} 
                           onClick={() => setEpPage(p => p - 1)}
-                          className="btn btn-circle btn-xs btn-ghost border border-white/10 disabled:opacity-20"
+                          className="btn btn-circle btn-xs btn-ghost border border-base-content/10 disabled:opacity-20 text-base-content"
                         >
                           <ChevronLeft size={14} />
                         </button>
-                        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Page {epPage} / {totalPages}</span>
+                        <span className="text-[10px] font-black text-base-content/40 uppercase tracking-widest">Page {epPage} / {totalPages}</span>
                         <button 
                           disabled={epPage === totalPages} 
                           onClick={() => setEpPage(p => p + 1)}
-                          className="btn btn-circle btn-xs btn-ghost border border-white/10 disabled:opacity-20"
+                          className="btn btn-circle btn-xs btn-ghost border border-base-content/10 disabled:opacity-20 text-base-content"
                         >
                           <ChevronRight size={14} />
                         </button>

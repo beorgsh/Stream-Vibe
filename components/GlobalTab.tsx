@@ -154,23 +154,23 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
     <div className="space-y-6 md:space-y-10 pb-10">
       <section className="flex flex-col items-center space-y-4">
         <div className="text-center space-y-1">
-          <h1 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tighter italic">
+          <h1 className="text-2xl md:text-3xl font-black text-base-content uppercase tracking-tighter italic">
             {viewMode === 'download' ? 'Download Content' : 'Global Stream Vibe'}
           </h1>
-          <p className="text-[10px] uppercase font-bold text-white/20 tracking-[0.2em]">TMDB Global Network v4.0</p>
+          <p className="text-[10px] uppercase font-bold text-base-content/20 tracking-[0.2em]">TMDB Global Network v4.0</p>
         </div>
 
-        <div className="flex p-0.5 bg-white/5 rounded-full border border-white/10">
+        <div className="flex p-0.5 bg-base-content/5 rounded-full border border-base-content/10">
            <button 
             onClick={() => setViewMode('watch')}
-            className={`px-6 py-2 rounded-full transition-all ${viewMode === 'watch' ? 'bg-white text-black shadow-lg' : 'text-white/40'}`}
+            className={`px-6 py-2 rounded-full transition-all ${viewMode === 'watch' ? 'bg-base-content text-base-100 shadow-lg' : 'text-base-content/40 hover:text-base-content'}`}
             title="Watch Mode"
            >
              <Play size={14} className={viewMode === 'watch' ? 'fill-current' : ''} />
            </button>
            <button 
             onClick={() => setViewMode('download')}
-            className={`px-6 py-2 rounded-full transition-all ${viewMode === 'download' ? 'bg-white text-black shadow-lg' : 'text-white/40'}`}
+            className={`px-6 py-2 rounded-full transition-all ${viewMode === 'download' ? 'bg-base-content text-base-100 shadow-lg' : 'text-base-content/40 hover:text-base-content'}`}
             title="Download Mode"
            >
              <Download size={14} />
@@ -181,12 +181,12 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
           <input 
             type="text" 
             placeholder={viewMode === 'download' ? "Search to Download..." : "Search Film & TV..."}
-            className="input input-sm h-10 md:h-12 w-full bg-white/5 border-white/5 rounded-full pl-10 pr-24 text-xs font-medium focus:border-white transition-colors"
+            className="input input-sm h-10 md:h-12 w-full bg-base-content/5 border-base-content/10 rounded-full pl-10 pr-24 text-xs font-medium focus:border-primary transition-colors text-base-content placeholder:text-base-content/30"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-white/20" size={14} />
-          <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 btn bg-white text-black border-none hover:bg-gray-200 btn-xs h-8 md:h-10 rounded-full px-4 font-black uppercase text-[8px]" disabled={isSearching}>
+          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-base-content/20" size={14} />
+          <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 btn bg-base-content text-base-100 border-none hover:bg-base-content/80 btn-xs h-8 md:h-10 rounded-full px-4 font-black uppercase text-[8px]" disabled={isSearching}>
             {isSearching ? <Loader2 className="animate-spin" size={12} /> : "Search"}
           </button>
         </form>
@@ -194,11 +194,11 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
 
       {(isSearching || searchResults.length > 0) && (
         <section className="space-y-4">
-          <div className="flex items-center justify-between border-b border-white/5 pb-1">
-            <h2 className="text-sm font-black text-white uppercase tracking-tighter italic flex items-center gap-2">
-              {viewMode === 'download' ? 'Download Results' : 'Search Results'} <span className="text-white not-italic">({searchResults.length})</span>
+          <div className="flex items-center justify-between border-b border-base-content/5 pb-1">
+            <h2 className="text-sm font-black text-base-content uppercase tracking-tighter italic flex items-center gap-2">
+              {viewMode === 'download' ? 'Download Results' : 'Search Results'} <span className="text-base-content not-italic">({searchResults.length})</span>
             </h2>
-            <button onClick={() => setSearchResults([])} className="text-[8px] uppercase font-black text-white/30">Clear</button>
+            <button onClick={() => setSearchResults([])} className="text-[8px] uppercase font-black text-base-content/30">Clear</button>
           </div>
           <AnimatePresence mode="wait">
             {isSearching ? (
@@ -256,7 +256,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                 >
                   {extendedTrending.length > 0 && (
                     <section className="space-y-3">
-                      <div className="relative w-full rounded-2xl h-[250px] md:h-[400px] shadow-2xl border border-white/5 overflow-hidden group">
+                      <div className="relative w-full rounded-2xl h-[250px] md:h-[400px] shadow-2xl border border-base-content/5 overflow-hidden group">
                         <div 
                           ref={carouselRef} 
                           onScroll={handleScroll}
@@ -294,7 +294,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                           <button 
                             key={i} 
                             onClick={() => setSpotlightIndex(i)}
-                            className={`h-1 rounded-full transition-all duration-300 ${i === (spotlightIndex % (extendedTrending.length - 1)) ? 'w-8 bg-white' : 'w-2 bg-white/20 hover:bg-white/40'}`} 
+                            className={`h-1 rounded-full transition-all duration-300 ${i === (spotlightIndex % (extendedTrending.length - 1)) ? 'w-8 bg-base-content' : 'w-2 bg-base-content/20 hover:bg-base-content/40'}`} 
                           />
                         ))}
                       </div>
@@ -310,7 +310,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                   />
 
                   <section className="space-y-4">
-                    <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter border-l-2 border-white pl-3">Trending Now</h2>
+                    <h2 className="text-sm md:text-lg font-black text-base-content uppercase tracking-tighter border-l-2 border-base-content pl-3">Trending Now</h2>
                     <motion.div 
                       variants={container}
                       initial="hidden"
@@ -327,8 +327,8 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                   </section>
 
                   <section className="space-y-4">
-                    <div className="border-l-2 border-white pl-3">
-                        <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter">Top Movies</h2>
+                    <div className="border-l-2 border-base-content pl-3">
+                        <h2 className="text-sm md:text-lg font-black text-base-content uppercase tracking-tighter">Top Movies</h2>
                     </div>
                     <motion.div 
                       variants={container}
@@ -346,8 +346,8 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                   </section>
 
                   <section className="space-y-4">
-                    <div className="border-l-2 border-white pl-3">
-                        <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter">TV Series</h2>
+                    <div className="border-l-2 border-base-content pl-3">
+                        <h2 className="text-sm md:text-lg font-black text-base-content uppercase tracking-tighter">TV Series</h2>
                     </div>
                     <motion.div 
                       variants={container}
@@ -377,8 +377,8 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
               />
               
               <section className="space-y-4">
-                <div className="flex items-center justify-between border-l-2 border-white pl-3">
-                  <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter">Top Downloads</h2>
+                <div className="flex items-center justify-between border-l-2 border-base-content pl-3">
+                  <h2 className="text-sm md:text-lg font-black text-base-content uppercase tracking-tighter">Top Downloads</h2>
                 </div>
                 <AnimatePresence mode="wait">
                   {isLoading ? (

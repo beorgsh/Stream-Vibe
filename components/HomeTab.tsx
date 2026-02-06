@@ -39,18 +39,47 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
   return (
     <div className="flex flex-col items-center justify-center space-y-20 py-12 px-4 text-base-content">
       {/* Hero Section */}
-      <section className="text-center space-y-8 max-w-4xl mx-auto">
+      <section className="text-center space-y-8 max-w-4xl mx-auto relative">
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6 }}
           className="relative inline-block"
         >
-          <div className="absolute inset-0 bg-primary/20 blur-[100px] rounded-full" />
-          <img 
-            src="https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png" 
-            alt="Logo" 
-            className="w-24 h-24 md:w-32 md:h-32 mx-auto relative z-10 drop-shadow-2xl invert dark:invert-0"
+          {/* Animated Background Graphics */}
+          <motion.div 
+             animate={{ 
+               scale: [1, 1.2, 1],
+               rotate: [0, 90, 0],
+               opacity: [0.5, 0.8, 0.5]
+             }}
+             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+             className="absolute inset-0 bg-gradient-to-tr from-primary to-secondary blur-[80px] rounded-full opacity-60"
+          />
+          
+          <motion.div 
+            animate={{ rotate: 360 }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+            className="absolute -inset-8 border border-dashed border-base-content/10 rounded-full"
+          />
+          <motion.div 
+            animate={{ rotate: -360 }}
+            transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+            className="absolute -inset-4 border border-dotted border-base-content/20 rounded-full"
+          />
+
+          <div 
+             className="w-24 h-24 md:w-32 md:h-32 mx-auto relative z-10 drop-shadow-2xl bg-primary"
+             style={{
+               maskImage: 'url(https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png)',
+               maskSize: 'contain',
+               maskRepeat: 'no-repeat',
+               maskPosition: 'center',
+               WebkitMaskImage: 'url(https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png)',
+               WebkitMaskSize: 'contain',
+               WebkitMaskRepeat: 'no-repeat',
+               WebkitMaskPosition: 'center'
+             }}
           />
         </motion.div>
         
@@ -62,8 +91,8 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
         >
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-base-content/5 border border-base-content/10 mb-4">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
             </span>
             <span className="text-[10px] font-bold uppercase tracking-widest text-base-content/60">Systems Online</span>
           </div>
@@ -84,7 +113,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
         >
           <button 
             onClick={() => setActiveTab(AppTab.ANIME)}
-            className="btn bg-base-content text-base-100 hover:bg-base-content/80 border-none rounded-full px-8 h-12 text-xs font-black uppercase tracking-widest shadow-lg hover:scale-105 transition-transform"
+            className="btn btn-primary text-primary-content hover:opacity-90 border-none rounded-full px-8 h-12 text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/30 hover:scale-105 transition-transform"
           >
             <Play size={14} className="fill-current mr-2" />
             Explore Anime
@@ -113,7 +142,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
             { label: "Database", value: "4.2M+", icon: <Cpu size={14} /> },
         ].map((stat, i) => (
             <div key={i} className="bg-base-content/5 border border-base-content/5 rounded-xl p-4 flex flex-col items-center justify-center text-center group hover:bg-base-content/10 transition-colors">
-                <div className="text-base-content/20 mb-2 group-hover:text-base-content transition-colors">{stat.icon}</div>
+                <div className="text-base-content/20 mb-2 group-hover:text-primary transition-colors">{stat.icon}</div>
                 <div className="text-lg font-black text-base-content">{stat.value}</div>
                 <div className="text-[9px] uppercase font-bold text-base-content/40 tracking-widest">{stat.label}</div>
             </div>
@@ -124,17 +153,17 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl">
         {[
           {
-            icon: <Zap size={24} className="text-base-content" />,
+            icon: <Zap size={24} className="text-primary" />,
             title: "Dual Mode Engine",
             desc: "Toggle instantly between streaming mode for immediate playback and download mode for offline archival."
           },
           {
-            icon: <Globe size={24} className="text-base-content" />,
+            icon: <Globe size={24} className="text-primary" />,
             title: "Global TMDB Network",
             desc: "Powered by The Movie Database API to provide real-time metadata, trending lists, and high-res assets."
           },
           {
-            icon: <Smartphone size={24} className="text-base-content" />,
+            icon: <Smartphone size={24} className="text-primary" />,
             title: "PWA Optimized",
             desc: "Install as a native app on iOS and Android. Experience app-like performance with gesture navigation."
           }
@@ -145,9 +174,9 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: idx * 0.1 }}
-            className="bg-base-200/50 border border-base-content/5 p-8 rounded-3xl hover:border-base-content/20 transition-all group shadow-xl"
+            className="bg-base-200/50 border border-base-content/5 p-8 rounded-3xl hover:border-primary/20 transition-all group shadow-xl hover:shadow-primary/5"
           >
-            <div className="w-12 h-12 rounded-2xl bg-base-300 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-inner border border-base-content/5">
+            <div className="w-12 h-12 rounded-2xl bg-base-300 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-inner border border-base-content/5 group-hover:border-primary/20">
               {feature.icon}
             </div>
             <h3 className="text-lg font-black text-base-content uppercase tracking-tight mb-3">{feature.title}</h3>
@@ -170,8 +199,8 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
                 { step: "02", title: "Choose Mode", text: "Toggle between 'Watch' for instant streaming or 'Download' for highest quality files." },
                 { step: "03", title: "Engage", text: "Enjoy seamless playback in our custom player or save files directly to your device." }
             ].map((item, i) => (
-                <div key={i} className="relative p-6 rounded-2xl bg-gradient-to-br from-base-content/5 to-transparent border border-base-content/5">
-                    <div className="absolute -top-4 -left-4 text-4xl font-black text-base-content/5 italic select-none">{item.step}</div>
+                <div key={i} className="relative p-6 rounded-2xl bg-gradient-to-br from-base-content/5 to-transparent border border-base-content/5 group hover:border-primary/20 transition-all">
+                    <div className="absolute -top-4 -left-4 text-4xl font-black text-base-content/5 group-hover:text-primary/10 transition-colors italic select-none">{item.step}</div>
                     <h3 className="text-sm font-black text-base-content uppercase tracking-wider mb-2">{item.title}</h3>
                     <p className="text-xs text-base-content/50 leading-relaxed">{item.text}</p>
                 </div>
@@ -187,7 +216,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
         </div>
         <div className="space-y-3">
             {faqs.map((faq, i) => (
-                <div key={i} className="bg-base-content/5 border border-base-content/5 rounded-xl overflow-hidden group">
+                <div key={i} className="bg-base-content/5 border border-base-content/5 rounded-xl overflow-hidden group hover:border-primary/20 transition-colors">
                     <button 
                         onClick={() => toggleFaq(i)}
                         className="w-full flex items-center justify-between p-4 text-left hover:bg-base-content/5 transition-colors"
@@ -195,7 +224,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
                         <span className="text-xs md:text-sm font-bold text-base-content uppercase tracking-wide pr-4">{faq.q}</span>
                         <ChevronDown 
                             size={16} 
-                            className={`text-base-content/40 transition-transform duration-300 ${openFaqIndices.includes(i) ? 'rotate-180 text-base-content' : ''}`} 
+                            className={`text-base-content/40 transition-transform duration-300 ${openFaqIndices.includes(i) ? 'rotate-180 text-primary' : ''}`} 
                         />
                     </button>
                     <AnimatePresence initial={false}>
@@ -252,7 +281,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
-        className="w-full max-w-4xl bg-gradient-to-r from-base-content/10 via-base-content/5 to-transparent rounded-[2.5rem] p-1"
+        className="w-full max-w-4xl bg-gradient-to-r from-primary/10 via-base-content/5 to-transparent rounded-[2.5rem] p-1"
       >
         <div className="bg-base-200 rounded-[2.4rem] p-8 md:p-12 text-center space-y-6 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
@@ -266,7 +295,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
              </p>
              <button 
                 onClick={() => setActiveTab(AppTab.ANIME)} 
-                className="btn bg-base-content text-base-100 border-none hover:bg-base-content/80 rounded-full px-8 font-black uppercase text-xs tracking-widest hover:scale-105 transition-transform"
+                className="btn btn-primary text-primary-content border-none hover:opacity-90 rounded-full px-8 font-black uppercase text-xs tracking-widest hover:scale-105 transition-transform shadow-xl shadow-primary/20"
              >
                 Start Watching
              </button>
