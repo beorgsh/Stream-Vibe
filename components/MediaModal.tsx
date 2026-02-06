@@ -17,9 +17,11 @@ interface MediaModalProps {
 }
 
 const SERVERS = [
+  { id: 'rivestream', label: 'RiveStream' },
+  { id: 'rive2', label: 'Rive 2' },
+  { id: 'vidfast', label: 'VidFast' },
   { id: 'vidsrcto', label: 'Vidsrc.to' },
   { id: 'vidsrc', label: 'Vidsrc (Pro)' },
-  { id: 'rivestream', label: 'RiveStream' },
   { id: 'vidzee', label: 'Vidzee' },
 ];
 
@@ -36,7 +38,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [playingEpisode, setPlayingEpisode] = useState<TMDBEpisode | null>(null);
-  const [server, setServer] = useState('vidsrcto');
+  const [server, setServer] = useState('rivestream');
 
   const hasAutoResumed = useRef(false);
 
@@ -112,6 +114,10 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
     const color = 'ff2e63'; 
 
     switch(server) {
+        case 'vidfast':
+            return isTv
+                ? `https://vidfast.pro/tv/${id}/${playingEpisode?.season_number}/${playingEpisode?.episode_number}?autoPlay=true`
+                : `https://vidfast.pro/movie/${id}?autoPlay=true`;
         case 'vidsrcto':
             return isTv
                 ? `https://vidsrc.to/embed/tv/${id}/${playingEpisode?.season_number}/${playingEpisode?.episode_number}`
@@ -120,6 +126,10 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
              return isTv 
                 ? `https://rivestream.org/embed?type=tv&id=${id}&season=${playingEpisode?.season_number}&episode=${playingEpisode?.episode_number}`
                 : `https://rivestream.org/embed?type=movie&id=${id}`;
+        case 'rive2':
+             return isTv 
+                ? `https://rivestream.net/embed?type=tv&id=${id}&season=${playingEpisode?.season_number}&episode=${playingEpisode?.episode_number}`
+                : `https://rivestream.net/embed?type=movie&id=${id}`;
         case 'vidzee':
             return isTv
                 ? `https://player.vidzee.wtf/embed/tv/${id}/${playingEpisode?.season_number}/${playingEpisode?.episode_number}`
@@ -262,8 +272,11 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                                   setIsIframeLoading(true);
                                   if (onPlay) onPlay(playingEpisode || undefined);
                                 }}
-                                className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${server === srv.id ? 'bg-primary text-primary-content shadow-[0_0_15px_rgba(255,46,99,0.4)]' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white'}`}
+                                className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 ${server === srv.id ? 'bg-primary text-primary-content shadow-[0_0_15px_rgba(255,46,99,0.4)]' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white'}`}
                             >
+                                {srv.id === 'rivestream' && (
+                                  <Star size={8} className={server === srv.id ? "fill-current" : "fill-yellow-500 text-yellow-500"} />
+                                )}
                                 {srv.label}
                             </button>
                         ))}
