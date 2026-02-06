@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { TMDBMedia, WatchHistoryItem, HistoryFilter } from '../types';
-import { Search, Loader2 } from 'lucide-react';
+import { Search, Loader2, Download, Play } from 'lucide-react';
 import MediaCard from './MediaCard';
 import { SkeletonCard } from './Skeleton';
 import ContinueWatching from './ContinueWatching';
@@ -31,7 +31,7 @@ const item = {
 
 const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistorySelect, onHistoryRemove, onViewAllHistory }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'watch' | 'download'>('download');
+  const [viewMode, setViewMode] = useState<'watch' | 'download'>('watch');
   const [trending, setTrending] = useState<TMDBMedia[]>([]);
   const [latestMovies, setLatestMovies] = useState<TMDBMedia[]>([]);
   const [latestTV, setLatestTV] = useState<TMDBMedia[]>([]);
@@ -133,16 +133,18 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
 
         <div className="flex p-0.5 bg-white/5 rounded-full border border-white/10">
            <button 
-            onClick={() => setViewMode('download')}
-            className={`px-4 py-1 rounded-full text-[8px] md:text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'download' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40'}`}
+            onClick={() => setViewMode('watch')}
+            className={`px-6 py-2 rounded-full transition-all ${viewMode === 'watch' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40'}`}
+            title="Watch Mode"
            >
-             Download
+             <Play size={14} className={viewMode === 'watch' ? 'fill-current' : ''} />
            </button>
            <button 
-            onClick={() => setViewMode('watch')}
-            className={`px-4 py-1 rounded-full text-[8px] md:text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'watch' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40'}`}
+            onClick={() => setViewMode('download')}
+            className={`px-6 py-2 rounded-full transition-all ${viewMode === 'download' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40'}`}
+            title="Download Mode"
            >
-             Watch
+             <Download size={14} />
            </button>
         </div>
 
@@ -274,7 +276,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                     history={filteredHistory} 
                     onSelect={onHistorySelect} 
                     onRemove={onHistoryRemove} 
-                    onViewAll={() => onViewAllHistory(viewMode === 'watch' ? 'global-watch' : 'global-download')}
+                    onViewAll={() => onViewAllHistory('global-watch')}
                     title="Global Stream History"
                   />
 
@@ -341,7 +343,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                 history={filteredHistory} 
                 onSelect={onHistorySelect} 
                 onRemove={onHistoryRemove} 
-                onViewAll={() => onViewAllHistory(viewMode === 'watch' ? 'global-watch' : 'global-download')}
+                onViewAll={() => onViewAllHistory('global-download')}
                 title="Global Download History"
               />
               

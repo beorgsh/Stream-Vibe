@@ -1,6 +1,6 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Play, Globe, Zap, Shield, Smartphone, Server, Cpu, Activity, HelpCircle, ChevronDown, Check } from 'lucide-react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Play, Globe, Zap, Smartphone, Server, Cpu, Activity, HelpCircle, ChevronDown } from 'lucide-react';
 import { AppTab } from '../types';
 
 interface HomeTabProps {
@@ -8,6 +8,34 @@ interface HomeTabProps {
 }
 
 const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
+  const [openFaqIndices, setOpenFaqIndices] = useState<number[]>([]);
+  
+  // Cleaned up tech stack list without duplicates
+  const techStack = [
+    { name: "React", icon: "https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg" },
+    { name: "TypeScript", icon: "https://upload.wikimedia.org/wikipedia/commons/4/4c/Typescript_logo_2020.svg" },
+    { name: "Tailwind", icon: "https://upload.wikimedia.org/wikipedia/commons/d/d5/Tailwind_CSS_Logo.svg" },
+    { name: "Vite", icon: "https://vitejs.dev/logo.svg" },
+    { name: "TMDB", icon: "https://www.themoviedb.org/assets/2/v4/logos/v2/blue_square_2-d537fb228cf3ded904ef09b136fe3fec72548ebc1fea3fbbd1ad9e36364db38b.svg" },
+    { name: "Framer", icon: "https://cdn.worldvectorlogo.com/logos/framer-motion.svg" }, 
+    { name: "Vercel", icon: "https://assets.vercel.com/image/upload/v1588805858/repositories/vercel/logo.png" }, 
+    { name: "PWA", icon: "https://upload.wikimedia.org/wikipedia/commons/d/d5/Progressive_Web_Apps_Logo.svg" }, 
+    { name: "Lucide", icon: "https://lucide.dev/logo.light.svg" }
+  ];
+
+  const toggleFaq = (index: number) => {
+    setOpenFaqIndices(prev => 
+      prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
+    );
+  };
+
+  const faqs = [
+    { q: "Is StreamVibe free to use?", a: "Yes, StreamVibe is completely free. We do not require any subscriptions or credit cards." },
+    { q: "Do I need to create an account?", a: "No account is required. Your watch history is stored locally on your device for privacy." },
+    { q: "How do I install this on my phone?", a: "Use your browser's 'Add to Home Screen' feature to install StreamVibe as a Progressive Web App (PWA)." },
+    { q: "Why isn't the video loading?", a: "Try switching servers in the player options. Sometimes specific nodes may be under heavy load." }
+  ];
+
   return (
     <div className="flex flex-col items-center justify-center space-y-20 py-12 px-4">
       {/* Hero Section */}
@@ -158,35 +186,64 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
             <h2 className="text-lg font-black text-white uppercase tracking-tighter">Frequently Asked Questions</h2>
         </div>
         <div className="space-y-3">
-            {[
-                { q: "Is StreamVibe free to use?", a: "Yes, StreamVibe is completely free. We do not require any subscriptions or credit cards." },
-                { q: "Do I need to create an account?", a: "No account is required. Your watch history is stored locally on your device for privacy." },
-                { q: "How do I install this on my phone?", a: "Use your browser's 'Add to Home Screen' feature to install StreamVibe as a Progressive Web App (PWA)." },
-                { q: "Why isn't the video loading?", a: "Try switching servers in the player options. Sometimes specific nodes may be under heavy load." }
-            ].map((faq, i) => (
-                <div key={i} className="collapse collapse-arrow bg-white/5 border border-white/5 rounded-xl">
-                    <input type="radio" name="my-accordion-2" defaultChecked={i === 0} /> 
-                    <div className="collapse-title text-xs md:text-sm font-bold text-white uppercase tracking-wide">
-                        {faq.q}
-                    </div>
-                    <div className="collapse-content"> 
-                        <p className="text-xs text-white/60 leading-relaxed pb-2">{faq.a}</p>
-                    </div>
+            {faqs.map((faq, i) => (
+                <div key={i} className="bg-white/5 border border-white/5 rounded-xl overflow-hidden group">
+                    <button 
+                        onClick={() => toggleFaq(i)}
+                        className="w-full flex items-center justify-between p-4 text-left hover:bg-white/5 transition-colors"
+                    >
+                        <span className="text-xs md:text-sm font-bold text-white uppercase tracking-wide pr-4">{faq.q}</span>
+                        <ChevronDown 
+                            size={16} 
+                            className={`text-white/40 transition-transform duration-300 ${openFaqIndices.includes(i) ? 'rotate-180 text-primary' : ''}`} 
+                        />
+                    </button>
+                    <AnimatePresence initial={false}>
+                        {openFaqIndices.includes(i) && (
+                            <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
+                            >
+                                <div className="px-4 pb-4">
+                                    <p className="text-xs text-white/60 leading-relaxed border-t border-white/5 pt-3">{faq.a}</p>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             ))}
         </div>
       </section>
 
-      {/* Tech Stack Marquee (Static representation for layout) */}
-      <div className="w-full max-w-4xl py-8 border-y border-white/5">
-          <div className="flex justify-between items-center opacity-30 grayscale mix-blend-screen px-4">
-               {/* Placeholders for tech logos */}
-               <span className="text-xs font-black uppercase">React</span>
-               <span className="text-xs font-black uppercase">Vite</span>
-               <span className="text-xs font-black uppercase">Tailwind</span>
-               <span className="text-xs font-black uppercase">TMDB</span>
-               <span className="text-xs font-black uppercase">Framer</span>
-               <span className="text-xs font-black uppercase">Vercel</span>
+      {/* Tech Stack Marquee */}
+      <div className="w-full max-w-4xl py-12 border-y border-white/5 overflow-hidden relative">
+          {/* Gradients to fade edges */}
+          <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-[#0c0c0c] to-transparent z-10 pointer-events-none" />
+          <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-[#0c0c0c] to-transparent z-10 pointer-events-none" />
+
+          <style>{`
+            @keyframes scroll {
+              0% { transform: translateX(0); }
+              100% { transform: translateX(-50%); }
+            }
+            .animate-scroll {
+              animation: scroll 30s linear infinite;
+            }
+          `}</style>
+          
+          <div className="flex animate-scroll w-max hover:[animation-play-state:paused]">
+               {[...techStack, ...techStack].map((tech, i) => (
+                 <div key={i} className="flex items-center justify-center mx-8 md:mx-12 grayscale opacity-40 hover:grayscale-0 hover:opacity-100 transition-all duration-300">
+                   <img 
+                     src={tech.icon} 
+                     alt={tech.name} 
+                     className={`h-8 w-auto object-contain ${tech.name === 'Vercel' ? 'invert' : ''}`} 
+                     title={tech.name} 
+                   />
+                 </div>
+               ))}
           </div>
       </div>
 
@@ -207,7 +264,10 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
              <p className="text-sm text-white/60 max-w-lg mx-auto">
                Join thousands of users enjoying the next generation of content discovery and consumption.
              </p>
-             <button onClick={() => setActiveTab(AppTab.ANIME)} className="btn btn-white text-black rounded-full px-8 font-black uppercase text-xs tracking-widest hover:scale-105 transition-transform">
+             <button 
+                onClick={() => setActiveTab(AppTab.ANIME)} 
+                className="btn bg-white text-black border-none hover:bg-gray-200 rounded-full px-8 font-black uppercase text-xs tracking-widest hover:scale-105 transition-transform"
+             >
                 Start Watching
              </button>
           </div>

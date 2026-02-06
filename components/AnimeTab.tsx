@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { AnimeSeries, WatchHistoryItem, HistoryFilter } from '../types';
-import { Search, Loader2, RefreshCw, Play, Trophy, Zap, Flame, Heart, Star, Activity, CheckCircle } from 'lucide-react';
+import { Search, Loader2, RefreshCw, Play, Trophy, Zap, Flame, Heart, Star, Activity, CheckCircle, Download } from 'lucide-react';
 import AnimeCard from './AnimeCard';
 import { SkeletonCard } from './Skeleton';
 import ContinueWatching from './ContinueWatching';
@@ -31,7 +31,7 @@ const item = {
 
 const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySelect, onHistoryRemove, onViewAllHistory }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchMode, setSearchMode] = useState<'download' | 'watch'>('download');
+  const [searchMode, setSearchMode] = useState<'download' | 'watch'>('watch');
   const [animeList, setAnimeList] = useState<AnimeSeries[]>([]);
   const [searchResults, setSearchResults] = useState<AnimeSeries[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -229,16 +229,18 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
 
         <div className="flex p-0.5 bg-white/5 rounded-full border border-white/10">
            <button 
-            onClick={() => setSearchMode('download')}
-            className={`px-4 py-1 rounded-full text-[8px] md:text-[10px] font-black uppercase tracking-widest transition-all ${searchMode === 'download' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40'}`}
+            onClick={() => setSearchMode('watch')}
+            className={`px-6 py-2 rounded-full transition-all ${searchMode === 'watch' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40'}`}
+            title="Watch Mode"
            >
-             Download
+             <Play size={14} className={searchMode === 'watch' ? 'fill-current' : ''} />
            </button>
            <button 
-            onClick={() => setSearchMode('watch')}
-            className={`px-4 py-1 rounded-full text-[8px] md:text-[10px] font-black uppercase tracking-widest transition-all ${searchMode === 'watch' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40'}`}
+            onClick={() => setSearchMode('download')}
+            className={`px-6 py-2 rounded-full transition-all ${searchMode === 'download' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40'}`}
+            title="Download Mode"
            >
-             Watch
+             <Download size={14} />
            </button>
         </div>
 
@@ -380,7 +382,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                     history={filteredHistory} 
                     onSelect={onHistorySelect} 
                     onRemove={onHistoryRemove} 
-                    onViewAll={() => onViewAllHistory(searchMode === 'watch' ? 'anime-watch' : 'anime-download')}
+                    onViewAll={() => onViewAllHistory('anime-watch')}
                     title="Stream History"
                   />
 
@@ -438,7 +440,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                 history={filteredHistory} 
                 onSelect={onHistorySelect} 
                 onRemove={onHistoryRemove} 
-                onViewAll={() => onViewAllHistory(searchMode === 'watch' ? 'anime-watch' : 'anime-download')}
+                onViewAll={() => onViewAllHistory('anime-download')}
                 title="Download History"
               />
 

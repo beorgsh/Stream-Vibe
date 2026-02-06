@@ -8,7 +8,7 @@ import AnimeModal from './components/AnimeModal';
 import MediaModal from './components/MediaModal';
 import AdBlockModal from './components/AdBlockModal';
 import HistoryModal from './components/HistoryModal';
-import ErrorBoundary from './components/ErrorBoundary';
+import NotFoundPage from './components/NotFoundPage';
 import { AnimatePresence, motion } from 'framer-motion';
 
 const App: React.FC = () => {
@@ -20,6 +20,7 @@ const App: React.FC = () => {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all');
   const [isPWA, setIsPWA] = useState(false);
+  const [isNotFound, setIsNotFound] = useState(false);
   
   const [resumeData, setResumeData] = useState<{
     episodeId?: string | number;
@@ -32,14 +33,32 @@ const App: React.FC = () => {
   const TMDB_KEY = "7519c82c82dd0265f5b5d599e59e972a";
 
   useEffect(() => {
+    // Route checking
+    const checkRoute = () => {
+      const path = window.location.pathname;
+      // Allow root / and /index.html, everything else is 404
+      // We strip trailing slashes for consistency
+      const cleanPath = path.replace(/\/$/, '') || '/';
+      
+      if (cleanPath !== '/' && cleanPath !== '/index.html') {
+        setIsNotFound(true);
+      } else {
+        setIsNotFound(false);
+      }
+    };
+
+    checkRoute();
+    window.addEventListener('popstate', checkRoute);
+
     // Check if running as PWA
     const checkPWA = () => {
-      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
+      const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || (window.navigator as any).standalone === true;
       setIsPWA(isStandalone);
       if (isStandalone) {
         setActiveTab(AppTab.ANIME);
       } else {
-        setActiveTab(AppTab.HOME);
+        // If not PWA and at root, verify home tab
+        if (!isNotFound) setActiveTab(AppTab.HOME);
       }
     };
     checkPWA();
@@ -58,6 +77,8 @@ const App: React.FC = () => {
         console.error("Failed to parse history", e);
       }
     }
+
+    return () => window.removeEventListener('popstate', checkRoute);
   }, []);
 
   useEffect(() => {
@@ -106,6 +127,17 @@ const App: React.FC = () => {
     setResumeData(null);
   };
 
+  const handleGoHome = () => {
+    // Safely attempt to push state, fall back to simple state update if blocked
+    try {
+        window.history.pushState({}, '', '/');
+    } catch (e) {
+        console.warn("Could not push state", e);
+    }
+    setIsNotFound(false);
+    setActiveTab(AppTab.HOME);
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case AppTab.HOME:
@@ -145,24 +177,26 @@ const App: React.FC = () => {
     }
   };
 
+  if (isNotFound) {
+    return <NotFoundPage onGoHome={handleGoHome} />;
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-[#0c0c0c] relative">
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} isPWA={isPWA} />
       
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-4 md:py-8">
-        <ErrorBoundary onGoHome={() => setActiveTab(AppTab.HOME)}>
-            <AnimatePresence mode="wait">
-            <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3, ease: "easeInOut" }}
-            >
-                {renderContent()}
-            </motion.div>
-            </AnimatePresence>
-        </ErrorBoundary>
+        <AnimatePresence mode="wait">
+        <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+        >
+            {renderContent()}
+        </motion.div>
+        </AnimatePresence>
       </main>
 
       <footer className="p-8 footer bg-black border-t border-white/5 text-base-content mt-8">
@@ -205,62 +239,58 @@ const App: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <ErrorBoundary onGoHome={() => setActiveTab(AppTab.HOME)}>
-        <AnimatePresence>
-            {selectedAnime && (
-            <AnimeModal 
-                key="anime-modal"
-                anime={selectedAnime} 
-                onClose={handleCloseModals} 
-                initialEpisodeId={resumeData?.episodeId as string}
-                onPlay={(ep) => {
-                addToHistory({
-                    id: selectedAnime.session,
-                    title: selectedAnime.title,
-                    image: selectedAnime.image,
-                    type: 'anime',
-                    source: selectedAnime.source,
-                    episodeNumber: ep.episode,
-                    episodeTitle: ep.title,
-                    episodeId: ep.session,
-                    timestamp: Date.now(),
-                    fullMedia: selectedAnime
-                });
-                }}
-            />
-            )}
-        </AnimatePresence>
-      </ErrorBoundary>
+      <AnimatePresence>
+        {selectedAnime && (
+        <AnimeModal 
+            key="anime-modal"
+            anime={selectedAnime} 
+            onClose={handleCloseModals} 
+            initialEpisodeId={resumeData?.episodeId as string}
+            onPlay={(ep) => {
+            addToHistory({
+                id: selectedAnime.session,
+                title: selectedAnime.title,
+                image: selectedAnime.image,
+                type: 'anime',
+                source: selectedAnime.source,
+                episodeNumber: ep.episode,
+                episodeTitle: ep.title,
+                episodeId: ep.session,
+                timestamp: Date.now(),
+                fullMedia: selectedAnime
+            });
+            }}
+        />
+        )}
+      </AnimatePresence>
 
-      <ErrorBoundary onGoHome={() => setActiveTab(AppTab.HOME)}>
-        <AnimatePresence>
-            {selectedMedia && (
-            <MediaModal 
-                key="media-modal"
-                media={selectedMedia} 
-                onClose={handleCloseModals} 
-                apiKey={TMDB_KEY}
-                mode={mediaMode}
-                initialResumeData={resumeData}
-                onPlay={(ep) => {
-                addToHistory({
-                    id: selectedMedia.id,
-                    title: selectedMedia.title || selectedMedia.name || 'Untitled',
-                    image: `https://image.tmdb.org/t/p/w500${selectedMedia.backdrop_path || selectedMedia.poster_path}`,
-                    type: selectedMedia.media_type,
-                    mode: mediaMode,
-                    episodeNumber: ep?.episode_number,
-                    episodeTitle: ep?.name,
-                    seasonNumber: ep?.season_number,
-                    episodeId: ep?.id,
-                    timestamp: Date.now(),
-                    fullMedia: selectedMedia
-                });
-                }}
-            />
-            )}
-        </AnimatePresence>
-      </ErrorBoundary>
+      <AnimatePresence>
+        {selectedMedia && (
+        <MediaModal 
+            key="media-modal"
+            media={selectedMedia} 
+            onClose={handleCloseModals} 
+            apiKey={TMDB_KEY}
+            mode={mediaMode}
+            initialResumeData={resumeData}
+            onPlay={(ep) => {
+            addToHistory({
+                id: selectedMedia.id,
+                title: selectedMedia.title || selectedMedia.name || 'Untitled',
+                image: `https://image.tmdb.org/t/p/w500${selectedMedia.backdrop_path || selectedMedia.poster_path}`,
+                type: selectedMedia.media_type,
+                mode: mediaMode,
+                episodeNumber: ep?.episode_number,
+                episodeTitle: ep?.name,
+                seasonNumber: ep?.season_number,
+                episodeId: ep?.id,
+                timestamp: Date.now(),
+                fullMedia: selectedMedia
+            });
+            }}
+        />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
