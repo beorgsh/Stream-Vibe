@@ -13,9 +13,9 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-3">
           <img 
-            src="https://img.icons8.com/fluency/512/play-button-circled.png" 
+            src="https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png" 
             alt="SV" 
-            className="w-8 h-8 md:w-10 md:h-10 shadow-lg shadow-primary/20 hover:rotate-12 transition-transform duration-500 cursor-pointer"
+            className="w-8 h-8 md:w-10 md:h-10 shadow-lg shadow-white/10 hover:rotate-12 transition-transform duration-500 cursor-pointer"
           />
           <span className="text-lg md:text-xl font-black tracking-tighter text-white hidden sm:block">StreamVibe</span>
         </div>

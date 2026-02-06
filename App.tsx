@@ -139,7 +139,7 @@ const App: React.FC = () => {
       <footer className="p-8 footer bg-black border-t border-white/5 text-base-content mt-8">
         <aside>
           <div className="flex items-center gap-2">
-             <img src="https://img.icons8.com/fluency/512/play-button-circled.png" className="w-8 h-8 opacity-80" alt="Logo" />
+             <img src="https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png" className="w-8 h-8 opacity-80" alt="Logo" />
              <div className="text-xl font-bold tracking-tighter text-white">StreamVibe</div>
           </div>
           <p className="text-xs opacity-50 uppercase tracking-widest font-bold mt-1">Neural Engine v4.0</p>
