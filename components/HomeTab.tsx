@@ -46,7 +46,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
           transition={{ duration: 0.6 }}
           className="relative inline-block"
         >
-          <div className="absolute inset-0 bg-primary/20 blur-[100px] rounded-full" />
+          <div className="absolute inset-0 bg-white/5 blur-[100px] rounded-full" />
           <img 
             src="https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png" 
             alt="Logo" 
@@ -68,7 +68,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
             <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">Systems Online</span>
           </div>
           <h1 className="text-4xl md:text-7xl font-black text-white tracking-tighter uppercase italic">
-            Stream<span className="text-primary">Vibe</span>
+            Stream Vibe
           </h1>
           <p className="text-sm md:text-lg text-white/60 font-medium max-w-2xl mx-auto leading-relaxed">
             The ultimate minimalist streaming hub. Access a massive neural database of Anime, Movies, and TV Shows. 
@@ -84,14 +84,14 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
         >
           <button 
             onClick={() => setActiveTab(AppTab.ANIME)}
-            className="btn btn-primary rounded-full px-8 h-12 text-xs font-black uppercase tracking-widest shadow-[0_0_30px_rgba(255,46,99,0.3)] hover:scale-105 transition-transform"
+            className="btn bg-white text-black hover:bg-gray-200 border-none rounded-full px-8 h-12 text-xs font-black uppercase tracking-widest shadow-lg hover:scale-105 transition-transform"
           >
             <Play size={14} className="fill-current mr-2" />
             Explore Anime
           </button>
           <button 
             onClick={() => setActiveTab(AppTab.GLOBAL)}
-            className="btn btn-outline btn-neutral border-white/20 text-white rounded-full px-8 h-12 text-xs font-black uppercase tracking-widest hover:bg-white hover:text-black hover:border-white transition-all"
+            className="btn btn-outline border-white/20 text-white rounded-full px-8 h-12 text-xs font-black uppercase tracking-widest hover:bg-white hover:text-black hover:border-white transition-all"
           >
             <Globe size={14} className="mr-2" />
             Browse Global
@@ -113,7 +113,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
             { label: "Database", value: "4.2M+", icon: <Cpu size={14} /> },
         ].map((stat, i) => (
             <div key={i} className="bg-white/5 border border-white/5 rounded-xl p-4 flex flex-col items-center justify-center text-center group hover:bg-white/10 transition-colors">
-                <div className="text-white/20 mb-2 group-hover:text-primary transition-colors">{stat.icon}</div>
+                <div className="text-white/20 mb-2 group-hover:text-white transition-colors">{stat.icon}</div>
                 <div className="text-lg font-black text-white">{stat.value}</div>
                 <div className="text-[9px] uppercase font-bold text-white/40 tracking-widest">{stat.label}</div>
             </div>
@@ -124,17 +124,17 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl">
         {[
           {
-            icon: <Zap size={24} className="text-yellow-400" />,
+            icon: <Zap size={24} className="text-white" />,
             title: "Dual Mode Engine",
             desc: "Toggle instantly between streaming mode for immediate playback and download mode for offline archival."
           },
           {
-            icon: <Globe size={24} className="text-blue-400" />,
+            icon: <Globe size={24} className="text-white" />,
             title: "Global TMDB Network",
             desc: "Powered by The Movie Database API to provide real-time metadata, trending lists, and high-res assets."
           },
           {
-            icon: <Smartphone size={24} className="text-purple-400" />,
+            icon: <Smartphone size={24} className="text-white" />,
             title: "PWA Optimized",
             desc: "Install as a native app on iOS and Android. Experience app-like performance with gesture navigation."
           }
@@ -145,7 +145,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: idx * 0.1 }}
-            className="bg-[#0f0f0f] border border-white/5 p-8 rounded-3xl hover:border-primary/20 transition-all group shadow-xl"
+            className="bg-[#0f0f0f] border border-white/5 p-8 rounded-3xl hover:border-white/20 transition-all group shadow-xl"
           >
             <div className="w-12 h-12 rounded-2xl bg-black flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-inner border border-white/5">
               {feature.icon}
@@ -182,7 +182,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
       {/* FAQ Section */}
       <section className="w-full max-w-3xl space-y-6">
         <div className="flex items-center gap-2 border-b border-white/10 pb-4 mb-6">
-            <HelpCircle size={18} className="text-primary" />
+            <HelpCircle size={18} className="text-white" />
             <h2 className="text-lg font-black text-white uppercase tracking-tighter">Frequently Asked Questions</h2>
         </div>
         <div className="space-y-3">
@@ -195,7 +195,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
                         <span className="text-xs md:text-sm font-bold text-white uppercase tracking-wide pr-4">{faq.q}</span>
                         <ChevronDown 
                             size={16} 
-                            className={`text-white/40 transition-transform duration-300 ${openFaqIndices.includes(i) ? 'rotate-180 text-primary' : ''}`} 
+                            className={`text-white/40 transition-transform duration-300 ${openFaqIndices.includes(i) ? 'rotate-180 text-white' : ''}`} 
                         />
                     </button>
                     <AnimatePresence initial={false}>
@@ -252,7 +252,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
-        className="w-full max-w-4xl bg-gradient-to-r from-primary/20 via-primary/5 to-transparent rounded-[2.5rem] p-1"
+        className="w-full max-w-4xl bg-gradient-to-r from-white/10 via-white/5 to-transparent rounded-[2.5rem] p-1"
       >
         <div className="bg-[#0c0c0c] rounded-[2.4rem] p-8 md:p-12 text-center space-y-6 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />

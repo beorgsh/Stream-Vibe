@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { TMDBMedia, WatchHistoryItem, HistoryFilter } from '../types';
 import { Search, Loader2, Download, Play } from 'lucide-react';
 import MediaCard from './MediaCard';
-import { SkeletonCard } from './Skeleton';
+import { SkeletonMediaCard, SkeletonBanner } from './Skeleton';
 import ContinueWatching from './ContinueWatching';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -134,14 +134,14 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
         <div className="flex p-0.5 bg-white/5 rounded-full border border-white/10">
            <button 
             onClick={() => setViewMode('watch')}
-            className={`px-6 py-2 rounded-full transition-all ${viewMode === 'watch' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40'}`}
+            className={`px-6 py-2 rounded-full transition-all ${viewMode === 'watch' ? 'bg-white text-black shadow-lg' : 'text-white/40'}`}
             title="Watch Mode"
            >
              <Play size={14} className={viewMode === 'watch' ? 'fill-current' : ''} />
            </button>
            <button 
             onClick={() => setViewMode('download')}
-            className={`px-6 py-2 rounded-full transition-all ${viewMode === 'download' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40'}`}
+            className={`px-6 py-2 rounded-full transition-all ${viewMode === 'download' ? 'bg-white text-black shadow-lg' : 'text-white/40'}`}
             title="Download Mode"
            >
              <Download size={14} />
@@ -152,12 +152,12 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
           <input 
             type="text" 
             placeholder={viewMode === 'download' ? "Search to Download..." : "Search Film & TV..."}
-            className="input input-sm h-10 md:h-12 w-full bg-white/5 border-white/5 rounded-full pl-10 pr-24 text-xs font-medium focus:border-primary transition-colors"
+            className="input input-sm h-10 md:h-12 w-full bg-white/5 border-white/5 rounded-full pl-10 pr-24 text-xs font-medium focus:border-white transition-colors"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-white/20" size={14} />
-          <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 btn btn-primary btn-xs h-8 md:h-10 rounded-full px-4 font-black uppercase text-[8px]" disabled={isSearching}>
+          <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 btn bg-white text-black border-none hover:bg-gray-200 btn-xs h-8 md:h-10 rounded-full px-4 font-black uppercase text-[8px]" disabled={isSearching}>
             {isSearching ? <Loader2 className="animate-spin" size={12} /> : "Search"}
           </button>
         </form>
@@ -167,7 +167,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
         <section className="space-y-4">
           <div className="flex items-center justify-between border-b border-white/5 pb-1">
             <h2 className="text-sm font-black text-white uppercase tracking-tighter italic flex items-center gap-2">
-              {viewMode === 'download' ? 'Download Results' : 'Search Results'} <span className="text-primary not-italic">({searchResults.length})</span>
+              {viewMode === 'download' ? 'Download Results' : 'Search Results'} <span className="text-white not-italic">({searchResults.length})</span>
             </h2>
             <button onClick={() => setSearchResults([])} className="text-[8px] uppercase font-black text-white/30">Clear</button>
           </div>
@@ -180,7 +180,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                 exit={{ opacity: 0 }}
                 className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3"
               >
-                {[...Array(12)].map((_, i) => <SkeletonCard key={i} />)}
+                {[...Array(12)].map((_, i) => <SkeletonMediaCard key={i} />)}
               </motion.div>
             ) : (
               <motion.div 
@@ -213,9 +213,9 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                   exit={{ opacity: 0 }}
                   className="space-y-12"
                 >
-                  <div className="w-full h-[250px] md:h-[400px] bg-white/5 rounded-2xl animate-pulse" />
+                  <SkeletonBanner className="h-[250px] md:h-[400px]" />
                   <div className="flex gap-4 overflow-hidden">
-                     {[...Array(6)].map((_, i) => <div key={i} className="min-w-[140px] md:min-w-[200px]"><SkeletonCard /></div>)}
+                     {[...Array(6)].map((_, i) => <div key={i} className="min-w-[140px] md:min-w-[200px]"><SkeletonMediaCard /></div>)}
                   </div>
                 </motion.div>
               ) : (
@@ -248,7 +248,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                         <div className="absolute bottom-6 left-8 right-8 z-20 pointer-events-none">
                           {trending[spotlightIndex] && (
                             <div key={spotlightIndex} className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-700 fill-mode-both">
-                              <span className="badge badge-primary badge-xs uppercase font-black tracking-widest px-3 py-2 shadow-lg">Spotlight</span>
+                              <span className="badge bg-white text-black border-none badge-xs uppercase font-black tracking-widest px-3 py-2 shadow-lg">Spotlight</span>
                               <h1 className="text-xl md:text-4xl font-black text-white uppercase tracking-tighter line-clamp-1 drop-shadow-lg">
                                 {trending[spotlightIndex].title || trending[spotlightIndex].name}
                               </h1>
@@ -265,7 +265,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                           <button 
                             key={i} 
                             onClick={() => setSpotlightIndex(i)}
-                            className={`h-1 rounded-full transition-all duration-300 ${i === spotlightIndex ? 'w-8 bg-primary' : 'w-2 bg-white/20 hover:bg-white/40'}`} 
+                            className={`h-1 rounded-full transition-all duration-300 ${i === spotlightIndex ? 'w-8 bg-white' : 'w-2 bg-white/20 hover:bg-white/40'}`} 
                           />
                         ))}
                       </div>
@@ -281,7 +281,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                   />
 
                   <section className="space-y-4">
-                    <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter border-l-2 border-primary pl-3">Trending Now</h2>
+                    <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter border-l-2 border-white pl-3">Trending Now</h2>
                     <motion.div 
                       variants={container}
                       initial="hidden"
@@ -298,7 +298,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                   </section>
 
                   <section className="space-y-4">
-                    <div className="border-l-2 border-primary pl-3">
+                    <div className="border-l-2 border-white pl-3">
                         <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter">Top Movies</h2>
                     </div>
                     <motion.div 
@@ -317,7 +317,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                   </section>
 
                   <section className="space-y-4">
-                    <div className="border-l-2 border-primary pl-3">
+                    <div className="border-l-2 border-white pl-3">
                         <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter">TV Series</h2>
                     </div>
                     <motion.div 
@@ -348,7 +348,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
               />
               
               <section className="space-y-4">
-                <div className="flex items-center justify-between border-l-2 border-primary pl-3">
+                <div className="flex items-center justify-between border-l-2 border-white pl-3">
                   <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter">Top Downloads</h2>
                 </div>
                 <AnimatePresence mode="wait">
@@ -360,7 +360,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                       exit={{ opacity: 0 }}
                       className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3"
                     >
-                      {[...Array(12)].map((_, i) => <SkeletonCard key={i} />)}
+                      {[...Array(12)].map((_, i) => <SkeletonMediaCard key={i} />)}
                     </motion.div>
                   ) : (
                     <motion.div 

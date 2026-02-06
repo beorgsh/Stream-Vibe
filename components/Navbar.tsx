@@ -21,7 +21,10 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isPWA }) => {
             alt="SV" 
             className="w-8 h-8 md:w-10 md:h-10 shadow-lg shadow-white/10 group-hover:rotate-12 transition-transform duration-500"
           />
-          <span className="text-lg md:text-xl font-black tracking-tighter text-white hidden sm:block group-hover:text-primary transition-colors">StreamVibe</span>
+          <span className="text-lg md:text-xl font-black tracking-tighter text-white group-hover:text-white/80 transition-colors">
+            <span className="md:hidden">SV</span>
+            <span className="hidden md:inline">Stream Vibe</span>
+          </span>
         </div>
 
         <div className="flex items-center gap-1 bg-white/5 rounded-full p-1 border border-white/10">
@@ -37,14 +40,14 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isPWA }) => {
 
           <button 
             onClick={() => setActiveTab(AppTab.ANIME)}
-            className={`px-3 md:px-5 py-1.5 md:py-2 rounded-full flex items-center gap-2 transition-all duration-500 ${activeTab === AppTab.ANIME ? 'bg-primary text-primary-content shadow-lg scale-105' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
+            className={`px-3 md:px-5 py-1.5 md:py-2 rounded-full flex items-center gap-2 transition-all duration-500 ${activeTab === AppTab.ANIME ? 'bg-white text-black shadow-lg scale-105' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
           >
             <Play size={14} className={activeTab === AppTab.ANIME ? 'fill-current' : ''} />
             <span className="text-xs md:text-sm font-bold tracking-tight">Anime</span>
           </button>
           <button 
             onClick={() => setActiveTab(AppTab.GLOBAL)}
-            className={`px-3 md:px-5 py-1.5 md:py-2 rounded-full flex items-center gap-2 transition-all duration-500 ${activeTab === AppTab.GLOBAL ? 'bg-primary text-primary-content shadow-lg scale-105' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
+            className={`px-3 md:px-5 py-1.5 md:py-2 rounded-full flex items-center gap-2 transition-all duration-500 ${activeTab === AppTab.GLOBAL ? 'bg-white text-black shadow-lg scale-105' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
           >
             <Globe size={14} />
             <span className="text-xs md:text-sm font-bold tracking-tight">Global</span>

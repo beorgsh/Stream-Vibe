@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { AnimeSeries, WatchHistoryItem, HistoryFilter } from '../types';
 import { Search, Loader2, RefreshCw, Play, Trophy, Zap, Flame, Heart, Star, Activity, CheckCircle, Download } from 'lucide-react';
 import AnimeCard from './AnimeCard';
-import { SkeletonCard } from './Skeleton';
+import { SkeletonAnimeCard, SkeletonBanner } from './Skeleton';
 import ContinueWatching from './ContinueWatching';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -196,7 +196,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
     if (!items.length) return null;
     return (
       <section className="space-y-4">
-        <div className="flex items-center gap-2 border-l-2 border-primary pl-3">
+        <div className="flex items-center gap-2 border-l-2 border-white pl-3">
           {icon}
           <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter">{title}</h2>
         </div>
@@ -230,14 +230,14 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
         <div className="flex p-0.5 bg-white/5 rounded-full border border-white/10">
            <button 
             onClick={() => setSearchMode('watch')}
-            className={`px-6 py-2 rounded-full transition-all ${searchMode === 'watch' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40'}`}
+            className={`px-6 py-2 rounded-full transition-all ${searchMode === 'watch' ? 'bg-white text-black shadow-lg' : 'text-white/40'}`}
             title="Watch Mode"
            >
              <Play size={14} className={searchMode === 'watch' ? 'fill-current' : ''} />
            </button>
            <button 
             onClick={() => setSearchMode('download')}
-            className={`px-6 py-2 rounded-full transition-all ${searchMode === 'download' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40'}`}
+            className={`px-6 py-2 rounded-full transition-all ${searchMode === 'download' ? 'bg-white text-black shadow-lg' : 'text-white/40'}`}
             title="Download Mode"
            >
              <Download size={14} />
@@ -248,12 +248,12 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
           <input 
             type="text" 
             placeholder="Quick Find..."
-            className="input input-sm h-10 md:h-12 w-full bg-white/5 border-white/10 rounded-full pl-10 pr-24 text-xs font-medium focus:border-primary transition-all"
+            className="input input-sm h-10 md:h-12 w-full bg-white/5 border-white/10 rounded-full pl-10 pr-24 text-xs font-medium focus:border-white transition-all text-white"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/20" size={14} />
-          <button type="submit" className="absolute right-1 top-1/2 -translate-y-1/2 btn btn-primary btn-xs h-8 md:h-10 rounded-full px-4 font-black uppercase text-[8px]" disabled={isSearching}>
+          <button type="submit" className="absolute right-1 top-1/2 -translate-y-1/2 btn bg-white text-black border-none hover:bg-gray-200 btn-xs h-8 md:h-10 rounded-full px-4 font-black uppercase text-[8px]" disabled={isSearching}>
             {isSearching ? <Loader2 className="animate-spin" size={12} /> : "Search"}
           </button>
         </form>
@@ -263,7 +263,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
         <section className="space-y-4">
           <div className="flex items-center justify-between border-b border-white/5 pb-1">
             <h2 className="text-sm font-black text-white uppercase tracking-tighter italic flex items-center gap-2">
-              Found <span className="text-primary not-italic">({searchResults.length})</span>
+              Found <span className="text-white not-italic">({searchResults.length})</span>
             </h2>
             <button onClick={() => setSearchResults([])} className="text-[8px] uppercase font-black text-white/30">Clear</button>
           </div>
@@ -276,7 +276,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                 exit={{ opacity: 0 }}
                 className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3"
               >
-                {[...Array(12)].map((_, i) => <SkeletonCard key={i} />)}
+                {[...Array(12)].map((_, i) => <SkeletonAnimeCard key={i} />)}
               </motion.div>
             ) : (
               <motion.div 
@@ -309,9 +309,13 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                   exit={{ opacity: 0 }}
                   className="space-y-12"
                 >
-                  <div className="w-full h-[250px] md:h-[350px] bg-white/5 rounded-2xl animate-pulse" />
-                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                      {[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}
+                  <SkeletonBanner className="h-[250px] md:h-[350px]" />
+                  <div className="flex gap-3 overflow-hidden">
+                      {[...Array(6)].map((_, i) => (
+                        <div key={i} className="min-w-[140px] md:min-w-[180px]">
+                          <SkeletonAnimeCard />
+                        </div>
+                      ))}
                   </div>
                 </motion.div>
               ) : watchHome ? (
@@ -350,7 +354,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                             </h1>
                             <div className="flex gap-2">
                               <button 
-                                className="btn btn-primary btn-xs rounded-full px-4 text-[8px] font-black uppercase pointer-events-auto shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
+                                className="btn bg-white text-black hover:bg-gray-200 border-none btn-xs rounded-full px-4 text-[8px] font-black uppercase pointer-events-auto shadow-lg hover:scale-105 transition-transform"
                                 onClick={() => {
                                   const item = watchHome.spotlights[spotlightIndex];
                                   onSelectAnime({
@@ -371,7 +375,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                         <button 
                           key={i} 
                           onClick={() => setSpotlightIndex(i)}
-                          className={`h-1 rounded-full transition-all duration-300 ${i === spotlightIndex ? 'w-6 bg-primary' : 'w-2 bg-white/20 hover:bg-white/40'}`} 
+                          className={`h-1 rounded-full transition-all duration-300 ${i === spotlightIndex ? 'w-6 bg-white' : 'w-2 bg-white/20 hover:bg-white/40'}`} 
                         />
                       ))}
                     </div>
@@ -387,12 +391,12 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                   />
 
                   {/* Trending Section */}
-                  {renderHorizontalSection("Trending Now", watchHome.trending, <Flame size={18} className="text-orange-500" />)}
+                  {renderHorizontalSection("Trending Now", watchHome.trending, <Flame size={18} className="text-white" />)}
 
                   {/* Top 10 Today Section */}
                   <section className="space-y-4">
-                    <div className="flex items-center gap-2 border-l-2 border-primary pl-3">
-                      <Trophy size={18} className="text-yellow-500" />
+                    <div className="flex items-center gap-2 border-l-2 border-white pl-3">
+                      <Trophy size={18} className="text-white" />
                       <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter">Top 10 Today</h2>
                     </div>
                     <motion.div 
@@ -406,7 +410,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                         <motion.div variants={item} key={idx} className="relative min-w-[160px] md:min-w-[200px] snap-start group">
                            {/* Giant Ranking Number */}
                            <div className="absolute -left-6 -bottom-4 z-10 select-none pointer-events-none">
-                              <span className="text-7xl md:text-9xl font-black italic text-white/10 group-hover:text-primary/20 transition-colors duration-500" style={{ WebkitTextStroke: '2px rgba(255,255,255,0.1)' }}>
+                              <span className="text-7xl md:text-9xl font-black italic text-white/10 group-hover:text-white/20 transition-colors duration-500" style={{ WebkitTextStroke: '2px rgba(255,255,255,0.1)' }}>
                                 {idx + 1}
                               </span>
                            </div>
@@ -417,19 +421,19 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                   </section>
 
                   {/* Top Airing */}
-                  {renderHorizontalSection("Top Airing", watchHome.topAiring, <Activity size={18} className="text-emerald-400" />)}
+                  {renderHorizontalSection("Top Airing", watchHome.topAiring, <Activity size={18} className="text-white" />)}
 
                   {/* Most Popular */}
-                  {renderHorizontalSection("Most Popular", watchHome.mostPopular, <Star size={18} className="text-yellow-400" />)}
+                  {renderHorizontalSection("Most Popular", watchHome.mostPopular, <Star size={18} className="text-white" />)}
 
                   {/* Most Favorite */}
-                  {renderHorizontalSection("Most Favorite", watchHome.mostFavorite, <Heart size={18} className="text-rose-500" />)}
+                  {renderHorizontalSection("Most Favorite", watchHome.mostFavorite, <Heart size={18} className="text-white" />)}
 
                   {/* Latest Releases */}
-                  {renderHorizontalSection("Latest Episodes", watchHome.latestEpisode, <Zap size={18} className="text-blue-400" />)}
+                  {renderHorizontalSection("Latest Episodes", watchHome.latestEpisode, <Zap size={18} className="text-white" />)}
 
                   {/* Just Completed */}
-                  {renderHorizontalSection("Just Completed", watchHome.latestCompleted, <CheckCircle size={18} className="text-indigo-400" />)}
+                  {renderHorizontalSection("Just Completed", watchHome.latestCompleted, <CheckCircle size={18} className="text-white" />)}
                 </motion.div>
               ) : null}
             </AnimatePresence>
@@ -445,7 +449,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
               />
 
               <section className="space-y-4">
-                <div className="flex items-center justify-between border-l-2 border-primary pl-3">
+                <div className="flex items-center justify-between border-l-2 border-white pl-3">
                   <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter">Discovery</h2>
                   <RefreshCw onClick={fetchAnimeList} className={`${isLoading ? 'animate-spin' : ''} text-white/20 cursor-pointer`} size={14} />
                 </div>
@@ -458,7 +462,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                       exit={{ opacity: 0 }}
                       className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3"
                     >
-                      {[...Array(12)].map((_, i) => <SkeletonCard key={i} />)}
+                      {[...Array(12)].map((_, i) => <SkeletonAnimeCard key={i} />)}
                     </motion.div>
                   ) : (
                     <motion.div 
