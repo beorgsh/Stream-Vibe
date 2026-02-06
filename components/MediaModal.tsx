@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { TMDBMedia, TMDBEpisode } from '../types';
-import { X, Play, Loader2, Star, Download, ArrowLeft, ChevronLeft, ChevronRight, Search, ChevronDown, Server, CheckCircle2 } from 'lucide-react';
+import { X, Play, Loader2, Star, Download, ArrowLeft, ChevronLeft, ChevronRight, Search, ChevronDown, Server, CheckCircle2, List } from 'lucide-react';
 import { SkeletonRow, SkeletonText } from './Skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -18,6 +17,7 @@ interface MediaModalProps {
 }
 
 const SERVERS = [
+  { id: 'vidrock', label: 'VidRock (New)' },
   { id: 'rivestream', label: 'RiveStream' },
   { id: 'rive2', label: 'Rive 2' },
   { id: 'vidnest', label: 'VidNest' },
@@ -37,13 +37,18 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
   const [currentSeason, setCurrentSeason] = useState(1);
   const [isSeasonDropdownOpen, setIsSeasonDropdownOpen] = useState(false);
   const [isServerDropdownOpen, setIsServerDropdownOpen] = useState(false);
+  const [isPlayerEpDropdownOpen, setIsPlayerEpDropdownOpen] = useState(false);
+  const [isPlayerSeasonDropdownOpen, setIsPlayerSeasonDropdownOpen] = useState(false);
+  
   const dropdownRef = useRef<HTMLDivElement>(null);
   const serverDropdownRef = useRef<HTMLDivElement>(null);
+  const playerEpDropdownRef = useRef<HTMLDivElement>(null);
+  const playerSeasonDropdownRef = useRef<HTMLDivElement>(null);
   const episodesContainerRef = useRef<HTMLDivElement>(null);
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [playingEpisode, setPlayingEpisode] = useState<TMDBEpisode | null>(null);
-  const [server, setServer] = useState('rivestream');
+  const [server, setServer] = useState('vidrock');
   const [watchedEpisodes, setWatchedEpisodes] = useState<Set<string>>(new Set());
 
   const hasAutoResumed = useRef(false);
@@ -117,12 +122,14 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsSeasonDropdownOpen(false);
-      }
-      if (serverDropdownRef.current && !serverDropdownRef.current.contains(event.target as Node)) {
-        setIsServerDropdownOpen(false);
-      }
+      const refs = [dropdownRef, serverDropdownRef, playerEpDropdownRef, playerSeasonDropdownRef];
+      const setters = [setIsSeasonDropdownOpen, setIsServerDropdownOpen, setIsPlayerEpDropdownOpen, setIsPlayerSeasonDropdownOpen];
+      
+      refs.forEach((ref, idx) => {
+        if (ref.current && !ref.current.contains(event.target as Node)) {
+          setters[idx](false);
+        }
+      });
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -134,7 +141,6 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
     setCurrentSeason(newSeason);
     try {
         const res = await fetch(`https://api.themoviedb.org/3/tv/${media.id}/season/${newSeason}?api_key=${apiKey}`);
-        // Fix: corrected 'response' to 'res' to match defined fetch result variable
         const data = await res.json();
         setEpisodes(data.episodes || []);
     } catch (e) {
@@ -150,6 +156,10 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
     const color = 'ff2e63'; 
 
     switch(server) {
+        case 'vidrock':
+            return isTv
+                ? `https://vidrock.net/tv/${id}/${playingEpisode?.season_number}/${playingEpisode?.episode_number}`
+                : `https://vidrock.net/movie/${id}`;
         case 'vidnest':
             return isTv
                 ? `https://vidnest.fun/tv/${id}/${playingEpisode?.season_number}/${playingEpisode?.episode_number}`
@@ -310,11 +320,106 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                      />
                 </div>
 
-                <div className="p-4 bg-base-100 border-t border-base-content/5 flex justify-center">
-                    <div className="relative z-[70] w-full max-w-[240px]" ref={serverDropdownRef}>
+                <div className="p-4 bg-base-100 border-t border-base-content/5 flex flex-wrap justify-center gap-3 md:gap-4">
+                    {/* Season Selector (TV Only) */}
+                    {type === 'tv' && (
+                        <div className="relative z-[71] w-full md:w-auto md:min-w-[140px]" ref={playerSeasonDropdownRef}>
+                             <button
+                                onClick={() => setIsPlayerSeasonDropdownOpen(!isPlayerSeasonDropdownOpen)}
+                                className="w-full flex items-center justify-between gap-3 px-4 py-2 bg-base-content/5 border border-base-content/10 rounded-xl hover:border-primary/50 transition-all group shadow-xl"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <List size={12} className="text-base-content/30 group-hover:text-primary" />
+                                    <span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-base-content group-hover:text-primary truncate">
+                                        {currentSeasonName}
+                                    </span>
+                                </div>
+                                <ChevronDown size={14} className={`text-base-content/40 group-hover:text-primary transition-all duration-300 ${isPlayerSeasonDropdownOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            <AnimatePresence>
+                                {isPlayerSeasonDropdownOpen && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        className="absolute bottom-full left-0 mb-3 w-56 bg-base-100 border border-base-content/10 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 backdrop-blur-xl"
+                                    >
+                                        <div className="px-3 py-2 border-b border-base-content/5 mb-1">
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-base-content/30">Switch Season</span>
+                                        </div>
+                                        <div className="max-h-64 overflow-y-auto custom-scrollbar">
+                                            {details?.seasons?.filter((s: any) => s.season_number > 0 && s.episode_count > 0).map((s: any) => (
+                                                <button
+                                                    key={s.id}
+                                                    onClick={() => {
+                                                        handleSeasonChange(s.season_number);
+                                                        setIsPlayerSeasonDropdownOpen(false);
+                                                    }}
+                                                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${currentSeason === s.season_number ? 'bg-primary text-primary-content' : 'text-base-content/60 hover:bg-base-content/5 hover:text-base-content'}`}
+                                                >
+                                                    <span className="truncate">{s.name || `Season ${s.season_number}`}</span>
+                                                    {currentSeason === s.season_number && <div className="w-1.5 h-1.5 rounded-full bg-primary-content" />}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    )}
+
+                    {/* Episode Selector (TV Only) */}
+                    {type === 'tv' && (
+                        <div className="relative z-[71] w-full md:w-auto md:min-w-[140px]" ref={playerEpDropdownRef}>
+                             <button
+                                onClick={() => setIsPlayerEpDropdownOpen(!isPlayerEpDropdownOpen)}
+                                className="w-full flex items-center justify-between gap-3 px-4 py-2 bg-base-content/5 border border-base-content/10 rounded-xl hover:border-primary/50 transition-all group shadow-xl"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <Play size={12} className="text-base-content/30 group-hover:text-primary" />
+                                    <span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-base-content group-hover:text-primary truncate">
+                                        EP {playingEpisode?.episode_number || '1'}
+                                    </span>
+                                </div>
+                                <ChevronDown size={14} className={`text-base-content/40 group-hover:text-primary transition-all duration-300 ${isPlayerEpDropdownOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            <AnimatePresence>
+                                {isPlayerEpDropdownOpen && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        className="absolute bottom-full left-0 mb-3 w-56 bg-base-100 border border-base-content/10 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 backdrop-blur-xl"
+                                    >
+                                        <div className="px-3 py-2 border-b border-base-content/5 mb-1">
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-base-content/30">Jump to Episode</span>
+                                        </div>
+                                        <div className="max-h-64 overflow-y-auto custom-scrollbar">
+                                            {episodes.map(ep => (
+                                                <button
+                                                    key={ep.id}
+                                                    onClick={() => {
+                                                        handleAction(ep, true);
+                                                        setIsPlayerEpDropdownOpen(false);
+                                                    }}
+                                                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${playingEpisode?.id === ep.id ? 'bg-primary text-primary-content' : 'text-base-content/60 hover:bg-base-content/5 hover:text-base-content'}`}
+                                                >
+                                                    <span className="truncate">E{ep.episode_number}: {ep.name}</span>
+                                                    {playingEpisode?.id === ep.id && <div className="w-1.5 h-1.5 rounded-full bg-primary-content" />}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    )}
+
+                    {/* Server Dropdown */}
+                    <div className="relative z-[70] w-full md:w-auto md:min-w-[180px]" ref={serverDropdownRef}>
                         <button
                           onClick={() => setIsServerDropdownOpen(!isServerDropdownOpen)}
-                          className="w-full flex items-center justify-between px-4 py-2 bg-base-content/5 border border-base-content/10 rounded-xl hover:border-primary/50 transition-all group shadow-xl"
+                          className="w-full flex items-center justify-between gap-3 px-4 py-2 bg-base-content/5 border border-base-content/10 rounded-xl hover:border-primary/50 transition-all group shadow-xl"
                         >
                           <div className="flex items-center gap-2">
                              <Server size={12} className="text-base-content/30 group-hover:text-primary" />
@@ -349,7 +454,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                                           className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${server === srv.id ? 'bg-primary text-primary-content' : 'text-base-content/60 hover:bg-base-content/5 hover:text-base-content'}`}
                                       >
                                           <div className="flex items-center gap-2">
-                                            {srv.id === 'rivestream' && <Star size={10} className={server === srv.id ? 'text-primary-content' : 'text-yellow-500 fill-current'} />}
+                                            {(srv.id === 'rivestream' || srv.id === 'vidrock') && <Star size={10} className={server === srv.id ? 'text-primary-content' : 'text-yellow-500 fill-current'} />}
                                             {srv.label}
                                           </div>
                                           {server === srv.id && <div className="w-1.5 h-1.5 rounded-full bg-primary-content" />}
