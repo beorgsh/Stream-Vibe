@@ -1,7 +1,7 @@
-
 import React, { useState } from 'react';
 import { WatchHistoryItem } from '../types';
 import { X, Trash2, Play, History, Search } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface HistoryModalProps {
   history: WatchHistoryItem[];
@@ -12,21 +12,28 @@ interface HistoryModalProps {
 }
 
 const HistoryModal: React.FC<HistoryModalProps> = ({ history, onClose, onSelect, onRemove, onClearAll }) => {
-  const [isClosing, setIsClosing] = useState(false);
   const [search, setSearch] = useState('');
-
-  const handleClose = () => {
-    setIsClosing(true);
-    setTimeout(onClose, 300);
-  };
 
   const filteredHistory = history.filter(item => 
     item.title.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
-    <div className={`fixed inset-0 z-[1100] flex items-center justify-center p-3 bg-black/90 backdrop-blur-xl transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100 animate-in fade-in'}`}>
-      <div className={`bg-[#0a0a0a] border border-white/10 w-full max-w-4xl h-[85vh] rounded-3xl overflow-hidden relative flex flex-col shadow-2xl transition-all duration-300 ${isClosing ? 'scale-95 opacity-0' : 'scale-100 opacity-100 animate-in zoom-in-95'}`}>
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+      className="fixed inset-0 z-[1100] flex items-center justify-center p-3 bg-black/90 backdrop-blur-xl"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <motion.div 
+        initial={{ scale: 0.9, y: 30, opacity: 0 }}
+        animate={{ scale: 1, y: 0, opacity: 1 }}
+        exit={{ scale: 0.9, y: 30, opacity: 0 }}
+        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+        className="bg-[#0a0a0a] border border-white/10 w-full max-w-4xl h-[85vh] rounded-3xl overflow-hidden relative flex flex-col shadow-2xl"
+      >
         
         <div className="flex items-center justify-between p-6 border-b border-white/5 bg-black/20">
           <div className="flex items-center gap-3">
@@ -48,7 +55,7 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ history, onClose, onSelect,
                 Clear Database
               </button>
             )}
-            <button onClick={handleClose} className="btn btn-circle btn-sm btn-ghost bg-white/5 border border-white/10 text-white">
+            <button onClick={onClose} className="btn btn-circle btn-sm btn-ghost bg-white/5 border border-white/10 text-white">
               <X size={18} />
             </button>
           </div>
@@ -114,8 +121,8 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ history, onClose, onSelect,
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 

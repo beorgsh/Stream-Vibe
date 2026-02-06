@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { TMDBMedia, WatchHistoryItem } from '../types';
 import { Search, Loader2 } from 'lucide-react';
 import MediaCard from './MediaCard';
 import { SkeletonCard } from './Skeleton';
 import ContinueWatching from './ContinueWatching';
+import { motion } from 'framer-motion';
 
 interface GlobalTabProps {
   onSelectMedia: (media: TMDBMedia, mode: 'watch' | 'download') => void;
@@ -13,6 +13,21 @@ interface GlobalTabProps {
   onHistoryRemove: (id: string | number) => void;
   onViewAllHistory: () => void;
 }
+
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05
+    }
+  }
+};
+
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 }
+};
 
 const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistorySelect, onHistoryRemove, onViewAllHistory }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -147,22 +162,29 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
       </section>
 
       {(isSearching || searchResults.length > 0) && (
-        <section className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+        <section className="space-y-4">
           <div className="flex items-center justify-between border-b border-white/5 pb-1">
             <h2 className="text-sm font-black text-white uppercase tracking-tighter italic flex items-center gap-2">
               {viewMode === 'download' ? 'Download Results' : 'Search Results'} <span className="text-primary not-italic">({searchResults.length})</span>
             </h2>
             <button onClick={() => setSearchResults([])} className="text-[8px] uppercase font-black text-white/30">Clear</button>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+          <motion.div 
+            variants={container}
+            initial="hidden"
+            animate="show"
+            className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3"
+          >
             {isSearching ? (
               [...Array(12)].map((_, i) => <SkeletonCard key={i} />)
             ) : (
               searchResults.map((media) => (
-                <MediaCard key={media.id} media={media} onClick={() => onSelectMedia(media, viewMode)} />
+                <motion.div variants={item} key={media.id}>
+                  <MediaCard media={media} onClick={() => onSelectMedia(media, viewMode)} />
+                </motion.div>
               ))
             )}
-          </div>
+          </motion.div>
         </section>
       )}
 
@@ -228,51 +250,69 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
 
               <section className="space-y-4">
                 <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter border-l-2 border-primary pl-3">Trending Now</h2>
-                <div className="flex gap-4 overflow-x-auto pb-6 no-scrollbar snap-x snap-mandatory">
+                <motion.div 
+                  variants={container}
+                  initial="hidden"
+                  whileInView="show"
+                  viewport={{ once: true, margin: "-100px" }}
+                  className="flex gap-4 overflow-x-auto pb-6 no-scrollbar snap-x snap-mandatory"
+                >
                   {isLoading ? (
                     [...Array(6)].map((_, i) => <div key={i} className="min-w-[140px] md:min-w-[200px] snap-start"><SkeletonCard /></div>)
                   ) : (
                     trending.map((media) => (
-                      <div key={media.id} className="min-w-[140px] md:min-w-[200px] snap-start">
+                      <motion.div variants={item} key={media.id} className="min-w-[140px] md:min-w-[200px] snap-start">
                         <MediaCard media={media} onClick={() => onSelectMedia(media, viewMode)} />
-                      </div>
+                      </motion.div>
                     ))
                   )}
-                </div>
+                </motion.div>
               </section>
 
               <section className="space-y-4">
                 <div className="border-l-2 border-primary pl-3">
                     <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter">Top Movies</h2>
                 </div>
-                <div className="flex gap-4 overflow-x-auto pb-6 no-scrollbar snap-x snap-mandatory">
+                <motion.div 
+                  variants={container}
+                  initial="hidden"
+                  whileInView="show"
+                  viewport={{ once: true, margin: "-100px" }}
+                  className="flex gap-4 overflow-x-auto pb-6 no-scrollbar snap-x snap-mandatory"
+                >
                     {isLoading ? (
                         [...Array(6)].map((_, i) => <div key={i} className="min-w-[140px] md:min-w-[200px] snap-start"><SkeletonCard /></div>)
                     ) : (
                       latestMovies.map((media) => (
-                        <div key={media.id} className="min-w-[140px] md:min-w-[200px] snap-start">
+                        <motion.div variants={item} key={media.id} className="min-w-[140px] md:min-w-[200px] snap-start">
                           <MediaCard media={media} onClick={() => onSelectMedia(media, viewMode)} />
-                        </div>
+                        </motion.div>
                       ))
                     )}
-                </div>
+                </motion.div>
               </section>
 
               <section className="space-y-4">
                 <div className="border-l-2 border-primary pl-3">
                     <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter">TV Series</h2>
                 </div>
-                <div className="flex gap-4 overflow-x-auto pb-6 no-scrollbar snap-x snap-mandatory">
+                <motion.div 
+                  variants={container}
+                  initial="hidden"
+                  whileInView="show"
+                  viewport={{ once: true, margin: "-100px" }}
+                  className="flex gap-4 overflow-x-auto pb-6 no-scrollbar snap-x snap-mandatory"
+                >
                     {isLoading ? (
                         [...Array(6)].map((_, i) => <div key={i} className="min-w-[140px] md:min-w-[200px] snap-start"><SkeletonCard /></div>)
                     ) : (
                       latestTV.map((media) => (
-                        <div key={media.id} className="min-w-[140px] md:min-w-[200px] snap-start">
+                        <motion.div variants={item} key={media.id} className="min-w-[140px] md:min-w-[200px] snap-start">
                           <MediaCard media={media} onClick={() => onSelectMedia(media, viewMode)} />
-                        </div>
+                        </motion.div>
                       ))
                     )}
-                </div>
+                </motion.div>
               </section>
             </>
           ) : (
@@ -285,19 +325,26 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                 title="Global Download History"
               />
               
-              <section className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+              <section className="space-y-4">
                 <div className="flex items-center justify-between border-l-2 border-primary pl-3">
                   <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter">Top Downloads</h2>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                <motion.div 
+                  variants={container}
+                  initial="hidden"
+                  animate="show"
+                  className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3"
+                >
                   {isLoading ? (
                     [...Array(12)].map((_, i) => <SkeletonCard key={i} />)
                   ) : (
                     trending.map((media) => (
-                      <MediaCard key={media.id} media={media} onClick={() => onSelectMedia(media, viewMode)} />
+                      <motion.div variants={item} key={media.id}>
+                        <MediaCard media={media} onClick={() => onSelectMedia(media, viewMode)} />
+                      </motion.div>
                     ))
                   )}
-                </div>
+                </motion.div>
               </section>
             </div>
           )}

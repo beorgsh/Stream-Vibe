@@ -1,7 +1,7 @@
-
 import React from 'react';
 import { WatchHistoryItem } from '../types';
 import { Play, Trash2, History, ChevronRight } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface ContinueWatchingProps {
   history: WatchHistoryItem[];
@@ -31,7 +31,12 @@ const ContinueWatching: React.FC<ContinueWatchingProps> = ({ history, onSelect, 
   };
 
   return (
-    <section className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-700">
+    <motion.section 
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="space-y-4"
+    >
       <div className="flex items-center justify-between border-l-2 border-primary pl-3">
         <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter flex items-center gap-2">
           <History size={16} className="text-primary" />
@@ -47,7 +52,9 @@ const ContinueWatching: React.FC<ContinueWatchingProps> = ({ history, onSelect, 
 
       <div className="flex flex-nowrap gap-4 overflow-x-auto pb-4 no-scrollbar snap-x snap-mandatory">
         {history.slice(0, 10).map((item) => (
-          <div 
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
             key={item.id} 
             className="group relative w-[180px] md:w-[260px] shrink-0 aspect-video rounded-xl md:rounded-2xl overflow-hidden bg-white/5 border border-white/10 cursor-pointer snap-start"
           >
@@ -102,11 +109,11 @@ const ContinueWatching: React.FC<ContinueWatchingProps> = ({ history, onSelect, 
                 <Play className="fill-current ml-1" size={16} />
               </div>
             </div>
-          </div>
+          </motion.div>
         ))}
         <div className="w-2 md:w-4 shrink-0" />
       </div>
-    </section>
+    </motion.section>
   );
 };
 

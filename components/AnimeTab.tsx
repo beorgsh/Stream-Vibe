@@ -4,6 +4,7 @@ import { Search, Loader2, RefreshCw, Play, Trophy, Zap, Flame, Heart, Star, Acti
 import AnimeCard from './AnimeCard';
 import { SkeletonCard } from './Skeleton';
 import ContinueWatching from './ContinueWatching';
+import { motion } from 'framer-motion';
 
 interface AnimeTabProps {
   onSelectAnime: (anime: AnimeSeries) => void;
@@ -12,6 +13,21 @@ interface AnimeTabProps {
   onHistoryRemove: (id: string | number) => void;
   onViewAllHistory: () => void;
 }
+
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05
+    }
+  }
+};
+
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 }
+};
 
 const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySelect, onHistoryRemove, onViewAllHistory }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -184,13 +200,19 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
           {icon}
           <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter">{title}</h2>
         </div>
-        <div className="flex gap-3 overflow-x-auto pb-6 no-scrollbar snap-x snap-mandatory">
+        <motion.div 
+          variants={container}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-100px" }}
+          className="flex gap-3 overflow-x-auto pb-6 no-scrollbar snap-x snap-mandatory"
+        >
           {items.map((anime, idx) => (
-            <div key={idx} className="min-w-[140px] md:min-w-[180px] snap-start">
+            <motion.div variants={item} key={idx} className="min-w-[140px] md:min-w-[180px] snap-start">
               <AnimeCard anime={anime} onClick={() => onSelectAnime(anime)} />
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </section>
     );
   };
@@ -236,22 +258,29 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
       </section>
 
       {(isSearching || searchResults.length > 0) && (
-        <section className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+        <section className="space-y-4">
           <div className="flex items-center justify-between border-b border-white/5 pb-1">
             <h2 className="text-sm font-black text-white uppercase tracking-tighter italic flex items-center gap-2">
               Found <span className="text-primary not-italic">({searchResults.length})</span>
             </h2>
             <button onClick={() => setSearchResults([])} className="text-[8px] uppercase font-black text-white/30">Clear</button>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+          <motion.div 
+            variants={container}
+            initial="hidden"
+            animate="show"
+            className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3"
+          >
             {isSearching ? (
               [...Array(12)].map((_, i) => <SkeletonCard key={i} />)
             ) : (
               searchResults.map((anime, idx) => (
-                <AnimeCard key={idx} anime={anime} onClick={() => onSelectAnime(anime)} />
+                <motion.div variants={item} key={idx}>
+                  <AnimeCard anime={anime} onClick={() => onSelectAnime(anime)} />
+                </motion.div>
               ))
             )}
-          </div>
+          </motion.div>
         </section>
       )}
 
@@ -342,9 +371,15 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                       <Trophy size={18} className="text-yellow-500" />
                       <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter">Top 10 Today</h2>
                     </div>
-                    <div className="flex gap-6 overflow-x-auto pb-10 pt-4 no-scrollbar snap-x snap-mandatory px-4">
+                    <motion.div 
+                      variants={container}
+                      initial="hidden"
+                      whileInView="show"
+                      viewport={{ once: true, margin: "-100px" }}
+                      className="flex gap-6 overflow-x-auto pb-10 pt-4 no-scrollbar snap-x snap-mandatory px-4"
+                    >
                       {watchHome.topTenToday.map((anime, idx) => (
-                        <div key={idx} className="relative min-w-[160px] md:min-w-[200px] snap-start group">
+                        <motion.div variants={item} key={idx} className="relative min-w-[160px] md:min-w-[200px] snap-start group">
                            {/* Giant Ranking Number */}
                            <div className="absolute -left-6 -bottom-4 z-10 select-none pointer-events-none">
                               <span className="text-7xl md:text-9xl font-black italic text-white/10 group-hover:text-primary/20 transition-colors duration-500" style={{ WebkitTextStroke: '2px rgba(255,255,255,0.1)' }}>
@@ -352,9 +387,9 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                               </span>
                            </div>
                            <AnimeCard anime={anime} onClick={() => onSelectAnime(anime)} />
-                        </div>
+                        </motion.div>
                       ))}
-                    </div>
+                    </motion.div>
                   </section>
 
                   {/* Top Airing */}
@@ -390,15 +425,22 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                   <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter">Discovery</h2>
                   <RefreshCw onClick={fetchAnimeList} className={`${isLoading ? 'animate-spin' : ''} text-white/20 cursor-pointer`} size={14} />
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                <motion.div 
+                  variants={container}
+                  initial="hidden"
+                  animate="show"
+                  className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3"
+                >
                   {isLoading ? (
                     [...Array(12)].map((_, i) => <SkeletonCard key={i} />)
                   ) : (
                     animeList.map((anime, idx) => (
-                      <AnimeCard key={idx} anime={anime} onClick={() => onSelectAnime(anime)} />
+                      <motion.div variants={item} key={idx}>
+                        <AnimeCard anime={anime} onClick={() => onSelectAnime(anime)} />
+                      </motion.div>
                     ))
                   )}
-                </div>
+                </motion.div>
               </section>
             </div>
           )}

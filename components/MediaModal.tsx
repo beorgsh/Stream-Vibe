@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { TMDBMedia, TMDBEpisode } from '../types';
 import { X, Play, Loader2, Star, Download, ArrowLeft, ChevronLeft, ChevronRight, Search, ChevronDown } from 'lucide-react';
 import { SkeletonRow, SkeletonText } from './Skeleton';
+import { motion } from 'framer-motion';
 
 interface MediaModalProps {
   media: TMDBMedia;
@@ -23,7 +24,6 @@ const SERVERS = [
 ];
 
 const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 'watch', onPlay, initialResumeData }) => {
-  const [isClosing, setIsClosing] = useState(false);
   const [episodes, setEpisodes] = useState<TMDBEpisode[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isIframeLoading, setIsIframeLoading] = useState(false);
@@ -34,17 +34,11 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const episodesContainerRef = useRef<HTMLDivElement>(null);
   
-  // Player state
   const [isPlaying, setIsPlaying] = useState(false);
   const [playingEpisode, setPlayingEpisode] = useState<TMDBEpisode | null>(null);
   const [server, setServer] = useState('vidsrcto');
 
   const hasAutoResumed = useRef(false);
-
-  const handleClose = () => {
-    setIsClosing(true);
-    setTimeout(onClose, 300);
-  };
 
   const type = media.media_type || (media.title ? 'movie' : 'tv');
 
@@ -64,7 +58,6 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
           const epList = episodesData.episodes || [];
           setEpisodes(epList);
 
-          // Auto-resume logic for TV - only if it's watch mode
           if (mode === 'watch' && initialResumeData?.episodeNumber && !hasAutoResumed.current) {
              const targetEp = epList.find((e: any) => e.episode_number.toString() === initialResumeData.episodeNumber?.toString());
              if (targetEp) {
@@ -152,7 +145,6 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
 
     if (isManual && onPlay) onPlay(episode);
     
-    // Smooth reset for player logic
     setIsIframeLoading(true);
     if (episode) {
       setPlayingEpisode(episode);
@@ -183,12 +175,22 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
   }, [details, currentSeason]);
 
   return (
-    <div 
-      className={`fixed inset-0 z-[1000] flex items-center justify-center p-3 bg-black/80 backdrop-blur-2xl transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100 animate-in fade-in'}`}
-      onClick={(e) => e.target === e.currentTarget && handleClose()}
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-3 bg-black/80 backdrop-blur-2xl"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className={`bg-[#0a0a0a] border border-white/10 w-full max-w-5xl ${isPlaying ? 'h-auto' : 'max-h-[85vh]'} rounded-2xl overflow-hidden relative flex flex-col shadow-2xl transition-all duration-300 ${isClosing ? 'scale-95 opacity-0' : 'scale-100 opacity-100 animate-in zoom-in-95'}`}>
-        <button onClick={handleClose} className="absolute top-4 right-4 z-[60] btn btn-circle btn-xs btn-ghost bg-black/40 border border-white/10 text-white hover:bg-white/20">
+      <motion.div 
+        initial={{ scale: 0.9, y: 30, opacity: 0 }}
+        animate={{ scale: 1, y: 0, opacity: 1 }}
+        exit={{ scale: 0.9, y: 30, opacity: 0 }}
+        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+        className={`bg-[#0a0a0a] border border-white/10 w-full max-w-5xl ${isPlaying ? 'h-auto' : 'max-h-[85vh]'} rounded-2xl overflow-hidden relative flex flex-col shadow-2xl`}
+      >
+        <button onClick={onClose} className="absolute top-4 right-4 z-[60] btn btn-circle btn-xs btn-ghost bg-black/40 border border-white/10 text-white hover:bg-white/20">
           <X size={16} />
         </button>
 
@@ -301,7 +303,11 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
 
                 <div className="flex-1 overflow-y-auto p-4 md:p-8 pt-0 custom-scrollbar">
                 {activeTab === 'info' ? (
-                    <div className="space-y-6 animate-in slide-in-from-left-2">
+                    <motion.div 
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="space-y-6"
+                    >
                         {isLoading ? (
                         <SkeletonText lines={4} />
                         ) : (
@@ -322,9 +328,13 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                                 {type === 'movie' ? (mode === 'download' ? 'Download Film' : 'Play Film') : 'Browse Episodes'}
                             </button>
                         </div>
-                    </div>
+                    </motion.div>
                 ) : (
-                    <div className="space-y-4 animate-in slide-in-from-right-2 h-full flex flex-col">
+                    <motion.div 
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="space-y-4 h-full flex flex-col"
+                    >
                     <div className="flex flex-wrap items-center justify-between gap-4 p-1 border-b border-white/5 pb-2">
                          <div className="relative z-20" ref={dropdownRef}>
                             <button
@@ -396,14 +406,14 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                             ))
                         )}
                     </div>
-                    </div>
+                    </motion.div>
                 )}
                 </div>
             </div>
             </div>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 

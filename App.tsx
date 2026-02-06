@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { AppTab, AnimeSeries, TMDBMedia, WatchHistoryItem } from './types';
 import Navbar from './components/Navbar';
@@ -8,6 +7,7 @@ import AnimeModal from './components/AnimeModal';
 import MediaModal from './components/MediaModal';
 import AdBlockModal from './components/AdBlockModal';
 import HistoryModal from './components/HistoryModal';
+import { AnimatePresence } from 'framer-motion';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AppTab>(AppTab.ANIME);
@@ -131,66 +131,77 @@ const App: React.FC = () => {
         </nav>
       </footer>
 
-      {showAdBlockModal && (
-        <AdBlockModal onClose={handleCloseAdBlockModal} />
-      )}
+      <AnimatePresence>
+        {showAdBlockModal && (
+          <AdBlockModal key="adblock-modal" onClose={handleCloseAdBlockModal} />
+        )}
+      </AnimatePresence>
 
-      {showHistoryModal && (
-        <HistoryModal 
-          history={watchHistory} 
-          onClose={() => setShowHistoryModal(false)}
-          onSelect={handleSelectFromHistory}
-          onRemove={removeFromHistory}
-          onClearAll={() => setWatchHistory([])}
-        />
-      )}
+      <AnimatePresence>
+        {showHistoryModal && (
+          <HistoryModal 
+            key="history-modal"
+            history={watchHistory} 
+            onClose={() => setShowHistoryModal(false)}
+            onSelect={handleSelectFromHistory}
+            onRemove={removeFromHistory}
+            onClearAll={() => setWatchHistory([])}
+          />
+        )}
+      </AnimatePresence>
 
-      {selectedAnime && (
-        <AnimeModal 
-          anime={selectedAnime} 
-          onClose={handleCloseModals} 
-          initialEpisodeId={resumeData?.episodeId as string}
-          onPlay={(ep) => {
-            addToHistory({
-              id: selectedAnime.session,
-              title: selectedAnime.title,
-              image: selectedAnime.image,
-              type: 'anime',
-              source: selectedAnime.source,
-              episodeNumber: ep.episode,
-              episodeTitle: ep.title,
-              episodeId: ep.session,
-              timestamp: Date.now(),
-              fullMedia: selectedAnime
-            });
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {selectedAnime && (
+          <AnimeModal 
+            key="anime-modal"
+            anime={selectedAnime} 
+            onClose={handleCloseModals} 
+            initialEpisodeId={resumeData?.episodeId as string}
+            onPlay={(ep) => {
+              addToHistory({
+                id: selectedAnime.session,
+                title: selectedAnime.title,
+                image: selectedAnime.image,
+                type: 'anime',
+                source: selectedAnime.source,
+                episodeNumber: ep.episode,
+                episodeTitle: ep.title,
+                episodeId: ep.session,
+                timestamp: Date.now(),
+                fullMedia: selectedAnime
+              });
+            }}
+          />
+        )}
+      </AnimatePresence>
 
-      {selectedMedia && (
-        <MediaModal 
-          media={selectedMedia} 
-          onClose={handleCloseModals} 
-          apiKey={TMDB_KEY}
-          mode={mediaMode}
-          initialResumeData={resumeData}
-          onPlay={(ep) => {
-            addToHistory({
-              id: selectedMedia.id,
-              title: selectedMedia.title || selectedMedia.name || 'Untitled',
-              image: `https://image.tmdb.org/t/p/w500${selectedMedia.backdrop_path || selectedMedia.poster_path}`,
-              type: selectedMedia.media_type,
-              mode: mediaMode,
-              episodeNumber: ep?.episode_number,
-              episodeTitle: ep?.name,
-              seasonNumber: ep?.season_number,
-              episodeId: ep?.id,
-              timestamp: Date.now(),
-              fullMedia: selectedMedia
-            });
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {selectedMedia && (
+          <MediaModal 
+            key="media-modal"
+            media={selectedMedia} 
+            onClose={handleCloseModals} 
+            apiKey={TMDB_KEY}
+            mode={mediaMode}
+            initialResumeData={resumeData}
+            onPlay={(ep) => {
+              addToHistory({
+                id: selectedMedia.id,
+                title: selectedMedia.title || selectedMedia.name || 'Untitled',
+                image: `https://image.tmdb.org/t/p/w500${selectedMedia.backdrop_path || selectedMedia.poster_path}`,
+                type: selectedMedia.media_type,
+                mode: mediaMode,
+                episodeNumber: ep?.episode_number,
+                episodeTitle: ep?.name,
+                seasonNumber: ep?.season_number,
+                episodeId: ep?.id,
+                timestamp: Date.now(),
+                fullMedia: selectedMedia
+              });
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

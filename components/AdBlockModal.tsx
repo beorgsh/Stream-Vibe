@@ -1,28 +1,28 @@
-
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { ShieldAlert, X } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface AdBlockModalProps {
   onClose: () => void;
 }
 
 const AdBlockModal: React.FC<AdBlockModalProps> = ({ onClose }) => {
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    // Trigger animation after mount
-    requestAnimationFrame(() => setIsVisible(true));
-  }, []);
-
-  const handleClose = () => {
-    setIsVisible(false);
-    setTimeout(onClose, 300);
-  };
-
   return (
-    <div className={`fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
-      <div className={`bg-[#111] border border-red-500/20 w-full max-w-md rounded-2xl p-6 shadow-[0_0_50px_rgba(239,68,68,0.1)] relative transition-all duration-300 ${isVisible ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'}`}>
-        <button onClick={handleClose} className="absolute top-4 right-4 text-white/20 hover:text-white transition-colors">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+      className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md"
+    >
+      <motion.div 
+        initial={{ scale: 0.9, y: 20, opacity: 0 }}
+        animate={{ scale: 1, y: 0, opacity: 1 }}
+        exit={{ scale: 0.9, y: 20, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+        className="bg-[#111] border border-red-500/20 w-full max-w-md rounded-2xl p-6 shadow-[0_0_50px_rgba(239,68,68,0.1)] relative"
+      >
+        <button onClick={onClose} className="absolute top-4 right-4 text-white/20 hover:text-white transition-colors">
           <X size={20} />
         </button>
 
@@ -49,14 +49,14 @@ const AdBlockModal: React.FC<AdBlockModalProps> = ({ onClose }) => {
           </div>
 
           <button 
-            onClick={handleClose}
+            onClick={onClose}
             className="btn btn-primary w-full rounded-xl font-black uppercase tracking-widest mt-2 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform"
           >
             I Understand
           </button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 

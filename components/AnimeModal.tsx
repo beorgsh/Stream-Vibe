@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AnimeSeries, AnimeEpisode, AnimeLink } from '../types';
 import { X, Play, Loader2, ArrowLeft, Search, ChevronLeft, ChevronRight, Download, Star } from 'lucide-react';
 import { SkeletonRow, SkeletonText } from './Skeleton';
+import { motion } from 'framer-motion';
 
 interface AnimeModalProps {
   anime: AnimeSeries;
@@ -25,7 +26,6 @@ interface WatchServer {
 const TMDB_KEY = "7519c82c82dd0265f5b5d599e59e972a";
 
 const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initialEpisodeId }) => {
-  const [isClosing, setIsClosing] = useState(false);
   const [episodes, setEpisodes] = useState<AnimeEpisode[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'info' | 'episodes'>('info');
@@ -46,19 +46,16 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
   const [activeWatchServer, setActiveWatchServer] = useState<string | null>(null);
   const [activeWatchType, setActiveWatchType] = useState<'sub' | 'dub'>('sub');
   
-  // New state for server tab UI
   const [serverCategory, setServerCategory] = useState<'sub' | 'dub'>('sub');
   
   const [iframeUrl, setIframeUrl] = useState<string | null>(null);
 
   const hasAutoResumed = useRef(false);
 
-  // Sync server category tab with the active watch type (e.g. when switching episodes or auto-play)
   useEffect(() => {
     setServerCategory(activeWatchType);
   }, [activeWatchType]);
 
-  // Failsafe: If iframe loading takes too long (>8s), dismiss loader
   useEffect(() => {
     let timeout: ReturnType<typeof setTimeout>;
     if (isIframeLoading) {
@@ -68,11 +65,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
     }
     return () => clearTimeout(timeout);
   }, [isIframeLoading]);
-
-  const handleClose = () => {
-    setIsClosing(true);
-    setTimeout(onClose, 300);
-  };
 
   const handleMainImageError = async () => {
     if (!hasAttemptedTMDB && anime.title) {
@@ -141,7 +133,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
     setIsIframeLoading(true);
     setIframeUrl(null);
     setActiveWatchServer(`${type}-${serverName}`);
-    setActiveWatchType(type); // Ensure type is updated
+    setActiveWatchType(type);
     
     if (isManual && onPlay) {
       onPlay(originalEp);
@@ -181,7 +173,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
 
     try {
       if (anime.source === 'watch') {
-        // Fetch default HD-1 Sub
         const response = await fetch(`https://anime-api-iota-six.vercel.app/api/stream?id=${encodeURIComponent(ep.session)}&server=hd-1&type=sub`);
         const data = await response.json();
         
@@ -190,7 +181,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
           setWatchServers(servers);
           setActiveWatchType('sub');
           
-          // Smart highlighting: find the server in the list that matches 'hd-1' or 'vidstreaming'
           const match = servers.find((s: any) => {
             const name = s.serverName.toLowerCase();
             return name === 'hd-1' || name === 'vidstreaming';
@@ -199,7 +189,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
           if (match) {
             setActiveWatchServer(`sub-${match.serverName}`);
           } else {
-            // Fallback to strict expected default if not found (though less likely to highlight correctly)
             setActiveWatchServer('sub-hd-1');
           }
 
@@ -297,9 +286,22 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
   const totalPages = Math.ceil(filteredEpisodes.length / EP_PER_PAGE);
 
   return (
-    <div className={`fixed inset-0 z-[1000] flex items-center justify-center p-3 bg-black/90 backdrop-blur-2xl transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100 animate-in fade-in'}`}>
-      <div className={`bg-[#0a0a0a] border border-white/10 w-full max-w-5xl ${selectedEpisode ? 'h-auto' : 'max-h-[85vh]'} rounded-2xl overflow-hidden relative flex flex-col shadow-2xl transition-all duration-300 ${isClosing ? 'scale-95 opacity-0' : 'scale-100 opacity-100 animate-in zoom-in-95'}`}>
-        <button onClick={handleClose} className="absolute top-4 right-4 z-[60] btn btn-circle btn-xs btn-ghost bg-black/40 border border-white/10 text-white hover:bg-white/20">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-3 bg-black/90 backdrop-blur-2xl"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <motion.div 
+        initial={{ scale: 0.9, y: 30, opacity: 0 }}
+        animate={{ scale: 1, y: 0, opacity: 1 }}
+        exit={{ scale: 0.9, y: 30, opacity: 0 }}
+        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+        className={`bg-[#0a0a0a] border border-white/10 w-full max-w-5xl ${selectedEpisode ? 'h-auto' : 'max-h-[85vh]'} rounded-2xl overflow-hidden relative flex flex-col shadow-2xl`}
+      >
+        <button onClick={onClose} className="absolute top-4 right-4 z-[60] btn btn-circle btn-xs btn-ghost bg-black/40 border border-white/10 text-white hover:bg-white/20">
           <X size={16} />
         </button>
 
@@ -363,11 +365,9 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                   ) : (
                     <>
                       {anime.source === 'watch' ? (
-                        // Fallback UI if iframe is missing but we're in watch mode (rare case)
                         <div className="space-y-6 w-full max-w-2xl">
                           <p className="text-white/40 text-[10px] uppercase font-black tracking-widest">Select a server to initialize</p>
                           <div className="flex flex-wrap justify-center gap-2">
-                             {/* Basic fallback listing if needed */}
                           </div>
                         </div>
                       ) : (
@@ -402,7 +402,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
             {anime.source === 'watch' && iframeUrl && (
               <div className="p-4 bg-[#0a0a0a] border-t border-white/5 flex flex-col items-center gap-4 animate-in fade-in slide-in-from-top-2">
                  
-                 {/* Category Tabs */}
                  {(watchServersByType.sub.length > 0 || watchServersByType.dub.length > 0) && (
                    <div className="flex p-1 bg-white/5 rounded-full border border-white/10">
                       {watchServersByType.sub.length > 0 && (
@@ -424,7 +423,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                    </div>
                  )}
 
-                 {/* Servers List for Active Category */}
                  <div className="flex flex-wrap items-center justify-center gap-2 max-w-2xl">
                     {watchServersByType[serverCategory]?.length > 0 ? (
                       watchServersByType[serverCategory].map(srv => {
@@ -495,7 +493,11 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
 
               <div className="flex-1 overflow-y-auto p-6 md:p-8 pt-0 custom-scrollbar">
                 {activeTab === 'info' ? (
-                  <div className="space-y-6 animate-in slide-in-from-left-2">
+                  <motion.div 
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="space-y-6"
+                  >
                     {isLoading ? (
                       <SkeletonText lines={4} />
                     ) : (
@@ -507,9 +509,13 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                     >
                       Initialize Stream
                     </button>
-                  </div>
+                  </motion.div>
                 ) : (
-                  <div className="space-y-6 animate-in slide-in-from-right-2">
+                  <motion.div 
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="space-y-6"
+                  >
                     <div className="relative">
                       <input 
                         type="text" 
@@ -565,14 +571,14 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                         </button>
                       </div>
                     )}
-                  </div>
+                  </motion.div>
                 )}
               </div>
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 

@@ -42,7 +42,7 @@ const MediaCard: React.FC<MediaCardProps> = ({ media, onClick }) => {
         {/* Play Icon */}
         <div className="absolute inset-0 flex items-center justify-center scale-0 group-hover:scale-100 transition-transform duration-500">
            <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-primary text-primary-content flex items-center justify-center shadow-2xl">
-              <Play className="fill-current ml-1" size={20} md:size={28} />
+              <Play className="fill-current ml-1 w-5 h-5 md:w-7 md:h-7" />
            </div>
         </div>
       </div>
