@@ -68,8 +68,10 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
   const fetchAnimeList = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Download Mode Source
-      const response = await fetch(`https://anime.apex-cloud.workers.dev/?method=search&query=a`);
+      // Download Mode Source with Dynamic Random Query
+      // Generate a random letter a-z to ensure different results each load/refresh
+      const randomChar = String.fromCharCode(97 + Math.floor(Math.random() * 26));
+      const response = await fetch(`https://anime.apex-cloud.workers.dev/?method=search&query=${randomChar}`);
       const data = await response.json();
       const results = data.data || [];
       const mapped: AnimeSeries[] = results.map((item: any) => ({
@@ -230,9 +232,9 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
     if (!items.length) return null;
     return (
       <section className="space-y-4">
-        <div className="flex items-center gap-2 border-l-2 border-white pl-3">
+        <div className="flex items-center gap-2 border-l-2 border-base-content pl-3">
           {icon}
-          <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter">{title}</h2>
+          <h2 className="text-sm md:text-lg font-black text-base-content uppercase tracking-tighter">{title}</h2>
         </div>
         <motion.div 
           variants={container}
@@ -255,23 +257,23 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
     <div className="space-y-6 md:space-y-10">
       <section className="max-w-xl mx-auto w-full space-y-4 flex flex-col items-center">
         <div className="text-center space-y-1">
-          <h1 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tighter italic">
+          <h1 className="text-2xl md:text-3xl font-black text-base-content uppercase tracking-tighter italic">
             {searchMode === 'download' ? 'Download Anime' : 'Search for Anime'}
           </h1>
-          <p className="text-[10px] uppercase font-bold text-white/20 tracking-[0.2em]">Neural Database Search</p>
+          <p className="text-[10px] uppercase font-bold text-base-content/20 tracking-[0.2em]">Neural Database Search</p>
         </div>
 
-        <div className="flex p-0.5 bg-white/5 rounded-full border border-white/10">
+        <div className="flex p-0.5 bg-base-content/5 rounded-full border border-base-content/10">
            <button 
             onClick={() => setSearchMode('watch')}
-            className={`px-6 py-2 rounded-full transition-all ${searchMode === 'watch' ? 'bg-white text-black shadow-lg' : 'text-white/40'}`}
+            className={`px-6 py-2 rounded-full transition-all ${searchMode === 'watch' ? 'bg-base-content text-base-100 shadow-lg' : 'text-base-content/40'}`}
             title="Watch Mode"
            >
              <Play size={14} className={searchMode === 'watch' ? 'fill-current' : ''} />
            </button>
            <button 
             onClick={() => setSearchMode('download')}
-            className={`px-6 py-2 rounded-full transition-all ${searchMode === 'download' ? 'bg-white text-black shadow-lg' : 'text-white/40'}`}
+            className={`px-6 py-2 rounded-full transition-all ${searchMode === 'download' ? 'bg-base-content text-base-100 shadow-lg' : 'text-base-content/40'}`}
             title="Download Mode"
            >
              <Download size={14} />
@@ -282,12 +284,12 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
           <input 
             type="text" 
             placeholder="Quick Find..."
-            className="input input-sm h-10 md:h-12 w-full bg-white/5 border-white/10 rounded-full pl-10 pr-24 text-xs font-medium focus:border-white transition-all text-white"
+            className="input input-sm h-10 md:h-12 w-full bg-base-content/5 border-base-content/10 rounded-full pl-10 pr-24 text-xs font-medium focus:border-base-content transition-all text-base-content placeholder:text-base-content/30"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/20" size={14} />
-          <button type="submit" className="absolute right-1 top-1/2 -translate-y-1/2 btn bg-white text-black border-none hover:bg-gray-200 btn-xs h-8 md:h-10 rounded-full px-4 font-black uppercase text-[8px]" disabled={isSearching}>
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/20" size={14} />
+          <button type="submit" className="absolute right-1 top-1/2 -translate-y-1/2 btn bg-base-content text-base-100 border-none hover:bg-base-content/80 btn-xs h-8 md:h-10 rounded-full px-4 font-black uppercase text-[8px]" disabled={isSearching}>
             {isSearching ? <Loader2 className="animate-spin" size={12} /> : "Search"}
           </button>
         </form>
@@ -295,11 +297,11 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
 
       {(isSearching || searchResults.length > 0) && (
         <section className="space-y-4">
-          <div className="flex items-center justify-between border-b border-white/5 pb-1">
-            <h2 className="text-sm font-black text-white uppercase tracking-tighter italic flex items-center gap-2">
-              Found <span className="text-white not-italic">({searchResults.length})</span>
+          <div className="flex items-center justify-between border-b border-base-content/5 pb-1">
+            <h2 className="text-sm font-black text-base-content uppercase tracking-tighter italic flex items-center gap-2">
+              Found <span className="text-base-content not-italic">({searchResults.length})</span>
             </h2>
-            <button onClick={() => setSearchResults([])} className="text-[8px] uppercase font-black text-white/30">Clear</button>
+            <button onClick={() => setSearchResults([])} className="text-[8px] uppercase font-black text-base-content/30">Clear</button>
           </div>
           <AnimatePresence mode="wait">
             {isSearching ? (
@@ -360,7 +362,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                   transition={{ duration: 0.5 }}
                 >
                   <section className="space-y-3">
-                    <div className="relative w-full rounded-2xl h-[250px] md:h-[350px] shadow-xl border border-white/5 overflow-hidden group">
+                    <div className="relative w-full rounded-2xl h-[250px] md:h-[350px] shadow-xl border border-base-content/5 overflow-hidden group">
                       <div 
                         ref={carouselRef} 
                         onScroll={handleScroll}
@@ -375,7 +377,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                             })}
                           >
                             <img src={item.poster} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={item.title} />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-base-100 via-transparent to-transparent opacity-90" />
                           </div>
                         ))}
                       </div>
@@ -388,7 +390,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                             </h1>
                             <div className="flex gap-2">
                               <button 
-                                className="btn bg-white text-black hover:bg-gray-200 border-none btn-xs rounded-full px-4 text-[8px] font-black uppercase pointer-events-auto shadow-lg hover:scale-105 transition-transform"
+                                className="btn bg-base-100 text-base-content hover:bg-base-200 border-none btn-xs rounded-full px-4 text-[8px] font-black uppercase pointer-events-auto shadow-lg hover:scale-105 transition-transform"
                                 onClick={() => {
                                   const item = extendedSpotlights[spotlightIndex];
                                   onSelectAnime({
@@ -409,7 +411,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                         <button 
                           key={i} 
                           onClick={() => setSpotlightIndex(i)}
-                          className={`h-1 rounded-full transition-all duration-300 ${i === (spotlightIndex % (extendedSpotlights.length - 1)) ? 'w-6 bg-white' : 'w-2 bg-white/20 hover:bg-white/40'}`} 
+                          className={`h-1 rounded-full transition-all duration-300 ${i === (spotlightIndex % (extendedSpotlights.length - 1)) ? 'w-6 bg-base-content' : 'w-2 bg-base-content/20 hover:bg-base-content/40'}`} 
                         />
                       ))}
                     </div>
@@ -425,13 +427,13 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                   />
 
                   {/* Trending Section */}
-                  {renderHorizontalSection("Trending Now", watchHome.trending, <Flame size={18} className="text-white" />)}
+                  {renderHorizontalSection("Trending Now", watchHome.trending, <Flame size={18} className="text-base-content" />)}
 
                   {/* Top 10 Today Section */}
                   <section className="space-y-4">
-                    <div className="flex items-center gap-2 border-l-2 border-white pl-3">
-                      <Trophy size={18} className="text-white" />
-                      <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter">Top 10 Today</h2>
+                    <div className="flex items-center gap-2 border-l-2 border-base-content pl-3">
+                      <Trophy size={18} className="text-base-content" />
+                      <h2 className="text-sm md:text-lg font-black text-base-content uppercase tracking-tighter">Top 10 Today</h2>
                     </div>
                     <motion.div 
                       variants={container}
@@ -444,7 +446,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                         <motion.div variants={item} key={idx} className="relative min-w-[160px] md:min-w-[200px] snap-start group">
                            {/* Giant Ranking Number */}
                            <div className="absolute -left-6 -bottom-4 z-10 select-none pointer-events-none">
-                              <span className="text-7xl md:text-9xl font-black italic text-white/10 group-hover:text-white/20 transition-colors duration-500" style={{ WebkitTextStroke: '2px rgba(255,255,255,0.1)' }}>
+                              <span className="text-7xl md:text-9xl font-black italic text-base-content/10 group-hover:text-base-content/20 transition-colors duration-500" style={{ WebkitTextStroke: '2px rgba(128,128,128,0.1)' }}>
                                 {idx + 1}
                               </span>
                            </div>
@@ -455,19 +457,19 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                   </section>
 
                   {/* Top Airing */}
-                  {renderHorizontalSection("Top Airing", watchHome.topAiring, <Activity size={18} className="text-white" />)}
+                  {renderHorizontalSection("Top Airing", watchHome.topAiring, <Activity size={18} className="text-base-content" />)}
 
                   {/* Most Popular */}
-                  {renderHorizontalSection("Most Popular", watchHome.mostPopular, <Star size={18} className="text-white" />)}
+                  {renderHorizontalSection("Most Popular", watchHome.mostPopular, <Star size={18} className="text-base-content" />)}
 
                   {/* Most Favorite */}
-                  {renderHorizontalSection("Most Favorite", watchHome.mostFavorite, <Heart size={18} className="text-white" />)}
+                  {renderHorizontalSection("Most Favorite", watchHome.mostFavorite, <Heart size={18} className="text-base-content" />)}
 
                   {/* Latest Releases */}
-                  {renderHorizontalSection("Latest Episodes", watchHome.latestEpisode, <Zap size={18} className="text-white" />)}
+                  {renderHorizontalSection("Latest Episodes", watchHome.latestEpisode, <Zap size={18} className="text-base-content" />)}
 
                   {/* Just Completed */}
-                  {renderHorizontalSection("Just Completed", watchHome.latestCompleted, <CheckCircle size={18} className="text-white" />)}
+                  {renderHorizontalSection("Just Completed", watchHome.latestCompleted, <CheckCircle size={18} className="text-base-content" />)}
                 </motion.div>
               ) : null}
             </AnimatePresence>
@@ -483,9 +485,9 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
               />
 
               <section className="space-y-4">
-                <div className="flex items-center justify-between border-l-2 border-white pl-3">
-                  <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter">Discovery</h2>
-                  <RefreshCw onClick={fetchAnimeList} className={`${isLoading ? 'animate-spin' : ''} text-white/20 cursor-pointer`} size={14} />
+                <div className="flex items-center justify-between border-l-2 border-base-content pl-3">
+                  <h2 className="text-sm md:text-lg font-black text-base-content uppercase tracking-tighter">Discovery</h2>
+                  <RefreshCw onClick={fetchAnimeList} className={`${isLoading ? 'animate-spin' : ''} text-base-content/20 cursor-pointer`} size={14} />
                 </div>
                 <AnimatePresence mode="wait">
                   {isLoading ? (

@@ -22,6 +22,11 @@ const App: React.FC = () => {
   const [isPWA, setIsPWA] = useState(false);
   const [isNotFound, setIsNotFound] = useState(false);
   
+  // Theme State
+  const [theme, setTheme] = useState<string>(() => {
+    return localStorage.getItem('sv_theme') || 'black';
+  });
+
   const [resumeData, setResumeData] = useState<{
     episodeId?: string | number;
     seasonNumber?: number;
@@ -31,6 +36,12 @@ const App: React.FC = () => {
   const [watchHistory, setWatchHistory] = useState<WatchHistoryItem[]>([]);
 
   const TMDB_KEY = "7519c82c82dd0265f5b5d599e59e972a";
+
+  useEffect(() => {
+    // Apply theme to HTML tag
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('sv_theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     // Route checking
@@ -178,16 +189,23 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0c0c0c] text-white font-sans selection:bg-primary/30 relative overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-base-100 text-base-content font-sans selection:bg-primary/30 relative overflow-x-hidden transition-colors duration-500">
       
       {/* Background Grid & Vignette */}
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#0c0c0c_100%)]"></div>
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(128,128,128,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(128,128,128,0.05)_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+        {/* Dynamic Vignette using Base Colors */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,var(--fallback-b1,oklch(var(--b1)/1))_100%)]"></div>
       </div>
 
       <div className="relative z-10 flex flex-col min-h-screen">
-        <Navbar activeTab={activeTab} setActiveTab={setActiveTab} isPWA={isPWA} />
+        <Navbar 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab} 
+          isPWA={isPWA} 
+          currentTheme={theme}
+          onThemeChange={setTheme}
+        />
         
         <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-4 md:py-8">
           <AnimatePresence mode="wait">
@@ -203,20 +221,20 @@ const App: React.FC = () => {
           </AnimatePresence>
         </main>
 
-        <footer className="p-8 footer bg-black/40 backdrop-blur-md border-t border-white/5 text-white mt-8">
+        <footer className="p-8 footer bg-base-200/50 backdrop-blur-md border-t border-base-content/5 text-base-content mt-8 transition-colors duration-500">
           <aside>
             <div className="flex items-center gap-2">
-              <img src="https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png" className="w-8 h-8 opacity-80" alt="Logo" />
-              <div className="text-xl font-bold tracking-tighter text-white">StreamVibe</div>
+              <img src="https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png" className="w-8 h-8 opacity-80 invert dark:invert-0" alt="Logo" />
+              <div className="text-xl font-bold tracking-tighter">StreamVibe</div>
             </div>
-            <p className="text-xs opacity-50 uppercase tracking-widest font-bold mt-1 text-white">Neural Engine v4.0</p>
+            <p className="text-xs opacity-50 uppercase tracking-widest font-bold mt-1">Neural Engine v4.0</p>
           </aside> 
           <nav>
-            <header className="footer-title opacity-40 uppercase text-[10px] tracking-widest text-white">Links</header> 
-            {!isPWA && <a className="link link-hover text-xs text-white/60 hover:text-white" onClick={() => setActiveTab(AppTab.HOME)}>Home</a>}
-            <a className="link link-hover text-xs text-white/60 hover:text-white" onClick={() => setActiveTab(AppTab.ANIME)}>Anime</a>
-            <a className="link link-hover text-xs text-white/60 hover:text-white" onClick={() => setActiveTab(AppTab.GLOBAL)}>Global</a>
-            <a className="link link-hover text-xs text-white/60 hover:text-white" onClick={() => {
+            <header className="footer-title opacity-40 uppercase text-[10px] tracking-widest">Links</header> 
+            {!isPWA && <a className="link link-hover text-xs opacity-60 hover:opacity-100" onClick={() => setActiveTab(AppTab.HOME)}>Home</a>}
+            <a className="link link-hover text-xs opacity-60 hover:opacity-100" onClick={() => setActiveTab(AppTab.ANIME)}>Anime</a>
+            <a className="link link-hover text-xs opacity-60 hover:opacity-100" onClick={() => setActiveTab(AppTab.GLOBAL)}>Global</a>
+            <a className="link link-hover text-xs opacity-60 hover:opacity-100" onClick={() => {
               setHistoryFilter('all');
               setShowHistoryModal(true);
             }}>History</a>
