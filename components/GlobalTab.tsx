@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { TMDBMedia, WatchHistoryItem } from '../types';
+import { TMDBMedia, WatchHistoryItem, HistoryFilter } from '../types';
 import { Search, Loader2 } from 'lucide-react';
 import MediaCard from './MediaCard';
 import { SkeletonCard } from './Skeleton';
@@ -11,7 +11,7 @@ interface GlobalTabProps {
   history: WatchHistoryItem[];
   onHistorySelect: (item: WatchHistoryItem) => void;
   onHistoryRemove: (id: string | number) => void;
-  onViewAllHistory: () => void;
+  onViewAllHistory: (filter?: HistoryFilter) => void;
 }
 
 const container = {
@@ -274,7 +274,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                     history={filteredHistory} 
                     onSelect={onHistorySelect} 
                     onRemove={onHistoryRemove} 
-                    onViewAll={onViewAllHistory}
+                    onViewAll={() => onViewAllHistory(viewMode === 'watch' ? 'global-watch' : 'global-download')}
                     title="Global Stream History"
                   />
 
@@ -341,7 +341,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                 history={filteredHistory} 
                 onSelect={onHistorySelect} 
                 onRemove={onHistoryRemove} 
-                onViewAll={onViewAllHistory}
+                onViewAll={() => onViewAllHistory(viewMode === 'watch' ? 'global-watch' : 'global-download')}
                 title="Global Download History"
               />
               

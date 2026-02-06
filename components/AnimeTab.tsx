@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { AnimeSeries, WatchHistoryItem } from '../types';
+import { AnimeSeries, WatchHistoryItem, HistoryFilter } from '../types';
 import { Search, Loader2, RefreshCw, Play, Trophy, Zap, Flame, Heart, Star, Activity, CheckCircle } from 'lucide-react';
 import AnimeCard from './AnimeCard';
 import { SkeletonCard } from './Skeleton';
@@ -11,7 +11,7 @@ interface AnimeTabProps {
   history: WatchHistoryItem[];
   onHistorySelect: (item: WatchHistoryItem) => void;
   onHistoryRemove: (id: string | number) => void;
-  onViewAllHistory: () => void;
+  onViewAllHistory: (filter?: HistoryFilter) => void;
 }
 
 const container = {
@@ -380,7 +380,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                     history={filteredHistory} 
                     onSelect={onHistorySelect} 
                     onRemove={onHistoryRemove} 
-                    onViewAll={onViewAllHistory}
+                    onViewAll={() => onViewAllHistory(searchMode === 'watch' ? 'anime-watch' : 'anime-download')}
                     title="Stream History"
                   />
 
@@ -438,7 +438,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                 history={filteredHistory} 
                 onSelect={onHistorySelect} 
                 onRemove={onHistoryRemove} 
-                onViewAll={onViewAllHistory}
+                onViewAll={() => onViewAllHistory(searchMode === 'watch' ? 'anime-watch' : 'anime-download')}
                 title="Download History"
               />
 

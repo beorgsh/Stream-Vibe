@@ -72,6 +72,9 @@ export interface WatchHistoryItem {
 }
 
 export enum AppTab {
+  HOME = 'home',
   ANIME = 'anime',
   GLOBAL = 'global'
 }
+
+export type HistoryFilter = 'all' | 'anime-watch' | 'anime-download' | 'global-watch' | 'global-download';
