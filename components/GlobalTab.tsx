@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { TMDBMedia, WatchHistoryItem, HistoryFilter } from '../types';
-import { Search, Loader2, Download, Play } from 'lucide-react';
+import { Search, Loader2, Download, Play, Star } from 'lucide-react';
 import MediaCard from './MediaCard';
 import { SkeletonMediaCard, SkeletonBanner } from './Skeleton';
 import ContinueWatching from './ContinueWatching';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
 
 interface GlobalTabProps {
   onSelectMedia: (media: TMDBMedia, mode: 'watch' | 'download') => void;
@@ -14,7 +14,7 @@ interface GlobalTabProps {
   onViewAllHistory: (filter?: HistoryFilter) => void;
 }
 
-const container = {
+const containerVariants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
@@ -24,7 +24,7 @@ const container = {
   }
 };
 
-const item = {
+const itemVariants = {
   hidden: { opacity: 0, y: 20 },
   show: { opacity: 1, y: 0 }
 };
@@ -40,20 +40,24 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
   const [isSearching, setIsSearching] = useState(false);
 
   const [spotlightIndex, setSpotlightIndex] = useState(0);
-  const carouselRef = useRef<HTMLDivElement>(null);
-  const isAutoScrolling = useRef(false);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const spotlightRef = useRef<HTMLDivElement>(null);
+  const autoPlayTimerRef = useRef<number | null>(null);
+  const dragX = useMotionValue(0);
 
   const TMDB_KEY = "7519c82c82dd0265f5b5d599e59e972a";
   const BASE_URL = "https://api.themoviedb.org/3";
 
-  // Extended spotlights for infinite scroll (slice top 5 then duplicate first)
-  const extendedTrending = useMemo(() => {
-    if (!trending.length) return [];
-    const top5 = trending.slice(0, 5);
-    return [...top5, top5[0]];
+  const originalSpotlights = useMemo(() => {
+    return trending.slice(0, 5);
   }, [trending]);
 
-  // Filter history based on viewMode
+  // Extended spotlights for infinite loop
+  const extendedSpotlights = useMemo(() => {
+    if (!originalSpotlights.length) return [];
+    return [...originalSpotlights, originalSpotlights[0]];
+  }, [originalSpotlights]);
+
   const filteredHistory = useMemo(() => {
     return history.filter(h => (h.mode || 'watch') === viewMode);
   }, [history, viewMode]);
@@ -83,57 +87,21 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
     fetchGlobalData();
   }, [fetchGlobalData]);
 
+  // Infinite Spotlight Timer logic optimization
   useEffect(() => {
-    if (!extendedTrending.length || isSearching || viewMode === 'download') return;
-    const interval = setInterval(() => {
+    if (!originalSpotlights.length || isSearching || viewMode === 'download' || !isAutoPlaying) {
+      if (autoPlayTimerRef.current) clearInterval(autoPlayTimerRef.current);
+      return;
+    }
+
+    autoPlayTimerRef.current = window.setInterval(() => {
       setSpotlightIndex((prev) => prev + 1);
     }, 6000);
-    return () => clearInterval(interval);
-  }, [extendedTrending, isSearching, viewMode]);
 
-  useEffect(() => {
-    if (carouselRef.current && extendedTrending.length && viewMode === 'watch') {
-      const carouselWidth = carouselRef.current.offsetWidth;
-      
-      if (spotlightIndex === extendedTrending.length - 1) {
-          isAutoScrolling.current = true;
-          // Smooth scroll to clone
-          carouselRef.current.scrollTo({
-            left: carouselWidth * spotlightIndex,
-            behavior: 'smooth'
-          });
-          
-          // Instant reset
-          const timeout = setTimeout(() => {
-             if (carouselRef.current) {
-                carouselRef.current.scrollTo({ left: 0, behavior: 'auto' });
-                setSpotlightIndex(0);
-                setTimeout(() => { isAutoScrolling.current = false; }, 50);
-             }
-          }, 600);
-          return () => clearTimeout(timeout);
-      } else {
-          isAutoScrolling.current = true;
-          carouselRef.current.scrollTo({
-            left: carouselWidth * spotlightIndex,
-            behavior: 'smooth'
-          });
-          const timeout = setTimeout(() => { isAutoScrolling.current = false; }, 600);
-          return () => clearTimeout(timeout);
-      }
-    }
-  }, [spotlightIndex, extendedTrending, viewMode]);
-
-  const handleScroll = () => {
-    if (isAutoScrolling.current || !carouselRef.current || !extendedTrending.length) return;
-    const scrollLeft = carouselRef.current.scrollLeft;
-    const width = carouselRef.current.offsetWidth;
-    const newIndex = Math.round(scrollLeft / width);
-    
-    if (newIndex >= 0 && newIndex < extendedTrending.length) {
-      setSpotlightIndex(newIndex);
-    }
-  };
+    return () => {
+      if (autoPlayTimerRef.current) clearInterval(autoPlayTimerRef.current);
+    };
+  }, [originalSpotlights, isSearching, viewMode, isAutoPlaying]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,6 +116,32 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
     } finally {
       setIsSearching(false);
     }
+  };
+
+  const displaySpotlightIndex = useMemo(() => {
+    if (!originalSpotlights.length) return 0;
+    return spotlightIndex % originalSpotlights.length;
+  }, [spotlightIndex, originalSpotlights]);
+
+  // Swipe logic optimization
+  const handleDragStart = () => {
+    setIsAutoPlaying(false);
+  };
+
+  const handleDragEnd = (event: any, info: any) => {
+    const threshold = 50;
+    const velocityThreshold = 500;
+    
+    if (info.offset.x < -threshold || info.velocity.x < -velocityThreshold) {
+      setSpotlightIndex(prev => prev + 1);
+    } else if (info.offset.x > threshold || info.velocity.x > velocityThreshold) {
+      if (spotlightIndex > 0) {
+        setSpotlightIndex(prev => prev - 1);
+      }
+    }
+    
+    // Extended pause for better interaction feel
+    setTimeout(() => setIsAutoPlaying(true), 6000);
   };
 
   return (
@@ -214,13 +208,13 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
             ) : (
               <motion.div 
                 key="results-search"
-                variants={container}
+                variants={containerVariants}
                 initial="hidden"
                 animate="show"
                 className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3"
               >
                 {searchResults.map((media) => (
-                  <motion.div variants={item} key={media.id}>
+                  <motion.div variants={itemVariants} key={media.id}>
                     <MediaCard media={media} onClick={() => onSelectMedia(media, viewMode)} />
                   </motion.div>
                 ))}
@@ -254,47 +248,77 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.5 }}
                 >
-                  {extendedTrending.length > 0 && (
+                  {extendedSpotlights.length > 0 && (
                     <section className="space-y-3">
-                      <div className="relative w-full rounded-2xl h-[250px] md:h-[400px] shadow-2xl border border-base-content/5 overflow-hidden group">
-                        <div 
-                          ref={carouselRef} 
-                          onScroll={handleScroll}
-                          className="carousel w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar scroll-smooth"
+                      {/* Spotlight Continuous Slider */}
+                      <div ref={spotlightRef} className="relative w-full rounded-2xl h-[250px] md:h-[400px] shadow-2xl border border-base-content/10 overflow-hidden group bg-black touch-pan-y">
+                        <motion.div 
+                          className="flex h-full w-full cursor-grab active:cursor-grabbing"
+                          drag="x"
+                          dragConstraints={spotlightRef}
+                          dragElastic={0.1}
+                          onDragStart={handleDragStart}
+                          onDragEnd={handleDragEnd}
+                          animate={{ x: `-${spotlightIndex * 100}%` }}
+                          transition={spotlightIndex === 0 ? { duration: 0 } : { duration: 0.8, ease: [0.32, 0.72, 0, 1] }}
+                          onAnimationComplete={() => {
+                             if (originalSpotlights.length && spotlightIndex === originalSpotlights.length) {
+                                setSpotlightIndex(0);
+                             }
+                          }}
+                          style={{ x: dragX }}
                         >
-                          {extendedTrending.map((media, idx) => (
-                            <div key={`${media.id}-${idx}`} className="carousel-item relative w-full h-full cursor-pointer snap-start shrink-0" onClick={() => onSelectMedia(media, viewMode)}>
+                          {extendedSpotlights.map((media, idx) => (
+                            <div 
+                              key={`${media.id}-${idx}`} 
+                              className="relative w-full h-full cursor-pointer shrink-0 select-none overflow-hidden"
+                              onClick={() => {
+                                onSelectMedia(media, viewMode);
+                              }}
+                            >
+                              {/* Removed group-hover:scale-105 to fix stutter/zoom bug */}
                               <img 
                                 src={`https://image.tmdb.org/t/p/original${media.backdrop_path}`} 
-                                className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" 
+                                className="w-full h-full object-cover transition-opacity duration-1000 pointer-events-none" 
                                 alt="" 
+                                draggable={false}
                               />
                               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-90" />
                             </div>
                           ))}
-                        </div>
+                        </motion.div>
 
                         <div className="absolute bottom-6 left-8 right-8 z-20 pointer-events-none">
-                          {extendedTrending[spotlightIndex] && (
-                            <div key={spotlightIndex} className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-700 fill-mode-both">
+                          <AnimatePresence mode="wait">
+                            <motion.div 
+                              key={displaySpotlightIndex}
+                              initial={{ opacity: 0, x: 20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              exit={{ opacity: 0, x: -20 }}
+                              className="space-y-2"
+                            >
                               <span className="badge bg-white text-black border-none badge-xs uppercase font-black tracking-widest px-3 py-2 shadow-lg">Spotlight</span>
-                              <h1 className="text-xl md:text-4xl font-black text-white uppercase tracking-tighter line-clamp-1 drop-shadow-lg">
-                                {extendedTrending[spotlightIndex].title || extendedTrending[spotlightIndex].name}
+                              <h1 className="text-xl md:text-4xl font-black text-white uppercase tracking-tighter line-clamp-1 drop-shadow-lg italic">
+                                {originalSpotlights[displaySpotlightIndex]?.title || originalSpotlights[displaySpotlightIndex]?.name}
                               </h1>
-                              <p className="text-[10px] md:text-xs text-white/70 line-clamp-2 max-w-xl italic drop-shadow-md">
-                                {extendedTrending[spotlightIndex].overview}
+                              <p className="text-[10px] md:text-xs text-white/70 line-clamp-2 max-w-xl italic drop-shadow-md font-medium">
+                                {originalSpotlights[displaySpotlightIndex]?.overview}
                               </p>
-                            </div>
-                          )}
+                            </motion.div>
+                          </AnimatePresence>
                         </div>
                       </div>
 
                       <div className="flex justify-center gap-1.5 py-1">
-                        {extendedTrending.slice(0, extendedTrending.length - 1).map((_, i) => (
+                        {originalSpotlights.map((_, i) => (
                           <button 
                             key={i} 
-                            onClick={() => setSpotlightIndex(i)}
-                            className={`h-1 rounded-full transition-all duration-300 ${i === (spotlightIndex % (extendedTrending.length - 1)) ? 'w-8 bg-base-content' : 'w-2 bg-base-content/20 hover:bg-base-content/40'}`} 
+                            onClick={() => {
+                              setSpotlightIndex(i);
+                              setIsAutoPlaying(false);
+                              setTimeout(() => setIsAutoPlaying(true), 8000);
+                            }}
+                            className={`h-1 rounded-full transition-all duration-300 ${i === displaySpotlightIndex ? 'w-8 bg-base-content' : 'w-2 bg-base-content/20 hover:bg-base-content/40'}`} 
                           />
                         ))}
                       </div>
@@ -312,14 +336,14 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                   <section className="space-y-4">
                     <h2 className="text-sm md:text-lg font-black text-base-content uppercase tracking-tighter border-l-2 border-base-content pl-3">Trending Now</h2>
                     <motion.div 
-                      variants={container}
+                      variants={containerVariants}
                       initial="hidden"
                       whileInView="show"
                       viewport={{ once: true, margin: "-100px" }}
                       className="flex gap-4 overflow-x-auto pb-6 no-scrollbar snap-x snap-mandatory"
                     >
                       {trending.map((media) => (
-                        <motion.div variants={item} key={media.id} className="min-w-[140px] md:min-w-[200px] snap-start">
+                        <motion.div variants={itemVariants} key={media.id} className="min-w-[140px] md:min-w-[200px] snap-start">
                           <MediaCard media={media} onClick={() => onSelectMedia(media, viewMode)} />
                         </motion.div>
                       ))}
@@ -331,14 +355,14 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                         <h2 className="text-sm md:text-lg font-black text-base-content uppercase tracking-tighter">Top Movies</h2>
                     </div>
                     <motion.div 
-                      variants={container}
+                      variants={containerVariants}
                       initial="hidden"
                       whileInView="show"
                       viewport={{ once: true, margin: "-100px" }}
                       className="flex gap-4 overflow-x-auto pb-6 no-scrollbar snap-x snap-mandatory"
                     >
                         {latestMovies.map((media) => (
-                          <motion.div variants={item} key={media.id} className="min-w-[140px] md:min-w-[200px] snap-start">
+                          <motion.div variants={itemVariants} key={media.id} className="min-w-[140px] md:min-w-[200px] snap-start">
                             <MediaCard media={media} onClick={() => onSelectMedia(media, viewMode)} />
                           </motion.div>
                         ))}
@@ -350,14 +374,14 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                         <h2 className="text-sm md:text-lg font-black text-base-content uppercase tracking-tighter">TV Series</h2>
                     </div>
                     <motion.div 
-                      variants={container}
+                      variants={containerVariants}
                       initial="hidden"
                       whileInView="show"
                       viewport={{ once: true, margin: "-100px" }}
                       className="flex gap-4 overflow-x-auto pb-6 no-scrollbar snap-x snap-mandatory"
                     >
                         {latestTV.map((media) => (
-                          <motion.div variants={item} key={media.id} className="min-w-[140px] md:min-w-[200px] snap-start">
+                          <motion.div variants={itemVariants} key={media.id} className="min-w-[140px] md:min-w-[200px] snap-start">
                             <MediaCard media={media} onClick={() => onSelectMedia(media, viewMode)} />
                           </motion.div>
                         ))}
@@ -394,13 +418,13 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                   ) : (
                     <motion.div 
                       key="content-downloads"
-                      variants={container}
+                      variants={containerVariants}
                       initial="hidden"
                       animate="show"
                       className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3"
                     >
                       {trending.map((media) => (
-                        <motion.div variants={item} key={media.id}>
+                        <motion.div variants={itemVariants} key={media.id}>
                           <MediaCard media={media} onClick={() => onSelectMedia(media, viewMode)} />
                         </motion.div>
                       ))}

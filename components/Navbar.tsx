@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { AppTab } from '../types';
 import { Play, Globe, Home, Palette, ChevronDown } from 'lucide-react';
 
@@ -11,23 +11,24 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isPWA, currentTheme, onThemeChange }) => {
+  const detailsRef = useRef<HTMLDetailsElement>(null);
   
   const themes = [
-    { id: 'black', name: 'Default' },
-    { id: 'forest', name: 'Hacker' }, // Forest is dark green/black
-    { id: 'valentine', name: 'Cute' }, // Valentine is pink/red
-    { id: 'pastel', name: 'Pastel' }, // Pastel
-    { id: 'luxury', name: 'Elegant' } // Luxury is Gold/Black
+    { id: 'black', name: 'Default' }, // Strict B&W
+    { id: 'modern', name: 'Modern' }, // Strict B&W (Moved from default)
+    { id: 'forest', name: 'Hacker' },
+    { id: 'valentine', name: 'Cute' },
+    { id: 'pastel', name: 'Pastel' },
+    { id: 'luxury', name: 'Elegant' }
   ];
 
   const handleThemeSelect = (themeId: string) => {
     if (onThemeChange) {
       onThemeChange(themeId);
     }
-    // Close the dropdown by blurring the active element which removes focus state
-    const elem = document.activeElement as HTMLElement;
-    if (elem) {
-      elem.blur();
+    // Close the dropdown by removing the open attribute from details element
+    if (detailsRef.current) {
+      detailsRef.current.removeAttribute('open');
     }
   };
 
@@ -86,10 +87,10 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isPWA, current
 
         <div className="flex items-center">
             {onThemeChange && (
-              <div className="dropdown dropdown-end">
-                <div tabIndex={0} role="button" className="btn btn-ghost btn-circle btn-sm text-base-content/60 hover:text-base-content">
+              <details className="dropdown dropdown-end" ref={detailsRef}>
+                <summary tabIndex={0} role="button" className="btn btn-ghost btn-circle btn-sm text-base-content/60 hover:text-base-content">
                   <Palette size={20} />
-                </div>
+                </summary>
                 <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow-2xl bg-base-200 rounded-box w-40 mt-4 border border-base-content/5 gap-1">
                   {themes.map((t) => (
                     <li key={t.id}>
@@ -103,7 +104,7 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isPWA, current
                     </li>
                   ))}
                 </ul>
-              </div>
+              </details>
             )}
         </div>
       </div>

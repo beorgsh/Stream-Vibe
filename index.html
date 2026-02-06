@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="luxury">
+<html lang="en" data-theme="black">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="theme-color" content="#0c0c0c" />
+    <meta name="theme-color" content="#000000" />
     
     <!-- PWA Tags -->
     <link rel="manifest" href="/manifest.json" />
@@ -50,6 +50,60 @@
       .no-scrollbar {
         -ms-overflow-style: none;
         scrollbar-width: none;
+      }
+
+      /* STRICT MONOCHROME OVERRIDES FOR MODERN THEME ONLY */
+      [data-theme="modern"] {
+        /* Primary becomes White */
+        --p: 0 0% 100%; 
+        --pc: 0 0% 0%; 
+        
+        /* Base colors Pure Black */
+        --b1: 0 0% 0%; 
+        --b2: 0 0% 5%; 
+        --b3: 0 0% 10%; 
+        --bc: 0 0% 100%; /* Text content White */
+        
+        background-color: #000000;
+        color: #ffffff;
+      }
+
+      /* Force Utility Overrides for Modern Theme */
+      [data-theme="modern"] .text-primary {
+        color: #ffffff !important;
+      }
+      [data-theme="modern"] .bg-primary {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+      }
+      [data-theme="modern"] .btn-primary {
+        background-color: #ffffff !important;
+        border-color: #ffffff !important;
+        color: #000000 !important;
+      }
+      [data-theme="modern"] .btn-primary:hover {
+        background-color: #e5e5e5 !important;
+        border-color: #e5e5e5 !important;
+      }
+      /* Ensure outlines are visible */
+      [data-theme="modern"] .btn-outline.btn-primary {
+        background-color: transparent !important;
+        border-color: #ffffff !important;
+        color: #ffffff !important;
+      }
+      [data-theme="modern"] .btn-outline.btn-primary:hover {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+      }
+      
+      /* Ensure links match the monochrome aesthetic */
+      [data-theme="modern"] a.link-hover {
+         color: #ffffff !important;
+      }
+      
+      /* Adjust SVG fills */
+      [data-theme="modern"] .fill-primary {
+         fill: #ffffff !important;
       }
     </style>
   <script type="importmap">

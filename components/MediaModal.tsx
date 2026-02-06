@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { TMDBMedia, TMDBEpisode } from '../types';
-import { X, Play, Loader2, Star, Download, ArrowLeft, ChevronLeft, ChevronRight, Search, ChevronDown } from 'lucide-react';
+import { X, Play, Loader2, Star, Download, ArrowLeft, ChevronLeft, ChevronRight, Search, ChevronDown, Server } from 'lucide-react';
 import { SkeletonRow, SkeletonText } from './Skeleton';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface MediaModalProps {
   media: TMDBMedia;
@@ -35,7 +35,9 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
   const [details, setDetails] = useState<any>(null);
   const [currentSeason, setCurrentSeason] = useState(1);
   const [isSeasonDropdownOpen, setIsSeasonDropdownOpen] = useState(false);
+  const [isServerDropdownOpen, setIsServerDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const serverDropdownRef = useRef<HTMLDivElement>(null);
   const episodesContainerRef = useRef<HTMLDivElement>(null);
   
   const [isPlaying, setIsPlaying] = useState(false);
@@ -89,6 +91,9 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsSeasonDropdownOpen(false);
+      }
+      if (serverDropdownRef.current && !serverDropdownRef.current.contains(event.target as Node)) {
+        setIsServerDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -194,6 +199,10 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
     return s ? (s.name && s.name !== `Season ${s.season_number}` ? s.name : `Season ${s.season_number}`) : `Season ${currentSeason}`;
   }, [details, currentSeason]);
 
+  const activeServerLabel = useMemo(() => {
+    return SERVERS.find(s => s.id === server)?.label || 'Select Server';
+  }, [server]);
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -271,25 +280,55 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                      />
                 </div>
 
-                <div className="p-4 bg-base-100 border-t border-base-content/5">
-                    <div className="flex flex-wrap items-center justify-center gap-3">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-base-content/30 mr-2">Stream Node</span>
-                        {SERVERS.map(srv => (
-                            <button
-                                key={srv.id}
-                                onClick={() => {
-                                  setServer(srv.id);
-                                  setIsIframeLoading(true);
-                                  if (onPlay) onPlay(playingEpisode || undefined);
-                                }}
-                                className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 ${server === srv.id ? 'bg-primary text-primary-content shadow-[0_0_15px_rgba(255,46,99,0.4)]' : 'bg-base-content/5 text-base-content/40 hover:bg-base-content/10 hover:text-base-content'}`}
+                <div className="p-4 bg-base-100 border-t border-base-content/5 flex justify-center">
+                    <div className="relative z-[70] w-full max-w-[240px]" ref={serverDropdownRef}>
+                        <button
+                          onClick={() => setIsServerDropdownOpen(!isServerDropdownOpen)}
+                          className="w-full flex items-center justify-between px-4 py-2 bg-base-content/5 border border-base-content/10 rounded-xl hover:border-primary/50 transition-all group shadow-xl"
+                        >
+                          <div className="flex items-center gap-2">
+                             <Server size={12} className="text-base-content/30 group-hover:text-primary" />
+                             <span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-base-content group-hover:text-primary transition-colors">
+                                {activeServerLabel}
+                             </span>
+                          </div>
+                          <ChevronDown size={14} className={`text-base-content/40 group-hover:text-primary transition-all duration-300 ${isServerDropdownOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        <AnimatePresence>
+                          {isServerDropdownOpen && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                              className="absolute bottom-full left-0 mb-3 w-full bg-base-100 border border-base-content/10 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 backdrop-blur-xl"
                             >
-                                {srv.id === 'rivestream' && (
-                                  <Star size={8} className={server === srv.id ? "fill-current" : "fill-yellow-500 text-yellow-500"} />
-                                )}
-                                {srv.label}
-                            </button>
-                        ))}
+                               <div className="px-3 py-2 border-b border-base-content/5 mb-1">
+                                  <span className="text-[9px] font-black uppercase tracking-widest text-base-content/30">Select Stream Node</span>
+                               </div>
+                               <div className="max-h-64 overflow-y-auto custom-scrollbar">
+                                  {SERVERS.map(srv => (
+                                      <button
+                                          key={srv.id}
+                                          onClick={() => {
+                                            setServer(srv.id);
+                                            setIsIframeLoading(true);
+                                            setIsServerDropdownOpen(false);
+                                            if (onPlay) onPlay(playingEpisode || undefined);
+                                          }}
+                                          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${server === srv.id ? 'bg-primary text-primary-content' : 'text-base-content/60 hover:bg-base-content/5 hover:text-base-content'}`}
+                                      >
+                                          <div className="flex items-center gap-2">
+                                            {srv.id === 'rivestream' && <Star size={10} className={server === srv.id ? 'text-primary-content' : 'text-yellow-500 fill-current'} />}
+                                            {srv.label}
+                                          </div>
+                                          {server === srv.id && <div className="w-1.5 h-1.5 rounded-full bg-primary-content" />}
+                                      </button>
+                                  ))}
+                               </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                     </div>
                 </div>
             </div>
@@ -409,7 +448,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                             >
                                 <div className="w-20 h-12 rounded-lg overflow-hidden shrink-0 border border-base-content/5 relative">
                                 <img src={ep.still_path ? `https://image.tmdb.org/t/p/w200${ep.still_path}` : `https://image.tmdb.org/t/p/w200${media.backdrop_path}`} className="w-full h-full object-cover opacity-60 group-hover/item:opacity-100 transition-opacity" />
-                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-opacity bg-black/40">
+                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-opacity">
                                     {mode === 'download' ? (
                                          <Download size={16} className="text-white drop-shadow-lg" />
                                     ) : (

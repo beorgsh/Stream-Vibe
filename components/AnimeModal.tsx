@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AnimeSeries, AnimeEpisode, AnimeLink } from '../types';
-import { X, Play, Loader2, ArrowLeft, Search, ChevronLeft, ChevronRight, Download, Star } from 'lucide-react';
+import { X, Play, Loader2, ArrowLeft, Search, ChevronLeft, ChevronRight, Download, Star, ChevronDown, Server } from 'lucide-react';
 import { SkeletonRow, SkeletonText } from './Skeleton';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface AnimeModalProps {
   anime: AnimeSeries;
@@ -38,7 +38,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
 
   const [selectedEpisode, setSelectedEpisode] = useState<AnimeEpisode | null>(null);
   const [groupedLinks, setGroupedLinks] = useState<LinkGroup[]>([]);
-  const [activeLinkCategory, setActiveLinkCategory] = useState<'Sub' | 'Dub'>('Sub');
   const [isLinksLoading, setIsLinksLoading] = useState(false);
   const [isIframeLoading, setIsIframeLoading] = useState(false);
 
@@ -47,6 +46,8 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
   const [activeWatchType, setActiveWatchType] = useState<'sub' | 'dub'>('sub');
   
   const [serverCategory, setServerCategory] = useState<'sub' | 'dub'>('sub');
+  const [isServerDropdownOpen, setIsServerDropdownOpen] = useState(false);
+  const serverDropdownRef = useRef<HTMLDivElement>(null);
   
   const [iframeUrl, setIframeUrl] = useState<string | null>(null);
 
@@ -55,6 +56,16 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
   useEffect(() => {
     setServerCategory(activeWatchType);
   }, [activeWatchType]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (serverDropdownRef.current && !serverDropdownRef.current.contains(event.target as Node)) {
+        setIsServerDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     let timeout: ReturnType<typeof setTimeout>;
@@ -134,6 +145,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
     setIframeUrl(null);
     setActiveWatchServer(`${type}-${serverName}`);
     setActiveWatchType(type);
+    setIsServerDropdownOpen(false);
     
     if (isManual && onPlay) {
       onPlay(originalEp);
@@ -236,7 +248,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
         if (dubLinks.length > 0) groups.push({ category: 'Dub', links: dubLinks });
         
         setGroupedLinks(groups);
-        setActiveLinkCategory(groups[0]?.category || 'Sub');
         if (onPlay) onPlay(ep);
       }
     } catch (error) {
@@ -284,6 +295,13 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
   }, [filteredEpisodes, epPage]);
 
   const totalPages = Math.ceil(filteredEpisodes.length / EP_PER_PAGE);
+
+  const currentServerLabel = useMemo(() => {
+    const active = watchServersByType[serverCategory]?.find(srv => 
+      activeWatchServer?.toLowerCase() === `${serverCategory}-${srv.serverName}`.toLowerCase()
+    );
+    return active?.serverName || 'HD-1 (Default)';
+  }, [activeWatchServer, serverCategory, watchServersByType]);
 
   return (
     <motion.div 
@@ -367,8 +385,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                       {anime.source === 'watch' ? (
                         <div className="space-y-6 w-full max-w-2xl">
                           <p className="text-white/40 text-[10px] uppercase font-black tracking-widest">Select a server to initialize</p>
-                          <div className="flex flex-wrap justify-center gap-2">
-                          </div>
                         </div>
                       ) : (
                         <div className="space-y-6 w-full max-w-2xl">
@@ -402,46 +418,82 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
             {anime.source === 'watch' && iframeUrl && (
               <div className="p-4 bg-base-100 border-t border-base-content/5 flex flex-col items-center gap-4 animate-in fade-in slide-in-from-top-2">
                  
-                 {(watchServersByType.sub.length > 0 || watchServersByType.dub.length > 0) && (
-                   <div className="flex p-1 bg-base-content/5 rounded-full border border-base-content/10">
-                      {watchServersByType.sub.length > 0 && (
-                        <button 
-                          onClick={() => setServerCategory('sub')}
-                          className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${serverCategory === 'sub' ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/40 hover:text-base-content'}`}
-                        >
-                          Sub
-                        </button>
-                      )}
-                      {watchServersByType.dub.length > 0 && (
-                        <button 
-                           onClick={() => setServerCategory('dub')}
-                           className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${serverCategory === 'dub' ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/40 hover:text-base-content'}`}
-                        >
-                          Dub
-                        </button>
-                      )}
-                   </div>
-                 )}
-
-                 <div className="flex flex-wrap items-center justify-center gap-2 max-w-2xl">
-                    {watchServersByType[serverCategory]?.length > 0 ? (
-                      watchServersByType[serverCategory].map(srv => {
-                        const isActive = activeWatchServer?.toLowerCase() === `${serverCategory}-${srv.serverName}`.toLowerCase();
-                        return (
-                          <button
-                              key={`${serverCategory}-${srv.serverName}`}
-                              onClick={() => fetchStreamData(selectedEpisode.session, srv.serverName, serverCategory, selectedEpisode, true)}
-                              className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border ${isActive ? 'bg-primary text-primary-content border-primary shadow-[0_0_10px_rgba(255,46,99,0.3)]' : 'bg-base-content/5 text-base-content/40 border-transparent hover:bg-base-content/10 hover:border-base-content/10'}`}
-                          >
-                              {srv.serverName}
-                          </button>
-                        );
-                      })
-                    ) : (
-                      <span className="text-[9px] font-bold text-base-content/20 uppercase tracking-widest italic py-2">
-                        No {serverCategory === 'sub' ? 'Subtitled' : 'Dubbed'} servers available
-                      </span>
+                 <div className="flex items-center gap-4 w-full max-w-2xl justify-center">
+                    {(watchServersByType.sub.length > 0 || watchServersByType.dub.length > 0) && (
+                      <div className="flex p-0.5 bg-base-content/5 rounded-full border border-base-content/10 shrink-0">
+                          {watchServersByType.sub.length > 0 && (
+                            <button 
+                              onClick={() => setServerCategory('sub')}
+                              className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${serverCategory === 'sub' ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/40 hover:text-base-content'}`}
+                            >
+                              Sub
+                            </button>
+                          )}
+                          {watchServersByType.dub.length > 0 && (
+                            <button 
+                              onClick={() => setServerCategory('dub')}
+                              className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${serverCategory === 'dub' ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/40 hover:text-base-content'}`}
+                            >
+                              Dub
+                            </button>
+                          )}
+                      </div>
                     )}
+
+                    {/* Server Dropdown */}
+                    <div className="relative z-[70] flex-1 max-w-[220px]" ref={serverDropdownRef}>
+                        <button
+                          onClick={() => setIsServerDropdownOpen(!isServerDropdownOpen)}
+                          className="w-full flex items-center justify-between px-4 py-2 bg-base-content/5 border border-base-content/10 rounded-xl hover:border-primary/50 transition-all group shadow-xl"
+                        >
+                          <div className="flex items-center gap-2">
+                             <Server size={12} className="text-base-content/30 group-hover:text-primary" />
+                             <span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-base-content group-hover:text-primary transition-colors truncate">
+                                {currentServerLabel}
+                             </span>
+                          </div>
+                          <ChevronDown size={14} className={`text-base-content/40 group-hover:text-primary transition-all duration-300 ${isServerDropdownOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        <AnimatePresence>
+                          {isServerDropdownOpen && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                              className="absolute bottom-full left-0 mb-3 w-full bg-base-100 border border-base-content/10 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 backdrop-blur-xl"
+                            >
+                               <div className="px-3 py-2 border-b border-base-content/5 mb-1">
+                                  <span className="text-[9px] font-black uppercase tracking-widest text-base-content/30">Available Nodes</span>
+                               </div>
+                               <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                                  {watchServersByType[serverCategory]?.length > 0 ? (
+                                    watchServersByType[serverCategory].map(srv => {
+                                      const isActive = activeWatchServer?.toLowerCase() === `${serverCategory}-${srv.serverName}`.toLowerCase();
+                                      return (
+                                        <button
+                                          key={`${serverCategory}-${srv.serverName}`}
+                                          onClick={() => fetchStreamData(selectedEpisode.session, srv.serverName, serverCategory, selectedEpisode, true)}
+                                          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${isActive ? 'bg-primary text-primary-content' : 'text-base-content/60 hover:bg-base-content/5 hover:text-base-content'}`}
+                                        >
+                                          <div className="flex items-center gap-2">
+                                            {srv.serverName === 'hd-1' && <Star size={10} className={isActive ? 'text-primary-content' : 'text-yellow-500 fill-current'} />}
+                                            {srv.serverName}
+                                          </div>
+                                          {isActive && <div className="w-1.5 h-1.5 rounded-full bg-primary-content" />}
+                                        </button>
+                                      );
+                                    })
+                                  ) : (
+                                    <div className="px-3 py-4 text-center">
+                                       <span className="text-[9px] font-black text-base-content/20 uppercase tracking-widest italic">No Nodes Active</span>
+                                    </div>
+                                  )}
+                               </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                    </div>
                  </div>
 
               </div>
