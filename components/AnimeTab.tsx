@@ -52,6 +52,12 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
   const carouselRef = useRef<HTMLDivElement>(null);
   const isAutoScrolling = useRef(false);
 
+  // Extended spotlights for infinite scroll effect (add first item to end)
+  const extendedSpotlights = useMemo(() => {
+    if (!watchHome?.spotlights?.length) return [];
+    return [...watchHome.spotlights, watchHome.spotlights[0]];
+  }, [watchHome?.spotlights]);
+
   // Filter history based on searchMode (apex = download, watch = watch)
   const filteredHistory = useMemo(() => {
     return history.filter(h => 
@@ -116,34 +122,62 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
   }, [fetchAnimeList]);
 
   useEffect(() => {
-    if (!watchHome?.spotlights?.length || searchMode !== 'watch') return;
+    if (!extendedSpotlights.length || searchMode !== 'watch') return;
     const interval = setInterval(() => {
-      if (watchHome.spotlights.length > 0) {
-        setSpotlightIndex((prev) => (prev + 1) % watchHome.spotlights.length);
-      }
+      setSpotlightIndex((prev) => {
+        // If we're at the very end (clone), reset to 0 logic is handled in the effect, 
+        // but here we just increment. The max index is length - 1.
+        return prev + 1;
+      });
     }, 5000);
     return () => clearInterval(interval);
-  }, [watchHome, searchMode]);
+  }, [extendedSpotlights, searchMode]);
 
   useEffect(() => {
-    if (carouselRef.current && watchHome?.spotlights?.length) {
-      isAutoScrolling.current = true;
+    if (carouselRef.current && extendedSpotlights.length > 0) {
       const carouselWidth = carouselRef.current.offsetWidth;
-      carouselRef.current.scrollTo({
-        left: carouselWidth * spotlightIndex,
-        behavior: 'smooth'
-      });
-      setTimeout(() => { isAutoScrolling.current = false; }, 600);
+      
+      // Handle the infinite loop reset
+      if (spotlightIndex === extendedSpotlights.length - 1) {
+          isAutoScrolling.current = true;
+          // Smooth scroll to the clone
+          carouselRef.current.scrollTo({
+            left: carouselWidth * spotlightIndex,
+            behavior: 'smooth'
+          });
+          
+          // Wait for animation to finish, then instantly jump to 0
+          const timeout = setTimeout(() => {
+              if (carouselRef.current) {
+                  carouselRef.current.scrollTo({ left: 0, behavior: 'auto' });
+                  setSpotlightIndex(0);
+                  // Brief pause to prevent scroll event from firing during reset
+                  setTimeout(() => { isAutoScrolling.current = false; }, 50);
+              }
+          }, 600); // Match CSS scroll duration roughly
+          return () => clearTimeout(timeout);
+      } else {
+          // Normal scroll
+          isAutoScrolling.current = true;
+          carouselRef.current.scrollTo({
+            left: carouselWidth * spotlightIndex,
+            behavior: 'smooth'
+          });
+          const timeout = setTimeout(() => { isAutoScrolling.current = false; }, 600);
+          return () => clearTimeout(timeout);
+      }
     }
-  }, [spotlightIndex, watchHome]);
+  }, [spotlightIndex, extendedSpotlights]);
 
   const handleScroll = () => {
-    if (isAutoScrolling.current || !carouselRef.current || !watchHome?.spotlights?.length) return;
+    if (isAutoScrolling.current || !carouselRef.current || !extendedSpotlights.length) return;
     const scrollLeft = carouselRef.current.scrollLeft;
     const width = carouselRef.current.offsetWidth;
     const newIndex = Math.round(scrollLeft / width);
-    if (newIndex !== spotlightIndex && newIndex >= 0 && newIndex < watchHome.spotlights.length) {
-      setSpotlightIndex(newIndex);
+    
+    // Boundary check
+    if (newIndex >= 0 && newIndex < extendedSpotlights.length) {
+         setSpotlightIndex(newIndex);
     }
   };
 
@@ -332,9 +366,9 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                         onScroll={handleScroll}
                         className="carousel w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar scroll-smooth"
                       >
-                        {watchHome.spotlights.map((item, idx) => (
+                        {extendedSpotlights.map((item, idx) => (
                           <div 
-                            key={idx} 
+                            key={`${item.id}-${idx}`} 
                             className="carousel-item relative w-full h-full cursor-pointer snap-start shrink-0" 
                             onClick={() => onSelectAnime({
                               title: item.title, image: item.poster, session: item.id, description: item.description, source: 'watch'
@@ -347,16 +381,16 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                       </div>
 
                       <div className="absolute bottom-4 left-6 z-20 max-w-[80%] pointer-events-none">
-                        {watchHome.spotlights[spotlightIndex] && (
+                        {extendedSpotlights[spotlightIndex] && (
                           <div key={spotlightIndex} className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-both">
                             <h1 className="text-lg md:text-3xl font-black text-white uppercase line-clamp-1 drop-shadow-md">
-                              {watchHome.spotlights[spotlightIndex].title}
+                              {extendedSpotlights[spotlightIndex].title}
                             </h1>
                             <div className="flex gap-2">
                               <button 
                                 className="btn bg-white text-black hover:bg-gray-200 border-none btn-xs rounded-full px-4 text-[8px] font-black uppercase pointer-events-auto shadow-lg hover:scale-105 transition-transform"
                                 onClick={() => {
-                                  const item = watchHome.spotlights[spotlightIndex];
+                                  const item = extendedSpotlights[spotlightIndex];
                                   onSelectAnime({
                                     title: item.title, image: item.poster, session: item.id, description: item.description, source: 'watch'
                                   });
@@ -371,11 +405,11 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                     </div>
 
                     <div className="flex justify-center gap-1.5 py-1">
-                      {watchHome.spotlights.map((_, i) => (
+                      {extendedSpotlights.slice(0, extendedSpotlights.length - 1).map((_, i) => (
                         <button 
                           key={i} 
                           onClick={() => setSpotlightIndex(i)}
-                          className={`h-1 rounded-full transition-all duration-300 ${i === spotlightIndex ? 'w-6 bg-white' : 'w-2 bg-white/20 hover:bg-white/40'}`} 
+                          className={`h-1 rounded-full transition-all duration-300 ${i === (spotlightIndex % (extendedSpotlights.length - 1)) ? 'w-6 bg-white' : 'w-2 bg-white/20 hover:bg-white/40'}`} 
                         />
                       ))}
                     </div>

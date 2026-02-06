@@ -36,8 +36,6 @@ const App: React.FC = () => {
     // Route checking
     const checkRoute = () => {
       const path = window.location.pathname;
-      // Allow root / and /index.html, everything else is 404
-      // We strip trailing slashes for consistency
       const cleanPath = path.replace(/\/$/, '') || '/';
       
       if (cleanPath !== '/' && cleanPath !== '/index.html') {
@@ -57,7 +55,6 @@ const App: React.FC = () => {
       if (isStandalone) {
         setActiveTab(AppTab.ANIME);
       } else {
-        // If not PWA and at root, verify home tab
         if (!isNotFound) setActiveTab(AppTab.HOME);
       }
     };
@@ -128,7 +125,6 @@ const App: React.FC = () => {
   };
 
   const handleGoHome = () => {
-    // Safely attempt to push state, fall back to simple state update if blocked
     try {
         window.history.pushState({}, '', '/');
     } catch (e) {
@@ -182,42 +178,51 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0c0c0c] relative">
-      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} isPWA={isPWA} />
+    <div className="min-h-screen flex flex-col bg-[#0c0c0c] text-white font-sans selection:bg-primary/30 relative overflow-x-hidden">
       
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-4 md:py-8">
-        <AnimatePresence mode="wait">
-        <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-        >
-            {renderContent()}
-        </motion.div>
-        </AnimatePresence>
-      </main>
+      {/* Background Grid & Vignette */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#0c0c0c_100%)]"></div>
+      </div>
 
-      <footer className="p-8 footer bg-black border-t border-white/5 text-base-content mt-8">
-        <aside>
-          <div className="flex items-center gap-2">
-             <img src="https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png" className="w-8 h-8 opacity-80" alt="Logo" />
-             <div className="text-xl font-bold tracking-tighter text-white">StreamVibe</div>
-          </div>
-          <p className="text-xs opacity-50 uppercase tracking-widest font-bold mt-1">Neural Engine v4.0</p>
-        </aside> 
-        <nav>
-          <header className="footer-title opacity-40 uppercase text-[10px] tracking-widest">Links</header> 
-          {!isPWA && <a className="link link-hover text-xs" onClick={() => setActiveTab(AppTab.HOME)}>Home</a>}
-          <a className="link link-hover text-xs" onClick={() => setActiveTab(AppTab.ANIME)}>Anime</a>
-          <a className="link link-hover text-xs" onClick={() => setActiveTab(AppTab.GLOBAL)}>Global</a>
-          <a className="link link-hover text-xs" onClick={() => {
-            setHistoryFilter('all');
-            setShowHistoryModal(true);
-          }}>History</a>
-        </nav>
-      </footer>
+      <div className="relative z-10 flex flex-col min-h-screen">
+        <Navbar activeTab={activeTab} setActiveTab={setActiveTab} isPWA={isPWA} />
+        
+        <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-4 md:py-8">
+          <AnimatePresence mode="wait">
+          <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+          >
+              {renderContent()}
+          </motion.div>
+          </AnimatePresence>
+        </main>
+
+        <footer className="p-8 footer bg-black/40 backdrop-blur-md border-t border-white/5 text-white mt-8">
+          <aside>
+            <div className="flex items-center gap-2">
+              <img src="https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png" className="w-8 h-8 opacity-80" alt="Logo" />
+              <div className="text-xl font-bold tracking-tighter text-white">StreamVibe</div>
+            </div>
+            <p className="text-xs opacity-50 uppercase tracking-widest font-bold mt-1 text-white">Neural Engine v4.0</p>
+          </aside> 
+          <nav>
+            <header className="footer-title opacity-40 uppercase text-[10px] tracking-widest text-white">Links</header> 
+            {!isPWA && <a className="link link-hover text-xs text-white/60 hover:text-white" onClick={() => setActiveTab(AppTab.HOME)}>Home</a>}
+            <a className="link link-hover text-xs text-white/60 hover:text-white" onClick={() => setActiveTab(AppTab.ANIME)}>Anime</a>
+            <a className="link link-hover text-xs text-white/60 hover:text-white" onClick={() => setActiveTab(AppTab.GLOBAL)}>Global</a>
+            <a className="link link-hover text-xs text-white/60 hover:text-white" onClick={() => {
+              setHistoryFilter('all');
+              setShowHistoryModal(true);
+            }}>History</a>
+          </nav>
+        </footer>
+      </div>
 
       <AnimatePresence>
         {showAdBlockModal && (

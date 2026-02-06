@@ -46,6 +46,13 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
   const TMDB_KEY = "7519c82c82dd0265f5b5d599e59e972a";
   const BASE_URL = "https://api.themoviedb.org/3";
 
+  // Extended spotlights for infinite scroll (slice top 5 then duplicate first)
+  const extendedTrending = useMemo(() => {
+    if (!trending.length) return [];
+    const top5 = trending.slice(0, 5);
+    return [...top5, top5[0]];
+  }, [trending]);
+
   // Filter history based on viewMode
   const filteredHistory = useMemo(() => {
     return history.filter(h => (h.mode || 'watch') === viewMode);
@@ -77,31 +84,53 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
   }, [fetchGlobalData]);
 
   useEffect(() => {
-    if (!trending.length || isSearching || viewMode === 'download') return;
+    if (!extendedTrending.length || isSearching || viewMode === 'download') return;
     const interval = setInterval(() => {
-      setSpotlightIndex((prev) => (prev + 1) % 5);
+      setSpotlightIndex((prev) => prev + 1);
     }, 6000);
     return () => clearInterval(interval);
-  }, [trending, isSearching, viewMode]);
+  }, [extendedTrending, isSearching, viewMode]);
 
   useEffect(() => {
-    if (carouselRef.current && trending.length && viewMode === 'watch') {
-      isAutoScrolling.current = true;
+    if (carouselRef.current && extendedTrending.length && viewMode === 'watch') {
       const carouselWidth = carouselRef.current.offsetWidth;
-      carouselRef.current.scrollTo({
-        left: carouselWidth * spotlightIndex,
-        behavior: 'smooth'
-      });
-      setTimeout(() => { isAutoScrolling.current = false; }, 600);
+      
+      if (spotlightIndex === extendedTrending.length - 1) {
+          isAutoScrolling.current = true;
+          // Smooth scroll to clone
+          carouselRef.current.scrollTo({
+            left: carouselWidth * spotlightIndex,
+            behavior: 'smooth'
+          });
+          
+          // Instant reset
+          const timeout = setTimeout(() => {
+             if (carouselRef.current) {
+                carouselRef.current.scrollTo({ left: 0, behavior: 'auto' });
+                setSpotlightIndex(0);
+                setTimeout(() => { isAutoScrolling.current = false; }, 50);
+             }
+          }, 600);
+          return () => clearTimeout(timeout);
+      } else {
+          isAutoScrolling.current = true;
+          carouselRef.current.scrollTo({
+            left: carouselWidth * spotlightIndex,
+            behavior: 'smooth'
+          });
+          const timeout = setTimeout(() => { isAutoScrolling.current = false; }, 600);
+          return () => clearTimeout(timeout);
+      }
     }
-  }, [spotlightIndex, trending, viewMode]);
+  }, [spotlightIndex, extendedTrending, viewMode]);
 
   const handleScroll = () => {
-    if (isAutoScrolling.current || !carouselRef.current || !trending.length) return;
+    if (isAutoScrolling.current || !carouselRef.current || !extendedTrending.length) return;
     const scrollLeft = carouselRef.current.scrollLeft;
     const width = carouselRef.current.offsetWidth;
     const newIndex = Math.round(scrollLeft / width);
-    if (newIndex !== spotlightIndex && newIndex >= 0 && newIndex < 5) {
+    
+    if (newIndex >= 0 && newIndex < extendedTrending.length) {
       setSpotlightIndex(newIndex);
     }
   };
@@ -225,7 +254,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.5 }}
                 >
-                  {trending.length > 0 && (
+                  {extendedTrending.length > 0 && (
                     <section className="space-y-3">
                       <div className="relative w-full rounded-2xl h-[250px] md:h-[400px] shadow-2xl border border-white/5 overflow-hidden group">
                         <div 
@@ -233,8 +262,8 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                           onScroll={handleScroll}
                           className="carousel w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar scroll-smooth"
                         >
-                          {trending.slice(0, 5).map((media, idx) => (
-                            <div key={idx} className="carousel-item relative w-full h-full cursor-pointer snap-start shrink-0" onClick={() => onSelectMedia(media, viewMode)}>
+                          {extendedTrending.map((media, idx) => (
+                            <div key={`${media.id}-${idx}`} className="carousel-item relative w-full h-full cursor-pointer snap-start shrink-0" onClick={() => onSelectMedia(media, viewMode)}>
                               <img 
                                 src={`https://image.tmdb.org/t/p/original${media.backdrop_path}`} 
                                 className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" 
@@ -246,14 +275,14 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                         </div>
 
                         <div className="absolute bottom-6 left-8 right-8 z-20 pointer-events-none">
-                          {trending[spotlightIndex] && (
+                          {extendedTrending[spotlightIndex] && (
                             <div key={spotlightIndex} className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-700 fill-mode-both">
                               <span className="badge bg-white text-black border-none badge-xs uppercase font-black tracking-widest px-3 py-2 shadow-lg">Spotlight</span>
                               <h1 className="text-xl md:text-4xl font-black text-white uppercase tracking-tighter line-clamp-1 drop-shadow-lg">
-                                {trending[spotlightIndex].title || trending[spotlightIndex].name}
+                                {extendedTrending[spotlightIndex].title || extendedTrending[spotlightIndex].name}
                               </h1>
                               <p className="text-[10px] md:text-xs text-white/70 line-clamp-2 max-w-xl italic drop-shadow-md">
-                                {trending[spotlightIndex].overview}
+                                {extendedTrending[spotlightIndex].overview}
                               </p>
                             </div>
                           )}
@@ -261,11 +290,11 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                       </div>
 
                       <div className="flex justify-center gap-1.5 py-1">
-                        {trending.slice(0, 5).map((_, i) => (
+                        {extendedTrending.slice(0, extendedTrending.length - 1).map((_, i) => (
                           <button 
                             key={i} 
                             onClick={() => setSpotlightIndex(i)}
-                            className={`h-1 rounded-full transition-all duration-300 ${i === spotlightIndex ? 'w-8 bg-white' : 'w-2 bg-white/20 hover:bg-white/40'}`} 
+                            className={`h-1 rounded-full transition-all duration-300 ${i === (spotlightIndex % (extendedTrending.length - 1)) ? 'w-8 bg-white' : 'w-2 bg-white/20 hover:bg-white/40'}`} 
                           />
                         ))}
                       </div>
