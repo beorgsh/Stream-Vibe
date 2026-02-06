@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { TMDBMedia, TMDBEpisode } from '../types';
-import { X, Play, Loader2, Star, Download, ArrowLeft, ChevronLeft, ChevronRight, Search, ChevronDown, Server } from 'lucide-react';
+import { X, Play, Loader2, Star, Download, ArrowLeft, ChevronLeft, ChevronRight, Search, ChevronDown, Server, CheckCircle2 } from 'lucide-react';
 import { SkeletonRow, SkeletonText } from './Skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -43,10 +43,36 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
   const [isPlaying, setIsPlaying] = useState(false);
   const [playingEpisode, setPlayingEpisode] = useState<TMDBEpisode | null>(null);
   const [server, setServer] = useState('rivestream');
+  const [watchedEpisodes, setWatchedEpisodes] = useState<Set<string>>(new Set());
 
   const hasAutoResumed = useRef(false);
 
   const type = media.media_type || (media.title ? 'movie' : 'tv');
+
+  // Load watched registry
+  useEffect(() => {
+    const registry = localStorage.getItem('sv_watched_registry');
+    if (registry) {
+      try {
+        const parsed = JSON.parse(registry);
+        const seriesWatched = parsed[media.id.toString()] || [];
+        setWatchedEpisodes(new Set(seriesWatched));
+      } catch (e) {
+        console.error("Failed to load watched registry", e);
+      }
+    }
+  }, [media.id]);
+
+  const markAsWatched = (epId: string) => {
+    setWatchedEpisodes(prev => {
+      const next = new Set(prev).add(epId);
+      const registry = localStorage.getItem('sv_watched_registry');
+      const parsed = registry ? JSON.parse(registry) : {};
+      parsed[media.id.toString()] = Array.from(next);
+      localStorage.setItem('sv_watched_registry', JSON.stringify(parsed));
+      return next;
+    });
+  };
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -71,6 +97,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                 setPlayingEpisode(targetEp);
                 setIsPlaying(true);
                 setIsIframeLoading(true);
+                markAsWatched(targetEp.id.toString());
              }
           }
         } else if (type === 'movie' && mode === 'watch' && initialResumeData && !hasAutoResumed.current) {
@@ -173,6 +200,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
     setIsIframeLoading(true);
     if (episode) {
       setPlayingEpisode(episode);
+      markAsWatched(episode.id.toString());
     } else {
       setPlayingEpisode(null);
     }
@@ -439,33 +467,40 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                                 {[...Array(5)].map((_, i) => <SkeletonRow key={i} />)}
                             </div>
                         ) : (
-                            episodes.map(ep => (
-                            <div 
-                                key={ep.id}
-                                id={`episode-${ep.episode_number}`}
-                                onClick={() => handleAction(ep)}
-                                className="group/item flex items-center gap-4 p-3 rounded-xl bg-base-content/5 hover:bg-base-content/10 transition-all cursor-pointer border border-transparent hover:border-base-content/5"
-                            >
-                                <div className="w-20 h-12 rounded-lg overflow-hidden shrink-0 border border-base-content/5 relative">
-                                <img src={ep.still_path ? `https://image.tmdb.org/t/p/w200${ep.still_path}` : `https://image.tmdb.org/t/p/w200${media.backdrop_path}`} className="w-full h-full object-cover opacity-60 group-hover/item:opacity-100 transition-opacity" />
-                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-opacity">
-                                    {mode === 'download' ? (
-                                         <Download size={16} className="text-white drop-shadow-lg" />
-                                    ) : (
-                                         <Play size={16} className="fill-white text-white drop-shadow-lg" />
-                                    )}
-                                </div>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <h4 className="font-bold text-[10px] md:text-xs text-base-content/80 group-hover/item:text-base-content truncate uppercase tracking-tight mb-0.5">
-                                        {ep.name || `Episode ${ep.episode_number}`}
-                                    </h4>
-                                    <span className="text-[9px] text-base-content/30 font-bold uppercase tracking-widest">
-                                        E{ep.episode_number} • {ep.season_number}S
-                                    </span>
-                                </div>
-                            </div>
-                            ))
+                            episodes.map(ep => {
+                                const isEpWatched = watchedEpisodes.has(ep.id.toString());
+                                return (
+                                    <div 
+                                        key={ep.id}
+                                        id={`episode-${ep.episode_number}`}
+                                        onClick={() => handleAction(ep)}
+                                        className={`group/item flex items-center gap-4 p-3 rounded-xl bg-base-content/5 hover:bg-base-content/10 transition-all cursor-pointer border border-transparent hover:border-base-content/5 ${isEpWatched ? 'opacity-50' : ''}`}
+                                    >
+                                        <div className="w-20 h-12 rounded-lg overflow-hidden shrink-0 border border-base-content/5 relative">
+                                            <img src={ep.still_path ? `https://image.tmdb.org/t/p/w200${ep.still_path}` : `https://image.tmdb.org/t/p/w200${media.backdrop_path}`} className="w-full h-full object-cover opacity-60 group-hover/item:opacity-100 transition-opacity" />
+                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-opacity">
+                                                {mode === 'download' ? (
+                                                     <Download size={16} className="text-white drop-shadow-lg" />
+                                                ) : (
+                                                     <Play size={16} className="fill-white text-white drop-shadow-lg" />
+                                                )}
+                                            </div>
+                                            {isEpWatched && <div className="absolute top-1 right-1 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg"><CheckCircle2 size={10} className="text-white" /></div>}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <h4 className="font-bold text-[10px] md:text-xs text-base-content/80 group-hover/item:text-base-content truncate uppercase tracking-tight mb-0.5">
+                                                    {ep.name || `Episode ${ep.episode_number}`}
+                                                </h4>
+                                                {isEpWatched && <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-1.5 py-0.5 rounded">Watched</span>}
+                                            </div>
+                                            <span className="text-[9px] text-base-content/30 font-bold uppercase tracking-widest">
+                                                E{ep.episode_number} • {ep.season_number}S
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })
                         )}
                     </div>
                     </motion.div>

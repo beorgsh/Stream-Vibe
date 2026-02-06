@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AnimeSeries, AnimeEpisode, AnimeLink } from '../types';
-import { X, Play, Loader2, ArrowLeft, Search, ChevronLeft, ChevronRight, Download, Star, ChevronDown, Server } from 'lucide-react';
+import { X, Play, Loader2, ArrowLeft, Search, ChevronLeft, ChevronRight, Download, Star, ChevronDown, Server, CheckCircle2 } from 'lucide-react';
 import { SkeletonRow, SkeletonText } from './Skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -50,8 +50,34 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
   const serverDropdownRef = useRef<HTMLDivElement>(null);
   
   const [iframeUrl, setIframeUrl] = useState<string | null>(null);
+  const [watchedEpisodes, setWatchedEpisodes] = useState<Set<string>>(new Set());
 
   const hasAutoResumed = useRef(false);
+
+  // Load watched episodes registry
+  useEffect(() => {
+    const registry = localStorage.getItem('sv_watched_registry');
+    if (registry) {
+      try {
+        const parsed = JSON.parse(registry);
+        const seriesWatched = parsed[anime.session] || [];
+        setWatchedEpisodes(new Set(seriesWatched));
+      } catch (e) {
+        console.error("Failed to load watched registry", e);
+      }
+    }
+  }, [anime.session]);
+
+  const markAsWatched = (epId: string) => {
+    setWatchedEpisodes(prev => {
+      const next = new Set(prev).add(epId);
+      const registry = localStorage.getItem('sv_watched_registry');
+      const parsed = registry ? JSON.parse(registry) : {};
+      parsed[anime.session] = Array.from(next);
+      localStorage.setItem('sv_watched_registry', JSON.stringify(parsed));
+      return next;
+    });
+  };
 
   useEffect(() => {
     setServerCategory(activeWatchType);
@@ -149,6 +175,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
     
     if (isManual && onPlay) {
       onPlay(originalEp);
+      markAsWatched(originalEp.session);
     }
 
     try {
@@ -209,6 +236,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
             const separator = src.includes('?') ? '&' : '?';
             setIframeUrl(`${src}${separator}_debug=true`);
             if (onPlay) onPlay(ep);
+            markAsWatched(ep.session);
           } else {
             setIsIframeLoading(false);
           }
@@ -249,6 +277,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
         
         setGroupedLinks(groups);
         if (onPlay) onPlay(ep);
+        markAsWatched(ep.session);
       }
     } catch (error) {
       console.error("Error:", error);
@@ -502,15 +531,19 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
             <div className="p-4 bg-base-100 border-t border-base-content/5">
               <div className="flex flex-wrap items-center justify-center gap-3">
                 <span className="text-[9px] font-black uppercase tracking-widest text-base-content/30 mr-2">Quick Switch</span>
-                {episodes.slice(Math.max(0, currentIndex - 2), Math.min(episodes.length, currentIndex + 3)).map(ep => (
-                  <button
-                    key={ep.session}
-                    onClick={() => fetchEpisodeLinks(ep)}
-                    className={`w-10 h-10 rounded-lg text-[10px] font-black flex items-center justify-center transition-all ${ep.session === selectedEpisode.session ? 'bg-primary text-primary-content' : 'bg-base-content/5 text-base-content/40 hover:bg-base-content/10'}`}
-                  >
-                    {ep.episode}
-                  </button>
-                ))}
+                {episodes.slice(Math.max(0, currentIndex - 2), Math.min(episodes.length, currentIndex + 3)).map(ep => {
+                  const isEpWatched = watchedEpisodes.has(ep.session);
+                  return (
+                    <button
+                      key={ep.session}
+                      onClick={() => fetchEpisodeLinks(ep)}
+                      className={`relative w-10 h-10 rounded-lg text-[10px] font-black flex items-center justify-center transition-all ${ep.session === selectedEpisode.session ? 'bg-primary text-primary-content' : 'bg-base-content/5 text-base-content/40 hover:bg-base-content/10'} ${isEpWatched ? 'opacity-60' : ''}`}
+                    >
+                      {ep.episode}
+                      {isEpWatched && <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg"><CheckCircle2 size={8} className="text-white" /></div>}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -583,24 +616,31 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                       {isLoading ? (
                         [...Array(6)].map((_, i) => <SkeletonRow key={i} />)
                       ) : (
-                        pagedEpisodes.map(ep => (
-                          <div 
-                            key={ep.session}
-                            onClick={() => fetchEpisodeLinks(ep)}
-                            className="group flex items-center gap-4 p-3 rounded-xl bg-base-content/5 hover:bg-base-content/10 transition-all cursor-pointer border border-transparent hover:border-base-content/5"
-                          >
-                            <div className="w-12 h-12 rounded-lg bg-base-300 flex items-center justify-center shrink-0 border border-base-content/5 group-hover:border-primary/50">
-                              <span className="text-[10px] font-black text-base-content/40 group-hover:text-primary transition-colors">{ep.episode}</span>
+                        pagedEpisodes.map(ep => {
+                          const isEpWatched = watchedEpisodes.has(ep.session);
+                          return (
+                            <div 
+                              key={ep.session}
+                              onClick={() => fetchEpisodeLinks(ep)}
+                              className={`group flex items-center gap-4 p-3 rounded-xl bg-base-content/5 hover:bg-base-content/10 transition-all cursor-pointer border border-transparent hover:border-base-content/5 ${isEpWatched ? 'opacity-50' : ''}`}
+                            >
+                              <div className="w-12 h-12 rounded-lg bg-base-300 flex items-center justify-center shrink-0 border border-base-content/5 group-hover:border-primary/50 relative">
+                                <span className="text-[10px] font-black text-base-content/40 group-hover:text-primary transition-colors">{ep.episode}</span>
+                                {isEpWatched && <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg ring-2 ring-base-100"><CheckCircle2 size={10} className="text-white" /></div>}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-bold text-[10px] md:text-xs text-base-content/80 group-hover:text-base-content truncate uppercase tracking-tight mb-0.5">
+                                    {ep.title || `Episode ${ep.episode}`}
+                                  </h4>
+                                  {isEpWatched && <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-1.5 py-0.5 rounded">Watched</span>}
+                                </div>
+                                <span className="text-[8px] text-base-content/20 font-black uppercase tracking-widest">Access Node Available</span>
+                              </div>
+                              <Play size={14} className="text-base-content/20 group-hover:text-primary group-hover:scale-110 transition-all" />
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-bold text-[10px] md:text-xs text-base-content/80 group-hover:text-base-content truncate uppercase tracking-tight mb-0.5">
-                                {ep.title || `Episode ${ep.episode}`}
-                              </h4>
-                              <span className="text-[8px] text-base-content/20 font-black uppercase tracking-widest">Access Node Available</span>
-                            </div>
-                            <Play size={14} className="text-base-content/20 group-hover:text-primary group-hover:scale-110 transition-all" />
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
 
