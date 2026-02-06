@@ -69,7 +69,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
           />
 
           <div 
-             className="w-24 h-24 md:w-32 md:h-32 mx-auto relative z-10 drop-shadow-2xl bg-primary"
+             className="w-24 h-24 md:w-32 md:h-32 mx-auto relative z-10 drop-shadow-2xl bg-base-content"
              style={{
                maskImage: 'url(https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png)',
                maskSize: 'contain',

@@ -20,6 +20,17 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isPWA, current
     { id: 'luxury', name: 'Elegant' } // Luxury is Gold/Black
   ];
 
+  const handleThemeSelect = (themeId: string) => {
+    if (onThemeChange) {
+      onThemeChange(themeId);
+    }
+    // Close the dropdown by blurring the active element which removes focus state
+    const elem = document.activeElement as HTMLElement;
+    if (elem) {
+      elem.blur();
+    }
+  };
+
   return (
     <nav className="sticky top-0 z-50 bg-base-100/80 backdrop-blur-xl border-b border-base-content/5 px-4 md:px-6 py-3 md:py-4 transition-colors duration-500">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -28,7 +39,7 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isPWA, current
           onClick={() => !isPWA && setActiveTab(AppTab.HOME)}
         >
           <div 
-            className="w-8 h-8 md:w-10 md:h-10 bg-primary shadow-lg shadow-primary/20 group-hover:rotate-12 transition-transform duration-500"
+            className="w-8 h-8 md:w-10 md:h-10 bg-base-content shadow-lg shadow-base-content/10 group-hover:rotate-12 transition-transform duration-500"
             style={{
               maskImage: 'url(https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png)',
               maskSize: 'contain',
@@ -83,7 +94,7 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isPWA, current
                   {themes.map((t) => (
                     <li key={t.id}>
                       <button 
-                        onClick={() => onThemeChange(t.id)}
+                        onClick={() => handleThemeSelect(t.id)}
                         className={`text-xs font-bold uppercase tracking-wider flex justify-between ${currentTheme === t.id ? 'active bg-primary text-primary-content' : ''}`}
                       >
                         {t.name}

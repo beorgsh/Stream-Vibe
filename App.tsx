@@ -224,17 +224,29 @@ const App: React.FC = () => {
         <footer className="p-8 footer bg-base-200/50 backdrop-blur-md border-t border-base-content/5 text-base-content mt-8 transition-colors duration-500">
           <aside>
             <div className="flex items-center gap-2">
-              <img src="https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png" className="w-8 h-8 opacity-80 invert dark:invert-0" alt="Logo" />
-              <div className="text-xl font-bold tracking-tighter">StreamVibe</div>
+              <div 
+                className="w-8 h-8 bg-base-content"
+                style={{
+                  maskImage: 'url(https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png)',
+                  maskSize: 'contain',
+                  maskRepeat: 'no-repeat',
+                  maskPosition: 'center',
+                  WebkitMaskImage: 'url(https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png)',
+                  WebkitMaskSize: 'contain',
+                  WebkitMaskRepeat: 'no-repeat',
+                  WebkitMaskPosition: 'center'
+                }}
+              />
+              <div className="text-xl font-bold tracking-tighter text-base-content">StreamVibe</div>
             </div>
-            <p className="text-xs opacity-50 uppercase tracking-widest font-bold mt-1">Neural Engine v4.0</p>
+            <p className="text-xs opacity-50 uppercase tracking-widest font-bold mt-1 text-base-content/60">Neural Engine v4.0</p>
           </aside> 
           <nav>
-            <header className="footer-title opacity-40 uppercase text-[10px] tracking-widest">Links</header> 
-            {!isPWA && <a className="link link-hover text-xs opacity-60 hover:opacity-100" onClick={() => setActiveTab(AppTab.HOME)}>Home</a>}
-            <a className="link link-hover text-xs opacity-60 hover:opacity-100" onClick={() => setActiveTab(AppTab.ANIME)}>Anime</a>
-            <a className="link link-hover text-xs opacity-60 hover:opacity-100" onClick={() => setActiveTab(AppTab.GLOBAL)}>Global</a>
-            <a className="link link-hover text-xs opacity-60 hover:opacity-100" onClick={() => {
+            <header className="footer-title opacity-40 uppercase text-[10px] tracking-widest text-base-content">Links</header> 
+            {!isPWA && <a className="link link-hover text-xs opacity-60 hover:opacity-100 text-base-content" onClick={() => setActiveTab(AppTab.HOME)}>Home</a>}
+            <a className="link link-hover text-xs opacity-60 hover:opacity-100 text-base-content" onClick={() => setActiveTab(AppTab.ANIME)}>Anime</a>
+            <a className="link link-hover text-xs opacity-60 hover:opacity-100 text-base-content" onClick={() => setActiveTab(AppTab.GLOBAL)}>Global</a>
+            <a className="link link-hover text-xs opacity-60 hover:opacity-100 text-base-content" onClick={() => {
               setHistoryFilter('all');
               setShowHistoryModal(true);
             }}>History</a>
