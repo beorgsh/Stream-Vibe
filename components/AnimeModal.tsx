@@ -138,7 +138,8 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
              episode: item.episode_no.toString(),
              session: item.id, 
              snapshot: item.image || item.thumbnail || anime.image,
-             title: item.title
+             title: item.title,
+             overview: item.description // Map description if available
           }));
           setEpisodes(epList);
         }
@@ -445,7 +446,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
             </div>
 
             {anime.source === 'watch' && iframeUrl && (
-              <div className="p-4 bg-base-100 border-t border-base-content/5 flex flex-col items-center gap-4 animate-in fade-in slide-in-from-top-2">
+              <div className="p-4 bg-base-100 border-t border-base-content/5 flex flex-col items-center gap-4 animate-in fade-in slide-in-from-top-2 relative z-50">
                  
                  <div className="flex items-center gap-4 w-full max-w-2xl justify-center">
                     {(watchServersByType.sub.length > 0 || watchServersByType.dub.length > 0) && (
@@ -470,7 +471,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                     )}
 
                     {/* Server Dropdown */}
-                    <div className="relative z-[110] flex-1 max-w-[220px]" ref={serverDropdownRef}>
+                    <div className="relative z-[60] flex-1 max-w-[220px]" ref={serverDropdownRef}>
                         <button
                           onClick={() => setIsServerDropdownOpen(!isServerDropdownOpen)}
                           className="w-full flex items-center justify-between px-4 py-2 bg-base-content/5 border border-base-content/10 rounded-xl hover:border-primary/50 transition-all group shadow-xl"
@@ -490,12 +491,12 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                               initial={{ opacity: 0, y: 10, scale: 0.95 }}
                               animate={{ opacity: 1, y: 0, scale: 1 }}
                               exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                              className="absolute bottom-full left-0 mb-3 w-full bg-base-100 border border-base-content/10 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 backdrop-blur-xl z-[120]"
+                              className="absolute bottom-full left-0 mb-3 w-full bg-base-100 border border-base-content/20 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 backdrop-blur-xl z-[100] opacity-100"
                             >
-                               <div className="px-3 py-2 border-b border-base-content/5 mb-1 bg-base-100/50">
-                                  <span className="text-[9px] font-black uppercase tracking-widest text-base-content/30">Available Nodes</span>
+                               <div className="px-3 py-2 border-b border-base-content/10 mb-1 bg-base-200/50 rounded-t-xl">
+                                  <span className="text-[9px] font-black uppercase tracking-widest text-base-content/40">Available Nodes</span>
                                </div>
-                               <div className="max-h-60 overflow-y-auto custom-scrollbar bg-base-100">
+                               <div className="max-h-60 overflow-y-auto custom-scrollbar">
                                   {watchServersByType[serverCategory]?.length > 0 ? (
                                     watchServersByType[serverCategory].map(srv => {
                                       const isActive = activeWatchServer?.toLowerCase() === `${serverCategory}-${srv.serverName}`.toLowerCase();
@@ -503,7 +504,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                                         <button
                                           key={`${serverCategory}-${srv.serverName}`}
                                           onClick={() => fetchStreamData(selectedEpisode.session, srv.serverName, serverCategory, selectedEpisode, true)}
-                                          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${isActive ? 'bg-primary text-primary-content' : 'text-base-content/60 hover:bg-base-content/5 hover:text-base-content'}`}
+                                          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${isActive ? 'bg-primary text-primary-content' : 'text-base-content/60 hover:bg-base-content/10 hover:text-base-content'}`}
                                         >
                                           <div className="flex items-center gap-2">
                                             {srv.serverName === 'hd-1' && <Star size={10} className={isActive ? 'text-primary-content' : 'text-yellow-500 fill-current'} />}
@@ -612,7 +613,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                       <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/20" size={14} />
                     </div>
 
-                    <div className="grid grid-cols-1 gap-2">
+                    <div className="grid grid-cols-1 gap-3">
                       {isLoading ? (
                         [...Array(6)].map((_, i) => <SkeletonRow key={i} />)
                       ) : (
@@ -622,22 +623,30 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                             <div 
                               key={ep.session}
                               onClick={() => fetchEpisodeLinks(ep)}
-                              className={`group flex items-center gap-4 p-3 rounded-xl bg-base-content/5 hover:bg-base-content/10 transition-all cursor-pointer border border-transparent hover:border-base-content/5 ${isEpWatched ? 'opacity-50' : ''}`}
+                              className={`group flex items-start gap-4 p-3 rounded-xl bg-base-content/5 hover:bg-base-content/10 transition-all cursor-pointer border border-transparent hover:border-base-content/5 ${isEpWatched ? 'opacity-50' : ''}`}
                             >
-                              <div className="w-12 h-12 rounded-lg bg-base-300 flex items-center justify-center shrink-0 border border-base-content/5 group-hover:border-primary/50 relative">
-                                <span className="text-[10px] font-black text-base-content/40 group-hover:text-primary transition-colors">{ep.episode}</span>
-                                {isEpWatched && <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg ring-2 ring-base-100"><CheckCircle2 size={10} className="text-white" /></div>}
+                              <div className="w-20 md:w-24 aspect-video rounded-lg bg-base-300 flex items-center justify-center shrink-0 border border-base-content/5 group-hover:border-primary/50 relative overflow-hidden shadow-sm">
+                                <span className="text-[10px] font-black text-base-content/40 group-hover:text-primary transition-colors z-10">{ep.episode}</span>
+                                {isEpWatched && <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg ring-2 ring-base-100 z-20"><CheckCircle2 size={10} className="text-white" /></div>}
+                                <div className="absolute inset-0 bg-base-content/5 group-hover:bg-primary/5 transition-colors" />
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <h4 className="font-bold text-[10px] md:text-xs text-base-content/80 group-hover:text-base-content truncate uppercase tracking-tight mb-0.5">
+                              <div className="flex-1 min-w-0 pt-0.5">
+                                <div className="flex items-center justify-between mb-1">
+                                  <h4 className="font-black text-[10px] md:text-[11px] text-base-content/90 group-hover:text-primary truncate uppercase tracking-tight">
                                     {ep.title || `Episode ${ep.episode}`}
                                   </h4>
-                                  {isEpWatched && <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-1.5 py-0.5 rounded">Watched</span>}
+                                  {isEpWatched && <span className="text-[7px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-1.5 py-0.5 rounded ml-2 shrink-0">Watched</span>}
                                 </div>
-                                <span className="text-[8px] text-base-content/20 font-black uppercase tracking-widest">Access Node Available</span>
+                                <div className="flex items-center gap-2 mb-1.5">
+                                  <span className="text-[8px] text-base-content/20 font-black uppercase tracking-widest">Access Node Available</span>
+                                </div>
+                                {ep.overview && (
+                                  <p className="text-[9px] md:text-[10px] text-base-content/40 line-clamp-2 leading-relaxed font-medium italic group-hover:text-base-content/60 transition-colors">
+                                    {ep.overview}
+                                  </p>
+                                )}
                               </div>
-                              <Play size={14} className="text-base-content/20 group-hover:text-primary group-hover:scale-110 transition-all" />
+                              <Play size={14} className="text-base-content/20 group-hover:text-primary group-hover:scale-110 transition-all mt-1" />
                             </div>
                           );
                         })

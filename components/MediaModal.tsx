@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { TMDBMedia, TMDBEpisode } from '../types';
-import { X, Play, Loader2, Star, Download, ArrowLeft, ChevronLeft, ChevronRight, Search, ChevronDown, Server, CheckCircle2, List } from 'lucide-react';
+import { X, Play, Loader2, Star, Download, ArrowLeft, ChevronLeft, ChevronRight, Search, ChevronDown, Server, CheckCircle2, List, BookOpen } from 'lucide-react';
 import { SkeletonRow, SkeletonText } from './Skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -320,10 +320,10 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                      />
                 </div>
 
-                <div className="p-4 bg-base-100 border-t border-base-content/5 flex flex-wrap justify-center gap-3 md:gap-4">
+                <div className="p-4 bg-base-100 border-t border-base-content/5 flex flex-wrap justify-center gap-3 md:gap-4 relative z-50">
                     {/* Season Selector (TV Only) */}
                     {type === 'tv' && (
-                        <div className="relative z-[110] w-full md:w-auto md:min-w-[140px]" ref={playerSeasonDropdownRef}>
+                        <div className="relative z-[60] w-full md:w-auto md:min-w-[140px]" ref={playerSeasonDropdownRef}>
                              <button
                                 onClick={() => setIsPlayerSeasonDropdownOpen(!isPlayerSeasonDropdownOpen)}
                                 className="w-full flex items-center justify-between gap-3 px-4 py-2 bg-base-content/5 border border-base-content/10 rounded-xl hover:border-primary/50 transition-all group shadow-xl"
@@ -342,12 +342,12 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                         animate={{ opacity: 1, y: 0, scale: 1 }}
                                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                        className="absolute bottom-full left-0 mb-3 w-56 bg-base-100 border border-base-content/10 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 backdrop-blur-xl z-[120]"
+                                        className="absolute bottom-full left-0 mb-3 w-56 bg-base-100 border border-base-content/20 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 backdrop-blur-xl z-[100] opacity-100"
                                     >
-                                        <div className="px-3 py-2 border-b border-base-content/5 mb-1 bg-base-100/50">
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-base-content/30">Switch Season</span>
+                                        <div className="px-3 py-2 border-b border-base-content/10 mb-1 bg-base-200/50 rounded-t-xl">
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-base-content/40">Switch Season</span>
                                         </div>
-                                        <div className="max-h-64 overflow-y-auto custom-scrollbar bg-base-100">
+                                        <div className="max-h-64 overflow-y-auto custom-scrollbar">
                                             {details?.seasons?.filter((s: any) => s.season_number > 0 && s.episode_count > 0).map((s: any) => (
                                                 <button
                                                     key={s.id}
@@ -355,7 +355,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                                                         handleSeasonChange(s.season_number);
                                                         setIsPlayerSeasonDropdownOpen(false);
                                                     }}
-                                                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${currentSeason === s.season_number ? 'bg-primary text-primary-content' : 'text-base-content/60 hover:bg-base-content/5 hover:text-base-content'}`}
+                                                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${currentSeason === s.season_number ? 'bg-primary text-primary-content' : 'text-base-content/60 hover:bg-base-content/10 hover:text-base-content'}`}
                                                 >
                                                     <span className="truncate">{s.name || `Season ${s.season_number}`}</span>
                                                     {currentSeason === s.season_number && <div className="w-1.5 h-1.5 rounded-full bg-primary-content" />}
@@ -370,7 +370,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
 
                     {/* Episode Selector (TV Only) */}
                     {type === 'tv' && (
-                        <div className="relative z-[110] w-full md:w-auto md:min-w-[140px]" ref={playerEpDropdownRef}>
+                        <div className="relative z-[60] w-full md:w-auto md:min-w-[140px]" ref={playerEpDropdownRef}>
                              <button
                                 onClick={() => setIsPlayerEpDropdownOpen(!isPlayerEpDropdownOpen)}
                                 className="w-full flex items-center justify-between gap-3 px-4 py-2 bg-base-content/5 border border-base-content/10 rounded-xl hover:border-primary/50 transition-all group shadow-xl"
@@ -389,12 +389,12 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                         animate={{ opacity: 1, y: 0, scale: 1 }}
                                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                        className="absolute bottom-full left-0 mb-3 w-56 bg-base-100 border border-base-content/10 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 backdrop-blur-xl z-[120]"
+                                        className="absolute bottom-full left-0 mb-3 w-56 bg-base-100 border border-base-content/20 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 backdrop-blur-xl z-[100] opacity-100"
                                     >
-                                        <div className="px-3 py-2 border-b border-base-content/5 mb-1 bg-base-100/50">
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-base-content/30">Jump to Episode</span>
+                                        <div className="px-3 py-2 border-b border-base-content/10 mb-1 bg-base-200/50 rounded-t-xl">
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-base-content/40">Jump to Episode</span>
                                         </div>
-                                        <div className="max-h-64 overflow-y-auto custom-scrollbar bg-base-100">
+                                        <div className="max-h-64 overflow-y-auto custom-scrollbar">
                                             {episodes.map(ep => (
                                                 <button
                                                     key={ep.id}
@@ -402,7 +402,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                                                         handleAction(ep, true);
                                                         setIsPlayerEpDropdownOpen(false);
                                                     }}
-                                                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${playingEpisode?.id === ep.id ? 'bg-primary text-primary-content' : 'text-base-content/60 hover:bg-base-content/5 hover:text-base-content'}`}
+                                                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${playingEpisode?.id === ep.id ? 'bg-primary text-primary-content' : 'text-base-content/60 hover:bg-base-content/10 hover:text-base-content'}`}
                                                 >
                                                     <span className="truncate">E{ep.episode_number}: {ep.name}</span>
                                                     {playingEpisode?.id === ep.id && <div className="w-1.5 h-1.5 rounded-full bg-primary-content" />}
@@ -416,7 +416,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                     )}
 
                     {/* Server Dropdown */}
-                    <div className="relative z-[100] w-full md:w-auto md:min-w-[180px]" ref={serverDropdownRef}>
+                    <div className="relative z-[60] w-full md:w-auto md:min-w-[180px]" ref={serverDropdownRef}>
                         <button
                           onClick={() => setIsServerDropdownOpen(!isServerDropdownOpen)}
                           className="w-full flex items-center justify-between gap-3 px-4 py-2 bg-base-content/5 border border-base-content/10 rounded-xl hover:border-primary/50 transition-all group shadow-xl"
@@ -436,12 +436,12 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                               initial={{ opacity: 0, y: 10, scale: 0.95 }}
                               animate={{ opacity: 1, y: 0, scale: 1 }}
                               exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                              className="absolute bottom-full left-0 mb-3 w-full bg-base-100 border border-base-content/10 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 backdrop-blur-xl z-[120]"
+                              className="absolute bottom-full left-0 mb-3 w-full bg-base-100 border border-base-content/20 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 backdrop-blur-xl z-[100] opacity-100"
                             >
-                               <div className="px-3 py-2 border-b border-base-content/5 mb-1 bg-base-100/50">
-                                  <span className="text-[9px] font-black uppercase tracking-widest text-base-content/30">Select Stream Node</span>
+                               <div className="px-3 py-2 border-b border-base-content/10 mb-1 bg-base-200/50 rounded-t-xl">
+                                  <span className="text-[9px] font-black uppercase tracking-widest text-base-content/40">Select Stream Node</span>
                                </div>
-                               <div className="max-h-64 overflow-y-auto custom-scrollbar bg-base-100">
+                               <div className="max-h-64 overflow-y-auto custom-scrollbar">
                                   {SERVERS.map(srv => (
                                       <button
                                           key={srv.id}
@@ -451,7 +451,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                                             setIsServerDropdownOpen(false);
                                             if (onPlay) onPlay(playingEpisode || undefined);
                                           }}
-                                          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${server === srv.id ? 'bg-primary text-primary-content' : 'text-base-content/60 hover:bg-base-content/5 hover:text-base-content'}`}
+                                          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${server === srv.id ? 'bg-primary text-primary-content' : 'text-base-content/60 hover:bg-base-content/10 hover:text-base-content'}`}
                                       >
                                           <div className="flex items-center gap-2">
                                             {(srv.id === 'rivestream' || srv.id === 'vidrock') && <Star size={10} className={server === srv.id ? 'text-primary-content' : 'text-yellow-500 fill-current'} />}
@@ -568,9 +568,9 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                          </div>
                     </div>
 
-                    <div ref={episodesContainerRef} className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-2">
+                    <div ref={episodesContainerRef} className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3">
                         {isLoading ? (
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                                 {[...Array(5)].map((_, i) => <SkeletonRow key={i} />)}
                             </div>
                         ) : (
@@ -581,9 +581,9 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                                         key={ep.id}
                                         id={`episode-${ep.episode_number}`}
                                         onClick={() => handleAction(ep)}
-                                        className={`group/item flex items-center gap-4 p-3 rounded-xl bg-base-content/5 hover:bg-base-content/10 transition-all cursor-pointer border border-transparent hover:border-base-content/5 ${isEpWatched ? 'opacity-50' : ''}`}
+                                        className={`group/item flex items-start gap-4 p-3 rounded-xl bg-base-content/5 hover:bg-base-content/10 transition-all cursor-pointer border border-transparent hover:border-base-content/5 ${isEpWatched ? 'opacity-50' : ''}`}
                                     >
-                                        <div className="w-20 h-12 rounded-lg overflow-hidden shrink-0 border border-base-content/5 relative">
+                                        <div className="w-24 md:w-28 aspect-video rounded-lg overflow-hidden shrink-0 border border-base-content/5 relative shadow-sm">
                                             <img src={ep.still_path ? `https://image.tmdb.org/t/p/w200${ep.still_path}` : `https://image.tmdb.org/t/p/w200${media.backdrop_path}`} className="w-full h-full object-cover opacity-60 group-hover/item:opacity-100 transition-opacity" />
                                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-opacity">
                                                 {mode === 'download' ? (
@@ -594,16 +594,23 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                                             </div>
                                             {isEpWatched && <div className="absolute top-1 right-1 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg"><CheckCircle2 size={10} className="text-white" /></div>}
                                         </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                <h4 className="font-bold text-[10px] md:text-xs text-base-content/80 group-hover/item:text-base-content truncate uppercase tracking-tight mb-0.5">
+                                        <div className="flex-1 min-w-0 pt-0.5">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <h4 className="font-black text-[10px] md:text-[11px] text-base-content/90 group-hover/item:text-primary truncate uppercase tracking-tight">
                                                     {ep.name || `Episode ${ep.episode_number}`}
                                                 </h4>
-                                                {isEpWatched && <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-1.5 py-0.5 rounded">Watched</span>}
+                                                {isEpWatched && <span className="text-[7px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-1.5 py-0.5 rounded ml-2 shrink-0">Watched</span>}
                                             </div>
-                                            <span className="text-[9px] text-base-content/30 font-bold uppercase tracking-widest">
-                                                E{ep.episode_number} • {ep.season_number}S
-                                            </span>
+                                            <div className="flex items-center gap-2 mb-1.5">
+                                                <span className="text-[8px] text-base-content/30 font-black uppercase tracking-widest">
+                                                    E{ep.episode_number} • S{ep.season_number}
+                                                </span>
+                                            </div>
+                                            {ep.overview && (
+                                                <p className="text-[9px] md:text-[10px] text-base-content/40 line-clamp-2 leading-relaxed font-medium italic group-hover/item:text-base-content/60 transition-colors">
+                                                    {ep.overview}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 );

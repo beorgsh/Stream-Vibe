@@ -34,13 +34,17 @@ export const SkeletonBanner = ({ className = "" }: { className?: string }) => (
   <div className={`w-full bg-base-content/10 rounded-2xl animate-pulse ${className}`} />
 );
 
-// Row skeleton for Episode lists
+// Row skeleton for Episode lists - Updated with description placeholder
 export const SkeletonRow = () => (
-  <div className="flex items-center gap-4 p-3 rounded-xl bg-base-content/5 animate-pulse border border-base-content/5">
-    <div className="w-12 h-12 bg-base-content/10 rounded-lg shrink-0" />
+  <div className="flex items-start gap-4 p-3 rounded-xl bg-base-content/5 animate-pulse border border-base-content/5">
+    <div className="w-20 md:w-28 aspect-video bg-base-content/10 rounded-lg shrink-0" />
     <div className="flex-1 space-y-2 min-w-0">
       <div className="h-2.5 w-1/3 bg-base-content/20 rounded-full" />
       <div className="h-2 w-1/5 bg-base-content/10 rounded-full" />
+      <div className="space-y-1.5 pt-1">
+        <div className="h-2 w-full bg-base-content/5 rounded-full" />
+        <div className="h-2 w-4/5 bg-base-content/5 rounded-full" />
+      </div>
     </div>
   </div>
 );

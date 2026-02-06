@@ -17,6 +17,7 @@ export interface AnimeEpisode {
   session: string;
   snapshot: string;
   title?: string;
+  overview?: string;
 }
 
 export interface AnimeLink {
