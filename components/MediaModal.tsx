@@ -19,6 +19,8 @@ interface MediaModalProps {
 const SERVERS = [
   { id: 'rivestream', label: 'RiveStream' },
   { id: 'rive2', label: 'Rive 2' },
+  { id: 'vidnest', label: 'VidNest' },
+  { id: 'vidup', label: 'VidUp' },
   { id: 'vidfast', label: 'VidFast' },
   { id: 'vidsrcto', label: 'Vidsrc.to' },
   { id: 'vidsrc', label: 'Vidsrc (Pro)' },
@@ -114,6 +116,14 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
     const color = 'ff2e63'; 
 
     switch(server) {
+        case 'vidnest':
+            return isTv
+                ? `https://vidnest.fun/tv/${id}/${playingEpisode?.season_number}/${playingEpisode?.episode_number}`
+                : `https://vidnest.fun/movie/${id}`;
+        case 'vidup':
+            return isTv
+                ? `https://vidup.to/tv/${id}/${playingEpisode?.season_number}/${playingEpisode?.episode_number}?autoPlay=true`
+                : `https://vidup.to/movie/${id}?autoPlay=true`;
         case 'vidfast':
             return isTv
                 ? `https://vidfast.pro/tv/${id}/${playingEpisode?.season_number}/${playingEpisode?.episode_number}?autoPlay=true`
@@ -128,8 +138,8 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                 : `https://rivestream.org/embed?type=movie&id=${id}`;
         case 'rive2':
              return isTv 
-                ? `https://rivestream.net/embed?type=tv&id=${id}&season=${playingEpisode?.season_number}&episode=${playingEpisode?.episode_number}`
-                : `https://rivestream.net/embed?type=movie&id=${id}`;
+                ? `https://rivestream.org/embed/agg?type=tv&id=${id}&season=${playingEpisode?.season_number}&episode=${playingEpisode?.episode_number}`
+                : `https://rivestream.org/embed/agg?type=movie&id=${id}`;
         case 'vidzee':
             return isTv
                 ? `https://player.vidzee.wtf/embed/tv/${id}/${playingEpisode?.season_number}/${playingEpisode?.episode_number}`
