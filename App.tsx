@@ -8,6 +8,7 @@ import AnimeModal from './components/AnimeModal';
 import MediaModal from './components/MediaModal';
 import AdBlockModal from './components/AdBlockModal';
 import HistoryModal from './components/HistoryModal';
+import ErrorBoundary from './components/ErrorBoundary';
 import { AnimatePresence, motion } from 'framer-motion';
 
 const App: React.FC = () => {
@@ -149,17 +150,19 @@ const App: React.FC = () => {
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} isPWA={isPWA} />
       
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-4 md:py-8">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-          >
-            {renderContent()}
-          </motion.div>
-        </AnimatePresence>
+        <ErrorBoundary onGoHome={() => setActiveTab(AppTab.HOME)}>
+            <AnimatePresence mode="wait">
+            <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+            >
+                {renderContent()}
+            </motion.div>
+            </AnimatePresence>
+        </ErrorBoundary>
       </main>
 
       <footer className="p-8 footer bg-black border-t border-white/5 text-base-content mt-8">
@@ -202,58 +205,62 @@ const App: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {selectedAnime && (
-          <AnimeModal 
-            key="anime-modal"
-            anime={selectedAnime} 
-            onClose={handleCloseModals} 
-            initialEpisodeId={resumeData?.episodeId as string}
-            onPlay={(ep) => {
-              addToHistory({
-                id: selectedAnime.session,
-                title: selectedAnime.title,
-                image: selectedAnime.image,
-                type: 'anime',
-                source: selectedAnime.source,
-                episodeNumber: ep.episode,
-                episodeTitle: ep.title,
-                episodeId: ep.session,
-                timestamp: Date.now(),
-                fullMedia: selectedAnime
-              });
-            }}
-          />
-        )}
-      </AnimatePresence>
+      <ErrorBoundary onGoHome={() => setActiveTab(AppTab.HOME)}>
+        <AnimatePresence>
+            {selectedAnime && (
+            <AnimeModal 
+                key="anime-modal"
+                anime={selectedAnime} 
+                onClose={handleCloseModals} 
+                initialEpisodeId={resumeData?.episodeId as string}
+                onPlay={(ep) => {
+                addToHistory({
+                    id: selectedAnime.session,
+                    title: selectedAnime.title,
+                    image: selectedAnime.image,
+                    type: 'anime',
+                    source: selectedAnime.source,
+                    episodeNumber: ep.episode,
+                    episodeTitle: ep.title,
+                    episodeId: ep.session,
+                    timestamp: Date.now(),
+                    fullMedia: selectedAnime
+                });
+                }}
+            />
+            )}
+        </AnimatePresence>
+      </ErrorBoundary>
 
-      <AnimatePresence>
-        {selectedMedia && (
-          <MediaModal 
-            key="media-modal"
-            media={selectedMedia} 
-            onClose={handleCloseModals} 
-            apiKey={TMDB_KEY}
-            mode={mediaMode}
-            initialResumeData={resumeData}
-            onPlay={(ep) => {
-              addToHistory({
-                id: selectedMedia.id,
-                title: selectedMedia.title || selectedMedia.name || 'Untitled',
-                image: `https://image.tmdb.org/t/p/w500${selectedMedia.backdrop_path || selectedMedia.poster_path}`,
-                type: selectedMedia.media_type,
-                mode: mediaMode,
-                episodeNumber: ep?.episode_number,
-                episodeTitle: ep?.name,
-                seasonNumber: ep?.season_number,
-                episodeId: ep?.id,
-                timestamp: Date.now(),
-                fullMedia: selectedMedia
-              });
-            }}
-          />
-        )}
-      </AnimatePresence>
+      <ErrorBoundary onGoHome={() => setActiveTab(AppTab.HOME)}>
+        <AnimatePresence>
+            {selectedMedia && (
+            <MediaModal 
+                key="media-modal"
+                media={selectedMedia} 
+                onClose={handleCloseModals} 
+                apiKey={TMDB_KEY}
+                mode={mediaMode}
+                initialResumeData={resumeData}
+                onPlay={(ep) => {
+                addToHistory({
+                    id: selectedMedia.id,
+                    title: selectedMedia.title || selectedMedia.name || 'Untitled',
+                    image: `https://image.tmdb.org/t/p/w500${selectedMedia.backdrop_path || selectedMedia.poster_path}`,
+                    type: selectedMedia.media_type,
+                    mode: mediaMode,
+                    episodeNumber: ep?.episode_number,
+                    episodeTitle: ep?.name,
+                    seasonNumber: ep?.season_number,
+                    episodeId: ep?.id,
+                    timestamp: Date.now(),
+                    fullMedia: selectedMedia
+                });
+                }}
+            />
+            )}
+        </AnimatePresence>
+      </ErrorBoundary>
     </div>
   );
 };
