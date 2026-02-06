@@ -7,7 +7,7 @@ import AnimeModal from './components/AnimeModal';
 import MediaModal from './components/MediaModal';
 import AdBlockModal from './components/AdBlockModal';
 import HistoryModal from './components/HistoryModal';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AppTab>(AppTab.ANIME);
@@ -95,33 +95,54 @@ const App: React.FC = () => {
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
       
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-4 md:py-8">
-        {activeTab === AppTab.ANIME ? (
-          <AnimeTab 
-            onSelectAnime={(anime) => { setResumeData(null); setSelectedAnime(anime); }} 
-            history={watchHistory.filter(h => h.type === 'anime')}
-            onHistorySelect={handleSelectFromHistory}
-            onHistoryRemove={removeFromHistory}
-            onViewAllHistory={() => setShowHistoryModal(true)}
-          />
-        ) : ( activeTab === AppTab.GLOBAL ? (
-          <GlobalTab 
-            onSelectMedia={(media, mode) => {
-              setResumeData(null);
-              setSelectedMedia(media);
-              setMediaMode(mode);
-            }} 
-            history={watchHistory.filter(h => h.type !== 'anime')}
-            onHistorySelect={handleSelectFromHistory}
-            onHistoryRemove={removeFromHistory}
-            onViewAllHistory={() => setShowHistoryModal(true)}
-          />
-        ) : null)}
+        <AnimatePresence mode="wait">
+          {activeTab === AppTab.ANIME ? (
+            <motion.div
+              key="anime"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+            >
+              <AnimeTab 
+                onSelectAnime={(anime) => { setResumeData(null); setSelectedAnime(anime); }} 
+                history={watchHistory.filter(h => h.type === 'anime')}
+                onHistorySelect={handleSelectFromHistory}
+                onHistoryRemove={removeFromHistory}
+                onViewAllHistory={() => setShowHistoryModal(true)}
+              />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="global"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+            >
+              <GlobalTab 
+                onSelectMedia={(media, mode) => {
+                  setResumeData(null);
+                  setSelectedMedia(media);
+                  setMediaMode(mode);
+                }} 
+                history={watchHistory.filter(h => h.type !== 'anime')}
+                onHistorySelect={handleSelectFromHistory}
+                onHistoryRemove={removeFromHistory}
+                onViewAllHistory={() => setShowHistoryModal(true)}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
 
       <footer className="p-8 footer bg-black border-t border-white/5 text-base-content mt-8">
         <aside>
-          <div className="text-xl font-bold tracking-tighter text-white">StreamVibe</div>
-          <p className="text-xs opacity-50 uppercase tracking-widest font-bold">Neural Engine v4.0</p>
+          <div className="flex items-center gap-2">
+             <img src="https://img.icons8.com/fluency/512/play-button-circled.png" className="w-8 h-8 opacity-80" alt="Logo" />
+             <div className="text-xl font-bold tracking-tighter text-white">StreamVibe</div>
+          </div>
+          <p className="text-xs opacity-50 uppercase tracking-widest font-bold mt-1">Neural Engine v4.0</p>
         </aside> 
         <nav>
           <header className="footer-title opacity-40 uppercase text-[10px] tracking-widest">Links</header> 

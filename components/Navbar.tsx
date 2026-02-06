@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { AppTab } from '../types';
 import { Play, Globe } from 'lucide-react';
@@ -12,10 +11,12 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
   return (
     <nav className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/5 px-4 md:px-6 py-3 md:py-4">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 md:w-9 md:h-9 bg-primary rounded-lg md:rounded-xl flex items-center justify-center text-primary-content font-black shadow-lg shadow-primary/20 rotate-3 group hover:rotate-0 transition-transform cursor-pointer text-xs md:text-sm">
-            SV
-          </div>
+        <div className="flex items-center gap-3">
+          <img 
+            src="https://img.icons8.com/fluency/512/play-button-circled.png" 
+            alt="SV" 
+            className="w-8 h-8 md:w-10 md:h-10 shadow-lg shadow-primary/20 hover:rotate-12 transition-transform duration-500 cursor-pointer"
+          />
           <span className="text-lg md:text-xl font-black tracking-tighter text-white hidden sm:block">StreamVibe</span>
         </div>
 
@@ -36,12 +37,7 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
           </button>
         </div>
 
-        {/* Right side empty for balance, or could be removed if flex-start is desired. Keeping empty div or just removing aligns center element properly in justify-between if 3 items, but with 2 items it pushes global to right. 
-            Since we want to remove the account div, and we have justify-between, the center nav will move. 
-            To keep center nav centered, we can add a dummy div of same width or just let it float right. 
-            Ideally, we just remove the account div as requested.
-        */}
-        <div className="w-8 md:w-9" /> 
+        <div className="w-8 md:w-10" /> 
       </div>
     </nav>
   );

@@ -4,7 +4,7 @@ import { Search, Loader2, RefreshCw, Play, Trophy, Zap, Flame, Heart, Star, Acti
 import AnimeCard from './AnimeCard';
 import { SkeletonCard } from './Skeleton';
 import ContinueWatching from './ContinueWatching';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface AnimeTabProps {
   onSelectAnime: (anime: AnimeSeries) => void;
@@ -265,38 +265,60 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
             </h2>
             <button onClick={() => setSearchResults([])} className="text-[8px] uppercase font-black text-white/30">Clear</button>
           </div>
-          <motion.div 
-            variants={container}
-            initial="hidden"
-            animate="show"
-            className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3"
-          >
+          <AnimatePresence mode="wait">
             {isSearching ? (
-              [...Array(12)].map((_, i) => <SkeletonCard key={i} />)
+              <motion.div 
+                key="loading-search"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3"
+              >
+                {[...Array(12)].map((_, i) => <SkeletonCard key={i} />)}
+              </motion.div>
             ) : (
-              searchResults.map((anime, idx) => (
-                <motion.div variants={item} key={idx}>
-                  <AnimeCard anime={anime} onClick={() => onSelectAnime(anime)} />
-                </motion.div>
-              ))
+              <motion.div 
+                key="results-search"
+                variants={container}
+                initial="hidden"
+                animate="show"
+                className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3"
+              >
+                {searchResults.map((anime, idx) => (
+                  <motion.div variants={item} key={idx}>
+                    <AnimeCard anime={anime} onClick={() => onSelectAnime(anime)} />
+                  </motion.div>
+                ))}
+              </motion.div>
             )}
-          </motion.div>
+          </AnimatePresence>
         </section>
       )}
 
       {!searchResults.length && !isSearching && (
         <div className="space-y-8 md:space-y-12">
           {searchMode === 'watch' ? (
-            <>
+            <AnimatePresence mode="wait">
               {isLoading ? (
-                <div className="space-y-12">
+                <motion.div 
+                  key="loading-watch"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="space-y-12"
+                >
                   <div className="w-full h-[250px] md:h-[350px] bg-white/5 rounded-2xl animate-pulse" />
                   <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
                       {[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}
                   </div>
-                </div>
-              ) : watchHome && (
-                <>
+                </motion.div>
+              ) : watchHome ? (
+                <motion.div 
+                  key="content-watch"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5 }}
+                >
                   <section className="space-y-3">
                     <div className="relative w-full rounded-2xl h-[250px] md:h-[350px] shadow-xl border border-white/5 overflow-hidden group">
                       <div 
@@ -406,9 +428,9 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
 
                   {/* Just Completed */}
                   {renderHorizontalSection("Just Completed", watchHome.latestCompleted, <CheckCircle size={18} className="text-indigo-400" />)}
-                </>
-              )}
-            </>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
           ) : (
             <div className="space-y-8 md:space-y-12">
                {/* Continue Watching filtered for Download mode */}
@@ -425,22 +447,33 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                   <h2 className="text-sm md:text-lg font-black text-white uppercase tracking-tighter">Discovery</h2>
                   <RefreshCw onClick={fetchAnimeList} className={`${isLoading ? 'animate-spin' : ''} text-white/20 cursor-pointer`} size={14} />
                 </div>
-                <motion.div 
-                  variants={container}
-                  initial="hidden"
-                  animate="show"
-                  className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3"
-                >
+                <AnimatePresence mode="wait">
                   {isLoading ? (
-                    [...Array(12)].map((_, i) => <SkeletonCard key={i} />)
+                    <motion.div 
+                      key="loading-discovery"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3"
+                    >
+                      {[...Array(12)].map((_, i) => <SkeletonCard key={i} />)}
+                    </motion.div>
                   ) : (
-                    animeList.map((anime, idx) => (
-                      <motion.div variants={item} key={idx}>
-                        <AnimeCard anime={anime} onClick={() => onSelectAnime(anime)} />
-                      </motion.div>
-                    ))
+                    <motion.div 
+                      key="content-discovery"
+                      variants={container}
+                      initial="hidden"
+                      animate="show"
+                      className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3"
+                    >
+                      {animeList.map((anime, idx) => (
+                        <motion.div variants={item} key={idx}>
+                          <AnimeCard anime={anime} onClick={() => onSelectAnime(anime)} />
+                        </motion.div>
+                      ))}
+                    </motion.div>
                   )}
-                </motion.div>
+                </AnimatePresence>
               </section>
             </div>
           )}
