@@ -19,15 +19,10 @@ interface MediaModalProps {
 }
 
 const SERVERS = [
-  { id: 'vidrock', label: 'VidRock (New)' },
-  { id: 'rivestream', label: 'RiveStream' },
-  { id: 'rive2', label: 'Rive 2' },
+  { id: 'vidrock', label: 'VidRock' },
   { id: 'vidnest', label: 'VidNest' },
   { id: 'vidup', label: 'VidUp' },
-  { id: 'vidfast', label: 'VidFast' },
   { id: 'vidsrcto', label: 'Vidsrc.to' },
-  { id: 'vidsrc', label: 'Vidsrc (Pro)' },
-  { id: 'vidzee', label: 'Vidzee' },
 ];
 
 const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 'watch', onPlay, initialResumeData, isSaved, onToggleSave }) => {
@@ -37,319 +32,132 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
   const [activeTab, setActiveTab] = useState<'info' | 'episodes'>('info');
   const [details, setDetails] = useState<any>(null);
   const [currentSeason, setCurrentSeason] = useState(1);
-  const [isSeasonDropdownOpen, setIsSeasonDropdownOpen] = useState(false);
   const [isServerDropdownOpen, setIsServerDropdownOpen] = useState(false);
-  const [isPlayerEpDropdownOpen, setIsPlayerEpDropdownOpen] = useState(false);
-  const [isPlayerSeasonDropdownOpen, setIsPlayerSeasonDropdownOpen] = useState(false);
-  
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const serverDropdownRef = useRef<HTMLDivElement>(null);
-  const playerEpDropdownRef = useRef<HTMLDivElement>(null);
-  const playerSeasonDropdownRef = useRef<HTMLDivElement>(null);
-  const episodesContainerRef = useRef<HTMLDivElement>(null);
-  
   const [isPlaying, setIsPlaying] = useState(false);
   const [playingEpisode, setPlayingEpisode] = useState<TMDBEpisode | null>(null);
   const [server, setServer] = useState('vidrock');
-  const [watchedEpisodes, setWatchedEpisodes] = useState<Set<string>>(new Set());
-  const [lastHistoryItem, setLastHistoryItem] = useState<WatchHistoryItem | null>(null);
-
-  const hasAutoResumed = useRef(false);
   const type = media.media_type || (media.title ? 'movie' : 'tv');
+  const serverDropdownRef = useRef<HTMLDivElement>(null);
+  const [lastHistoryItem, setLastHistoryItem] = useState<WatchHistoryItem | null>(null);
 
   useEffect(() => {
     const savedHistory = localStorage.getItem('sv_watch_history_v2');
     if (savedHistory) {
       try {
-        const parsedHistory: WatchHistoryItem[] = JSON.parse(savedHistory);
-        const match = parsedHistory.find(h => h.id.toString() === media.id.toString() && h.mode === mode);
+        const parsedHistory = JSON.parse(savedHistory);
+        const match = parsedHistory.find((h: any) => h.id.toString() === media.id.toString());
         if (match) setLastHistoryItem(match);
       } catch (e) { console.error(e); }
     }
-
-    const registry = localStorage.getItem('sv_watched_registry');
-    if (registry) {
-      try {
-        const parsed = JSON.parse(registry);
-        const seriesWatched = parsed[media.id.toString()] || [];
-        setWatchedEpisodes(new Set(seriesWatched));
-      } catch (e) {
-        console.error("Failed to load watched registry", e);
-      }
-    }
-  }, [media.id, mode]);
-
-  const markAsWatched = (epId: string) => {
-    setWatchedEpisodes(prev => {
-      const next = new Set(prev).add(epId);
-      const registry = localStorage.getItem('sv_watched_registry');
-      const parsed = registry ? JSON.parse(registry) : {};
-      parsed[media.id.toString()] = Array.from(next);
-      localStorage.setItem('sv_watched_registry', JSON.stringify(parsed));
-      return next;
-    });
-  };
+  }, [media.id]);
 
   useEffect(() => {
     const fetchDetails = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch(`https://api.themoviedb.org/3/${type}/${media.id}?api_key=${apiKey}&append_to_response=videos`);
+        const res = await fetch(`https://api.themoviedb.org/3/${type}/${media.id}?api_key=${apiKey}`);
         const data = await res.json();
         setDetails(data);
         if (type === 'tv') {
-          const seasonToLoad = initialResumeData?.seasonNumber || 1;
-          setCurrentSeason(seasonToLoad);
-          const episodesRes = await fetch(`https://api.themoviedb.org/3/tv/${media.id}/season/${seasonToLoad}?api_key=${apiKey}`);
-          const episodesData = await episodesRes.json();
-          const epList = episodesData.episodes || [];
-          setEpisodes(epList);
-          if (mode === 'watch' && initialResumeData?.episodeNumber && !hasAutoResumed.current) {
-             const targetEp = epList.find((e: any) => e.episode_number.toString() === initialResumeData.episodeNumber?.toString());
-             if (targetEp) {
-                hasAutoResumed.current = true;
-                setPlayingEpisode(targetEp);
-                setIsPlaying(true);
-                setIsIframeLoading(true);
-                markAsWatched(targetEp.id.toString());
-             }
-          }
-        } else if (type === 'movie' && mode === 'watch' && initialResumeData && !hasAutoResumed.current) {
-          hasAutoResumed.current = true;
-          setIsPlaying(true);
-          setIsIframeLoading(true);
+          const sNum = initialResumeData?.seasonNumber || 1;
+          setCurrentSeason(sNum);
+          const epRes = await fetch(`https://api.themoviedb.org/3/tv/${media.id}/season/${sNum}?api_key=${apiKey}`);
+          const epData = await epRes.json();
+          setEpisodes(epData.episodes || []);
         }
-      } catch (error) {
-        console.error("Error:", error);
-      } finally {
-        setIsLoading(false);
-      }
+      } catch (e) { console.error(e); } finally { setIsLoading(false); }
     };
     fetchDetails();
-  }, [media.id, type, apiKey, mode]);
+  }, [media.id, type, apiKey]);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const refs = [dropdownRef, serverDropdownRef, playerEpDropdownRef, playerSeasonDropdownRef];
-      const setters = [setIsSeasonDropdownOpen, setIsServerDropdownOpen, setIsPlayerEpDropdownOpen, setIsPlayerSeasonDropdownOpen];
-      refs.forEach((ref, idx) => {
-        if (ref.current && !ref.current.contains(event.target as Node)) setters[idx](false);
-      });
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleSeasonChange = async (newSeason: number) => {
-    if (newSeason < 1) return;
-    setIsLoading(true);
-    setCurrentSeason(newSeason);
-    try {
-        const res = await fetch(`https://api.themoviedb.org/3/tv/${media.id}/season/${newSeason}?api_key=${apiKey}`);
-        const data = await res.json();
-        setEpisodes(data.episodes || []);
-    } catch (e) { console.error(e); } finally { setIsLoading(false); }
+  const handleAction = (episode?: TMDBEpisode) => {
+    if (mode === 'download') {
+        const url = type === 'tv' && episode ? `https://dl.vidsrc.vip/tv/${media.id}/${episode.season_number}/${episode.episode_number}` : `https://dl.vidsrc.vip/movie/${media.id}`;
+        window.open(url, '_blank');
+        return;
+    }
+    setPlayingEpisode(episode || null);
+    setIsPlaying(true);
+    setIsIframeLoading(true);
+    if (onPlay) onPlay(episode);
   };
 
   const getStreamUrl = () => {
     const id = media.id;
-    const isTv = type === 'tv';
-    const color = 'ff2e63'; 
-    switch(server) {
-        case 'vidrock': return isTv ? `https://vidrock.net/tv/${id}/${playingEpisode?.season_number}/${playingEpisode?.episode_number}` : `https://vidrock.net/movie/${id}`;
-        case 'vidnest': return isTv ? `https://vidnest.fun/tv/${id}/${playingEpisode?.season_number}/${playingEpisode?.episode_number}` : `https://vidnest.fun/movie/${id}`;
-        case 'vidup': return isTv ? `https://vidup.to/tv/${id}/${playingEpisode?.season_number}/${playingEpisode?.episode_number}?autoPlay=true` : `https://vidup.to/movie/${id}?autoPlay=true`;
-        case 'vidfast': return isTv ? `https://vidfast.pro/tv/${id}/${playingEpisode?.season_number}/${playingEpisode?.episode_number}?autoPlay=true` : `https://vidfast.pro/movie/${id}?autoPlay=true`;
-        case 'vidsrcto': return isTv ? `https://vidsrc.to/embed/tv/${id}/${playingEpisode?.season_number}/${playingEpisode?.episode_number}` : `https://vidsrc.to/embed/movie/${id}`;
-        case 'rivestream': return isTv ? `https://rivestream.org/embed?type=tv&id=${id}&season=${playingEpisode?.season_number}&episode=${playingEpisode?.episode_number}` : `https://rivestream.org/embed?type=movie&id=${id}`;
-        case 'rive2': return isTv ? `https://rivestream.org/embed/agg?type=tv&id=${id}&season=${playingEpisode?.season_number}&episode=${playingEpisode?.episode_number}` : `https://rivestream.org/embed/agg?type=movie&id=${id}`;
-        case 'vidzee': return isTv ? `https://player.vidzee.wtf/embed/tv/${id}/${playingEpisode?.season_number}/${playingEpisode?.episode_number}` : `https://player.vidzee.wtf/embed/movie/${id}`;
-        case 'vidsrc': default: return isTv ? `https://vidsrc.wtf/api/1/tv/?id=${id}&s=${playingEpisode?.season_number}&e=${playingEpisode?.episode_number}&color=${color}` : `https://vidsrc.wtf/api/1/movie/?id=${id}&color=${color}`;
-    }
-  };
-
-  const handleAction = (episode?: TMDBEpisode, isManual: boolean = true) => {
-    if (mode === 'download') {
-        if (type === 'tv' && episode) window.open(`https://dl.vidsrc.vip/tv/${media.id}/${episode.season_number}/${episode.episode_number}`, '_blank');
-        else if (type === 'movie') window.open(`https://dl.vidsrc.vip/movie/${media.id}`, '_blank');
-        if (onPlay) onPlay(episode);
-        return;
-    }
-    if (isManual && onPlay) onPlay(episode);
-    setIsIframeLoading(true);
-    if (episode) {
-      setPlayingEpisode(episode);
-      markAsWatched(episode.id.toString());
-      setLastHistoryItem({
-          id: media.id,
-          title: media.title || media.name || 'Untitled',
-          image: `https://image.tmdb.org/t/p/w500${media.backdrop_path || media.poster_path}`,
-          type: type as any,
-          mode: mode,
-          episodeNumber: episode.episode_number,
-          seasonNumber: episode.season_number,
-          episodeId: episode.id,
-          timestamp: Date.now()
-      });
-    } else {
-      setPlayingEpisode(null);
-      setLastHistoryItem({
-          id: media.id,
-          title: media.title || media.name || 'Untitled',
-          image: `https://image.tmdb.org/t/p/w500${media.backdrop_path || media.poster_path}`,
-          type: type as any,
-          mode: mode,
-          timestamp: Date.now()
-      });
-    }
-    setIsPlaying(true);
-  };
-
-  const currentIndex = useMemo(() => {
-    if (!playingEpisode || episodes.length === 0) return -1;
-    return episodes.findIndex(e => e.episode_number === playingEpisode.episode_number);
-  }, [playingEpisode, episodes]);
-
-  const handleNavigateEpisode = (direction: 'prev' | 'next') => {
-    if (currentIndex === -1) return;
-    const nextIdx = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
-    if (nextIdx >= 0 && nextIdx < episodes.length) handleAction(episodes[nextIdx], true);
-  };
-
-  const currentSeasonName = useMemo(() => {
-    if (!details?.seasons) return `Season ${currentSeason}`;
-    const s = details.seasons.find((s: any) => s.season_number === currentSeason);
-    return s ? (s.name && s.name !== `Season ${s.season_number}` ? s.name : `Season ${s.season_number}`) : `Season ${currentSeason}`;
-  }, [details, currentSeason]);
-
-  const activeServerLabel = useMemo(() => SERVERS.find(s => s.id === server)?.label || 'Select Server', [server]);
-
-  const handlePlayNow = async () => {
-    if (type === 'movie') { handleAction(); return; }
-    if (lastHistoryItem && lastHistoryItem.episodeNumber) {
-        const sNum = lastHistoryItem.seasonNumber || 1;
-        if (currentSeason !== sNum) await handleSeasonChange(sNum);
-        const target = episodes.find(e => e.episode_number.toString() === lastHistoryItem.episodeNumber?.toString());
-        if (target) { handleAction(target); return; }
-    }
-    if (episodes.length > 0) handleAction(episodes[0]);
-    else setActiveTab('episodes');
+    if (server === 'vidrock') return type === 'tv' ? `https://vidrock.net/tv/${id}/${playingEpisode?.season_number}/${playingEpisode?.episode_number}` : `https://vidrock.net/movie/${id}`;
+    return type === 'tv' ? `https://vidnest.fun/tv/${id}/${playingEpisode?.season_number}/${playingEpisode?.episode_number}` : `https://vidnest.fun/movie/${id}`;
   };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.3 }}
-      className="fixed inset-0 z-[1000] flex items-center justify-center p-3 bg-black/80 backdrop-blur-2xl"
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-2 bg-black/95 backdrop-blur-3xl"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <motion.div 
-        initial={{ scale: 0.9, y: 30, opacity: 0 }}
-        animate={{ scale: 1, y: 0, opacity: 1 }}
-        exit={{ scale: 0.9, y: 30, opacity: 0 }}
-        transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className={`bg-base-100 border border-base-content/20 w-full max-w-5xl ${isPlaying ? 'h-auto' : 'max-h-[85vh]'} rounded-2xl overflow-hidden relative flex flex-col shadow-2xl`}
+      <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+        className={`bg-black border border-white/20 w-full max-w-5xl ${isPlaying ? 'h-auto' : 'max-h-[90vh]'} rounded-2xl overflow-hidden relative flex flex-col shadow-2xl`}
       >
-        {/* SMALLER TOP-RIGHT BUTTONS */}
         <div className="absolute top-4 right-4 z-[60] flex gap-2">
             {!isPlaying && onToggleSave && (
-              <button 
-                onClick={onToggleSave}
-                className={`btn btn-circle btn-sm md:btn-md border border-base-content/10 ${isSaved ? 'bg-primary text-primary-content' : 'bg-base-100/40 text-base-content'} hover:bg-base-content/20 transition-all shadow-lg`}
-                title={isSaved ? "Saved" : "Save to Vault"}
-              >
-                {isSaved ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
+              <button onClick={onToggleSave} className={`btn btn-circle btn-xs md:btn-sm border border-white/20 ${isSaved ? 'bg-white text-black' : 'bg-black text-white hover:bg-white/10'}`}>
+                {isSaved ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
               </button>
             )}
-            <button 
-              onClick={onClose} 
-              className="btn btn-circle btn-sm md:btn-md btn-ghost bg-base-100/40 border border-base-content/10 text-base-content hover:bg-base-content/20 shadow-lg"
-              title="Close Hub"
-            >
-              <X size={18} />
-            </button>
+            <button onClick={onClose} className="btn btn-circle btn-xs md:btn-sm bg-black border border-white/20 text-white hover:bg-white/10 shadow-lg"><X size={14} /></button>
         </div>
 
         {isPlaying ? (
-            <div className="flex flex-col w-full bg-base-100 animate-in fade-in overflow-hidden">
-                <div className="flex flex-col md:flex-row md:items-center justify-between p-3 md:p-4 border-b border-base-content/10 bg-base-100 gap-3">
-                    <button onClick={() => { setIsPlaying(false); setPlayingEpisode(null); }} className="flex items-center gap-2 text-base-content/70 hover:text-base-content transition-colors text-[10px] font-black uppercase tracking-widest shrink-0">
-                        <ArrowLeft size={14} /> Details
-                    </button>
-                    <div className="flex flex-col items-center flex-1 min-w-0">
-                      <span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-primary truncate w-full text-center italic">
-                          {type === 'tv' && playingEpisode ? `S${playingEpisode.season_number}:E${playingEpisode.episode_number} - ${playingEpisode.name}` : media.title || media.name}
-                      </span>
-                    </div>
-                    {type === 'tv' && (
-                      <div className="flex items-center justify-center gap-4 shrink-0">
-                        <button disabled={currentIndex <= 0} onClick={() => handleNavigateEpisode('prev')} className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-base-content hover:scale-110 disabled:opacity-20 transition-all"><ChevronLeft size={14} /> Prev</button>
-                        <button disabled={currentIndex === -1 || currentIndex >= episodes.length - 1} onClick={() => handleNavigateEpisode('next')} className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-base-content hover:scale-110 disabled:opacity-20 transition-all">Next <ChevronRight size={14} /></button>
-                      </div>
-                    )}
+            <div className="flex flex-col bg-black">
+                <div className="flex items-center justify-between p-3 border-b border-white/10 gap-3">
+                    <button onClick={() => setIsPlaying(false)} className="text-[9px] font-black uppercase tracking-widest text-white/80 hover:text-white flex items-center gap-1"><ArrowLeft size={12}/> Info</button>
+                    <span className="text-[9px] font-black uppercase text-white truncate max-w-md">{media.title || media.name}</span>
+                    <div className="w-10"></div>
                 </div>
-                <div className="w-full aspect-video bg-black relative group overflow-hidden">
-                     {(isIframeLoading || isLoading) && (
-                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md z-50 animate-in fade-in duration-300">
-                             <div className="relative">
-                                 <div className="w-16 h-16 border-4 border-white/10 border-t-primary rounded-full animate-spin" />
-                                 <div className="absolute inset-0 flex items-center justify-center"><div className="w-8 h-8 bg-primary/20 blur-xl rounded-full animate-pulse" /></div>
-                             </div>
-                             <p className="mt-6 text-[10px] font-black uppercase tracking-[0.4em] text-white/60 animate-pulse">Syncing Player Node...</p>
-                         </div>
-                     )}
-                     <iframe key={`${playingEpisode?.season_number}-${playingEpisode?.episode_number}-${server}`} src={getStreamUrl()} className={`w-full h-full border-none transition-opacity duration-700 ${isIframeLoading ? 'opacity-0' : 'opacity-100'}`} allowFullScreen onLoad={() => setIsIframeLoading(false)} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
+                <div className="aspect-video w-full bg-black relative">
+                    {isIframeLoading && <div className="absolute inset-0 flex items-center justify-center bg-black z-10"><Loader2 size={24} className="animate-spin text-white"/></div>}
+                    <iframe src={getStreamUrl()} className="w-full h-full border-none" allowFullScreen onLoad={() => setIsIframeLoading(false)}/>
                 </div>
-                <div className="p-4 bg-base-100 border-t border-base-content/10 flex flex-wrap justify-center gap-3 md:gap-4 relative z-50">
-                    {type === 'tv' && (
-                        <div className="relative z-[60] w-full md:w-auto md:min-w-[140px]" ref={playerSeasonDropdownRef}>
-                             <button onClick={() => setIsPlayerSeasonDropdownOpen(!isPlayerSeasonDropdownOpen)} className="w-full flex items-center justify-between gap-3 px-4 py-2 bg-base-content/5 border border-base-content/20 rounded-xl hover:border-primary/50 transition-all group shadow-xl"><div className="flex items-center gap-2"><List size={12} className="text-base-content/60 group-hover:text-primary" /><span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-base-content group-hover:text-primary truncate">{currentSeasonName}</span></div><ChevronDown size={14} className={`text-base-content/60 group-hover:text-primary transition-all duration-300 ${isPlayerSeasonDropdownOpen ? 'rotate-180' : ''}`} /></button>
-                            <AnimatePresence>
-                                {isPlayerSeasonDropdownOpen && (
-                                    <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} className="absolute bottom-full left-0 mb-3 w-56 bg-base-100 border border-base-content/20 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 backdrop-blur-xl z-[100] opacity-100"><div className="px-3 py-2 border-b border-base-content/10 mb-1 bg-base-200/50 rounded-t-xl"><span className="text-[9px] font-black uppercase tracking-widest text-base-content/60">Switch Season</span></div><div className="max-h-64 overflow-y-auto custom-scrollbar">{details?.seasons?.filter((s: any) => s.season_number > 0 && s.episode_count > 0).map((s: any) => (<button key={s.id} onClick={() => { handleSeasonChange(s.season_number); setIsPlayerSeasonDropdownOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${currentSeason === s.season_number ? 'bg-primary text-primary-content' : 'text-base-content/80 hover:bg-base-content/10 hover:text-base-content'}`}><span className="truncate">{s.name || `Season ${s.season_number}`}</span>{currentSeason === s.season_number && <div className="w-1.5 h-1.5 rounded-full bg-primary-content" />}</button>))}</div></motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    )}
-                    {type === 'tv' && (
-                        <div className="relative z-[60] w-full md:w-auto md:min-w-[140px]" ref={playerEpDropdownRef}>
-                             <button onClick={() => setIsPlayerEpDropdownOpen(!isPlayerEpDropdownOpen)} className="w-full flex items-center justify-between gap-3 px-4 py-2 bg-base-content/5 border border-base-content/20 rounded-xl hover:border-primary/50 transition-all group shadow-xl"><div className="flex items-center gap-2"><Play size={12} className="text-base-content/60 group-hover:text-primary" /><span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-base-content group-hover:text-primary truncate">EP {playingEpisode?.episode_number || '1'}</span></div><ChevronDown size={14} className={`text-base-content/60 group-hover:text-primary transition-all duration-300 ${isPlayerEpDropdownOpen ? 'rotate-180' : ''}`} /></button>
-                            <AnimatePresence>
-                                {isPlayerEpDropdownOpen && (
-                                    <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} className="absolute bottom-full left-0 mb-3 w-56 bg-base-100 border border-base-content/20 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 backdrop-blur-xl z-[100] opacity-100"><div className="px-3 py-2 border-b border-base-content/10 mb-1 bg-base-200/50 rounded-t-xl"><span className="text-[9px] font-black uppercase tracking-widest text-base-content/60">Jump to Episode</span></div><div className="max-h-64 overflow-y-auto custom-scrollbar">{episodes.map(ep => (<button key={ep.id} onClick={() => { handleAction(ep, true); setIsPlayerEpDropdownOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${playingEpisode?.id === ep.id ? 'bg-primary text-primary-content' : 'text-base-content/80 hover:bg-base-content/10 hover:text-base-content'}`}><span className="truncate">E{ep.episode_number}: {ep.name}</span>{playingEpisode?.id === ep.id && <div className="w-1.5 h-1.5 rounded-full bg-primary-content" />}</button>))}</div></motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    )}
-                    <div className="relative z-[60] w-full md:w-auto md:min-w-[180px]" ref={serverDropdownRef}>
-                        <button onClick={() => setIsServerDropdownOpen(!isServerDropdownOpen)} className="w-full flex items-center justify-between gap-3 px-4 py-2 bg-base-content/5 border border-base-content/20 rounded-xl hover:border-primary/50 transition-all group shadow-xl"><div className="flex items-center gap-2"><Server size={12} className="text-base-content/60 group-hover:text-primary" /><span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-base-content group-hover:text-primary transition-colors">{activeServerLabel}</span></div><ChevronDown size={14} className={`text-base-content/60 group-hover:text-primary transition-all duration-300 ${isServerDropdownOpen ? 'rotate-180' : ''}`} /></button>
-                        <AnimatePresence>
-                          {isServerDropdownOpen && (
-                            <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} className="absolute bottom-full left-0 mb-3 w-full bg-base-100 border border-base-content/20 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 backdrop-blur-xl z-[100] opacity-100"><div className="px-3 py-2 border-b border-base-content/10 mb-1 bg-base-200/50 rounded-t-xl"><span className="text-[9px] font-black uppercase tracking-widest text-base-content/60">Select Stream Node</span></div><div className="max-h-64 overflow-y-auto custom-scrollbar">{SERVERS.map(srv => (<button key={srv.id} onClick={() => { setServer(srv.id); setIsIframeLoading(true); setIsServerDropdownOpen(false); if (onPlay) onPlay(playingEpisode || undefined); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${server === srv.id ? 'bg-primary text-primary-content' : 'text-base-content/80 hover:bg-base-content/10 hover:text-base-content'}`}><div className="flex items-center gap-2">{(srv.id === 'rivestream' || srv.id === 'vidrock') && <Star size={10} className={server === srv.id ? 'text-primary-content' : 'text-yellow-500 fill-current'} />}{srv.label}</div>{server === srv.id && <div className="w-1.5 h-1.5 rounded-full bg-primary-content" />}</button>))}</div></motion.div>
-                          )}
-                        </AnimatePresence>
+                <div className="p-4 flex justify-center gap-3">
+                    <div className="relative" ref={serverDropdownRef}>
+                        <button onClick={() => setIsServerDropdownOpen(!isServerDropdownOpen)} className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-[9px] font-black uppercase text-white flex items-center gap-2">
+                           Node: {SERVERS.find(s=>s.id===server)?.label} <ChevronDown size={12}/>
+                        </button>
+                        {isServerDropdownOpen && (
+                          <div className="absolute bottom-full left-0 mb-2 w-full bg-black border border-white/20 rounded-xl p-1 z-50">
+                             {SERVERS.map(s => <button key={s.id} onClick={() => {setServer(s.id); setIsServerDropdownOpen(false); setIsIframeLoading(true);}} className={`w-full text-left p-2 rounded-lg text-[9px] font-black uppercase ${server===s.id?'bg-white text-black':'hover:bg-white/5'}`}>{s.label}</button>)}
+                          </div>
+                        )}
                     </div>
                 </div>
             </div>
         ) : (
-            <div className="flex flex-col md:flex-row h-full overflow-hidden">
-            <div className="w-full md:w-56 shrink-0 relative bg-base-300"><img src={`https://image.tmdb.org/t/p/w500${media.poster_path}`} alt="" className="w-full h-full object-cover hidden md:block" /><div className="md:hidden h-32 relative"><img src={`https://image.tmdb.org/t/p/original${media.backdrop_path || media.poster_path}`} className="w-full h-full object-cover" alt="" /><div className="absolute inset-0 bg-gradient-to-t from-base-100 to-transparent" /></div></div>
-            <div className="flex-1 flex flex-col overflow-hidden">
-                <div className="p-4 md:p-8 pb-4">
-                <div className="flex items-center gap-2 mb-3"><span className="badge badge-primary badge-xs font-bold uppercase text-[7px] tracking-widest px-2">{type}</span><div className="flex items-center gap-1 text-yellow-500 font-bold text-[9px]"><Star size={10} className="fill-current" />{media.vote_average.toFixed(1)}</div><span className="text-base-content/60 text-[9px] font-bold">{(media.release_date || media.first_air_date)?.split('-')[0]}</span></div>
-                <h2 className="text-xl md:text-3xl font-black text-base-content mb-4 line-clamp-1 uppercase tracking-tighter italic">{media.title || media.name}</h2>
-                <div className="flex border-b border-base-content/10 gap-6"><button onClick={() => setActiveTab('info')} className={`pb-3 text-[9px] font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'info' ? 'border-primary text-primary' : 'border-transparent text-base-content/60 hover:text-base-content'}`}>Abstract</button>{type === 'tv' && (<button onClick={() => setActiveTab('episodes')} className={`pb-3 text-[9px] font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'episodes' ? 'border-primary text-primary' : 'border-transparent text-base-content/60 hover:text-base-content'}`}>Episodes</button>)}</div>
+            <div className="flex flex-col md:flex-row bg-black h-full overflow-hidden">
+                <div className="w-full md:w-56 shrink-0 bg-black border-r border-white/10"><img src={`https://image.tmdb.org/t/p/w500${media.poster_path}`} className="w-full h-full object-cover"/></div>
+                <div className="flex-1 flex flex-col">
+                    <div className="p-6 pb-4">
+                        <h2 className="text-xl md:text-3xl font-black text-white uppercase italic tracking-tighter mb-4">{media.title || media.name}</h2>
+                        <div className="flex border-b border-white/10 gap-6">
+                            <button onClick={()=>setActiveTab('info')} className={`pb-2 text-[9px] font-black uppercase tracking-[0.2em] border-b-2 ${activeTab==='info'?'border-white text-white':'border-transparent text-white/40'}`}>Details</button>
+                            {type==='tv' && <button onClick={()=>setActiveTab('episodes')} className={`pb-2 text-[9px] font-black uppercase tracking-[0.2em] border-b-2 ${activeTab==='episodes'?'border-white text-white':'border-transparent text-white/40'}`}>Episodes</button>}
+                        </div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6 pt-0 custom-scrollbar">
+                        {activeTab==='info' ? (
+                            <div className="space-y-6">
+                                <p className="text-white text-xs md:text-sm italic leading-relaxed">{media.overview}</p>
+                                <button onClick={()=>handleAction()} className="btn btn-primary bg-white text-black border-none rounded-full px-8 font-black uppercase text-[9px] tracking-widest">{lastHistoryItem?'Resume Playback':'Start Viewing'}</button>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {episodes.map(ep => (
+                                    <div key={ep.id} onClick={()=>handleAction(ep)} className="group flex items-center gap-4 p-3 rounded-xl bg-white/5 border border-transparent hover:border-white/20 cursor-pointer">
+                                        <div className="w-16 aspect-video bg-white/10 rounded flex items-center justify-center"><Play size={12}/></div>
+                                        <div className="flex-1 min-w-0"><h4 className="font-black text-[10px] text-white uppercase truncate">E{ep.episode_number}: {ep.name}</h4></div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
-                <div className="flex-1 overflow-y-auto p-4 md:p-8 pt-0 custom-scrollbar">
-                {activeTab === 'info' ? (
-                    <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">{isLoading ? (<SkeletonText lines={4} />) : (<p className="text-base-content/90 text-xs md:text-sm leading-relaxed italic">{media.overview || "No abstract available for this media."}</p>)}<div className="flex flex-wrap gap-2">{details?.genres?.slice(0, 4).map((g: any) => (<span key={g.id} className="px-3 py-1 rounded-full bg-base-content/10 border border-base-content/20 text-[8px] font-black uppercase tracking-wider text-base-content/90">{g.name}</span>))}</div><div className="flex flex-col sm:flex-row gap-4 pt-2"><button onClick={handlePlayNow} className="btn btn-primary btn-sm rounded-full px-8 font-black uppercase text-[9px] tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-transform">{lastHistoryItem ? (type === 'movie' ? (mode === 'download' ? 'Resume Download' : 'Continue') : `Continue: E${lastHistoryItem.episodeNumber || '?'}`) : 'Play Now'}</button><button onClick={() => setActiveTab('episodes')} className="btn btn-ghost border border-base-content/20 btn-sm rounded-full px-8 font-black uppercase text-[9px] tracking-widest hover:bg-base-content/10 transition-all">{type === 'tv' ? 'Browse Episodes' : 'Nodes List'}</button></div></motion.div>
-                ) : (
-                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4 h-full flex flex-col"><div className="flex flex-wrap items-center justify-between gap-4 p-1 border-b border-base-content/10 pb-2"><div className="relative z-20" ref={dropdownRef}><button onClick={() => setIsSeasonDropdownOpen(!isSeasonDropdownOpen)} className="flex items-center gap-2 px-3 py-1.5 md:py-2 bg-base-100 border border-base-content/20 rounded-lg hover:border-primary/50 transition-all group min-w-[120px] justify-between shadow-lg"><span className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-base-content group-hover:text-primary transition-colors truncate max-w-[140px]">{currentSeasonName}</span><ChevronDown size={12} className={`text-base-content/60 group-hover:text-primary transition-all duration-300 ${isSeasonDropdownOpen ? 'rotate-180' : ''}`} /></button>{isSeasonDropdownOpen && (<div className="absolute top-full left-0 mt-2 w-56 max-h-60 overflow-y-auto custom-scrollbar bg-base-100 border border-base-content/20 rounded-xl shadow-2xl p-1 flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-200 z-[120]">{details?.seasons ? (details.seasons.filter((s: any) => s.season_number > 0 && s.episode_count > 0).map((s: any) => (<button key={s.id} onClick={() => { handleSeasonChange(s.season_number); setIsSeasonDropdownOpen(false); }} className={`w-full text-left px-3 py-2 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all flex items-center justify-between ${currentSeason === s.season_number ? 'bg-base-content/10 text-primary' : 'text-base-content/80 hover:bg-base-content/5 hover:text-base-content'}`}><span className="truncate flex-1 pr-2">{s.name && s.name !== `Season ${s.season_number}` ? `S${s.season_number} - ${s.name}` : `Season ${s.season_number}`}</span><span className="text-[8px] opacity-70 shrink-0">{s.episode_count} Eps</span></button>))) : (<div className="px-3 py-2 text-[9px] text-base-content/50 text-center uppercase">No Seasons Found</div>)}</div>)}</div></div><div ref={episodesContainerRef} className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3">{isLoading ? (<div className="space-y-3">{[...Array(5)].map((_, i) => <SkeletonRow key={i} />)}</div>) : (episodes.map(ep => { const isEpWatched = watchedEpisodes.has(ep.id.toString()); return (<div key={ep.id} id={`episode-${ep.episode_number}`} onClick={() => handleAction(ep)} className={`group/item flex items-start gap-4 p-3 rounded-xl bg-base-content/5 hover:bg-base-content/10 transition-all cursor-pointer border border-transparent hover:border-base-content/10 ${isEpWatched ? 'opacity-80' : ''}`}><div className="w-24 md:w-28 aspect-video rounded-lg overflow-hidden shrink-0 border border-base-content/10 relative shadow-sm"><img src={ep.still_path ? `https://image.tmdb.org/t/p/w200${ep.still_path}` : `https://image.tmdb.org/t/p/w200${media.backdrop_path}`} className="w-full h-full object-cover opacity-80 group-hover/item:opacity-100 transition-opacity" /><div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-opacity">{mode === 'download' ? (<Download size={16} className="text-white drop-shadow-lg" />) : (<Play size={16} className="fill-white text-white drop-shadow-lg" />)}</div>{isEpWatched && <div className="absolute top-1 right-1 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg"><CheckCircle2 size={10} className="text-white" /></div>}</div><div className="flex-1 min-w-0 pt-0.5"><div className="flex items-center justify-between mb-1"><h4 className="font-black text-[10px] md:text-[11px] text-base-content group-hover/item:text-primary truncate uppercase tracking-tight">{ep.name || `Episode ${ep.episode_number}`}</h4>{isEpWatched && <span className="text-[7px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-1.5 py-0.5 rounded ml-2 shrink-0">Watched</span>}</div><div className="flex items-center gap-2 mb-1.5"><span className="text-[8px] text-base-content/70 font-black uppercase tracking-widest">E{ep.episode_number} • S{ep.season_number}</span></div>{ep.overview && (<p className="text-[9px] md:text-[10px] text-base-content/80 line-clamp-2 leading-relaxed font-medium italic group-hover/item:text-base-content transition-colors">{ep.overview}</p>)}</div></div>); }))}</div></motion.div>
-                )}
-                </div>
-            </div>
             </div>
         )}
       </motion.div>

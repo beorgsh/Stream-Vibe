@@ -228,7 +228,9 @@ const App: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-base-100 text-base-content font-sans selection:bg-primary/30 relative overflow-x-hidden transition-colors duration-500">
       
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="animate-grid absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.1)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
+        <div className="animate-grid absolute inset-0 [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
+        {/* Decorative glow that follows theme primary */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-96 bg-primary/5 blur-[120px] rounded-full" />
       </div>
 
       <div className="relative z-10 flex flex-col min-h-screen">
@@ -258,7 +260,7 @@ const App: React.FC = () => {
           <aside>
             <div className="flex items-center gap-2">
               <div 
-                className="w-8 h-8 bg-base-content"
+                className="w-8 h-8 bg-primary"
                 style={{
                   maskImage: 'url(https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png)',
                   maskSize: 'contain',

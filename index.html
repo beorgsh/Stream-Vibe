@@ -20,29 +20,36 @@
     <style>
       body {
         font-family: 'Inter', sans-serif;
-        background-color: #0c0c0c;
-        color: #e5e7eb;
         overflow-x: hidden;
+        /* Smooth theme transitions */
+        transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease;
       }
+      
+      /* Ensure everything inside body transitions too */
+      body *, body *:before, body *:after {
+        transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
+      }
+
       :root {
         --sat: env(safe-area-inset-top);
         --sar: env(safe-area-inset-right);
         --sab: env(safe-area-inset-bottom);
         --sal: env(safe-area-inset-left);
       }
+      
       ::-webkit-scrollbar {
         width: 8px;
         height: 8px;
       }
       ::-webkit-scrollbar-track {
-        background: #111;
+        background: transparent;
       }
       ::-webkit-scrollbar-thumb {
-        background: #333;
-        border-radius: 4px;
+        background: rgba(128, 128, 128, 0.3);
+        border-radius: 10px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #444;
+        background: rgba(128, 128, 128, 0.5);
       }
       .no-scrollbar::-webkit-scrollbar {
         display: none;
@@ -52,67 +59,31 @@
         scrollbar-width: none;
       }
 
-      /* Moving Grid Animation */
       @keyframes grid-move {
         0% { background-position: 0 0; }
         100% { background-position: 0 24px; }
       }
       .animate-grid {
         animation: grid-move 2s linear infinite;
+        /* Dynamic grid color based on base-content with low opacity */
+        background-image: 
+          linear-gradient(to right, color-mix(in srgb, currentColor, transparent 90%) 1px, transparent 1px),
+          linear-gradient(to bottom, color-mix(in srgb, currentColor, transparent 90%) 1px, transparent 1px);
+        background-size: 24px 24px;
       }
 
-      /* STRICT MONOCHROME OVERRIDES FOR MODERN THEME ONLY */
-      [data-theme="modern"] {
-        /* Primary becomes White */
-        --p: 0 0% 100%; 
-        --pc: 0 0% 0%; 
-        
-        /* Base colors Pure Black */
-        --b1: 0 0% 0%; 
-        --b2: 0 0% 5%; 
-        --b3: 0 0% 10%; 
-        --bc: 0 0% 100%; /* Text content White */
-        
-        background-color: #000000;
-        color: #ffffff;
+      /* Disable transitions on images and specific animations to prevent stutter */
+      img, .animate-spin, .animate-ping, .animate-pulse {
+        transition: none !important;
       }
 
-      /* Force Utility Overrides for Modern Theme */
-      [data-theme="modern"] .text-primary {
-        color: #ffffff !important;
+      /* Custom Scrollbar for Dropdowns */
+      .scrollbar-thin::-webkit-scrollbar {
+        width: 4px;
       }
-      [data-theme="modern"] .bg-primary {
-        background-color: #ffffff !important;
-        color: #000000 !important;
-      }
-      [data-theme="modern"] .btn-primary {
-        background-color: #ffffff !important;
-        border-color: #ffffff !important;
-        color: #000000 !important;
-      }
-      [data-theme="modern"] .btn-primary:hover {
-        background-color: #e5e5e5 !important;
-        border-color: #e5e5e5 !important;
-      }
-      /* Ensure outlines are visible */
-      [data-theme="modern"] .btn-outline.btn-primary {
-        background-color: transparent !important;
-        border-color: #ffffff !important;
-        color: #ffffff !important;
-      }
-      [data-theme="modern"] .btn-outline.btn-primary:hover {
-        background-color: #ffffff !important;
-        color: #000000 !important;
-      }
-      
-      /* Ensure links match the monochrome aesthetic */
-      [data-theme="modern"] a.link-hover {
-         color: #ffffff !important;
-      }
-      
-      /* Adjust SVG fills */
-      [data-theme="modern"] .fill-primary {
-         fill: #ffffff !important;
+      .scrollbar-thumb-primary\/20::-webkit-scrollbar-thumb {
+        background-color: oklch(var(--p) / 0.2);
+        border-radius: 20px;
       }
     </style>
   <script type="importmap">
@@ -131,14 +102,5 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(registration => console.log('SW registered'))
-            .catch(err => console.log('SW registration failed:', err));
-        });
-      }
-    </script>
   </body>
 </html>
