@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { AnimeSeries, WatchHistoryItem, HistoryFilter } from '../types';
-import { Search, Loader2, RefreshCw, Play, Trophy, Zap, Flame, Heart, Star, Activity, CheckCircle, Download } from 'lucide-react';
+import { Search, Loader2, RefreshCw, Play, Trophy, Zap, Flame, Heart, Star, Activity, CheckCircle, Download, Database, ChevronDown } from 'lucide-react';
 import AnimeCard from './AnimeCard';
 import { SkeletonAnimeCard, SkeletonBanner } from './Skeleton';
 import ContinueWatching from './ContinueWatching';
@@ -29,13 +29,55 @@ const itemVariants = {
   show: { opacity: 1, y: 0 }
 };
 
+// Use separate queries for clarity to avoid variable conflicts
+const ANILIST_TRENDING_QUERY = `
+query {
+  Page(page: 1, perPage: 20) {
+    media(type: ANIME, sort: [TRENDING_DESC, POPULARITY_DESC]) {
+      id
+      title { romaji english native }
+      coverImage { large extraLarge }
+      bannerImage
+      description
+      episodes
+      status
+      format
+      averageScore
+      genres
+    }
+  }
+}
+`;
+
+const ANILIST_SEARCH_QUERY = `
+query ($search: String) {
+  Page(page: 1, perPage: 20) {
+    media(search: $search, type: ANIME, sort: [POPULARITY_DESC]) {
+      id
+      title { romaji english native }
+      coverImage { large extraLarge }
+      bannerImage
+      description
+      episodes
+      status
+      format
+      averageScore
+      genres
+    }
+  }
+}
+`;
+
 const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySelect, onHistoryRemove, onViewAllHistory }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState<'download' | 'watch'>('watch');
+  const [animeSource, setAnimeSource] = useState<'default' | 'anilist'>('default');
   const [animeList, setAnimeList] = useState<AnimeSeries[]>([]);
   const [searchResults, setSearchResults] = useState<AnimeSeries[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
+  const [isSourceDropdownOpen, setIsSourceDropdownOpen] = useState(false);
+  const sourceDropdownRef = useRef<HTMLDivElement>(null);
 
   const [watchHome, setWatchHome] = useState<{
     spotlights: any[];
@@ -54,75 +96,116 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
   const autoPlayTimerRef = useRef<number | null>(null);
   const dragX = useMotionValue(0);
 
-  // Extended spotlights for infinite loop (original + first item clone)
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sourceDropdownRef.current && !sourceDropdownRef.current.contains(event.target as Node)) {
+        setIsSourceDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const extendedSpotlights = useMemo(() => {
     if (!watchHome?.spotlights?.length) return [];
     return [...watchHome.spotlights, watchHome.spotlights[0]];
   }, [watchHome?.spotlights]);
 
-  // Filter history based on searchMode
   const filteredHistory = useMemo(() => {
     return history.filter(h => 
-      searchMode === 'download' ? h.source === 'apex' : h.source === 'watch'
+      searchMode === 'download' ? h.source === 'apex' : (animeSource === 'anilist' ? h.source === 'anilist' : h.source === 'watch')
     );
-  }, [history, searchMode]);
+  }, [history, searchMode, animeSource]);
+
+  const fetchAnilistDiscovery = async () => {
+    try {
+      const response = await fetch('https://graphql.anilist.co', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: ANILIST_TRENDING_QUERY })
+      });
+      const data = await response.json();
+      
+      // Defensive parsing for Anilist response
+      const results = data?.data?.Page?.media || [];
+      const mapped: AnimeSeries[] = results.map((item: any) => ({
+        title: item.title.english || item.title.romaji || item.title.native,
+        image: item.coverImage.extraLarge || item.coverImage.large,
+        session: item.id.toString(),
+        description: item.description?.replace(/<[^>]*>?/gm, ''),
+        type: item.format,
+        status: item.status,
+        episodes: item.episodes,
+        score: item.averageScore ? (item.averageScore / 10).toFixed(1) : "N/A",
+        source: 'anilist'
+      }));
+      setAnimeList(mapped);
+    } catch (e) {
+      console.error("Anilist Discovery Error:", e);
+      setAnimeList([]);
+    }
+  };
 
   const fetchAnimeList = useCallback(async () => {
     setIsLoading(true);
     try {
-      const randomChar = String.fromCharCode(97 + Math.floor(Math.random() * 26));
-      const response = await fetch(`https://anime.apex-cloud.workers.dev/?method=search&query=${randomChar}`);
-      const data = await response.json();
-      const results = data.data || [];
-      const mapped: AnimeSeries[] = results.map((item: any) => ({
-        title: item.title,
-        image: item.poster || item.snapshot || "",
-        session: item.session,
-        type: item.type,
-        status: item.status,
-        episodes: item.episodes,
-        score: item.score,
-        source: 'apex'
-      }));
-      setAnimeList(mapped.sort(() => 0.5 - Math.random()).slice(0, 18));
-
-      const watchRes = await fetch(`https://anime-api-iota-six.vercel.app/api/`);
-      const watchData = await watchRes.json();
-      if (watchData.success && watchData.results) {
-        const mapIota = (item: any) => ({
+      if (animeSource === 'anilist') {
+        await fetchAnilistDiscovery();
+        setWatchHome(null); 
+      } else {
+        const randomChar = String.fromCharCode(97 + Math.floor(Math.random() * 26));
+        const response = await fetch(`https://anime.apex-cloud.workers.dev/?method=search&query=${randomChar}`);
+        const data = await response.json();
+        const results = data.data || [];
+        const mapped: AnimeSeries[] = results.map((item: any) => ({
           title: item.title,
-          image: item.poster || "",
-          session: item.id,
-          description: item.description || "",
-          type: item.tvInfo?.showType || "TV",
-          episodes: item.tvInfo?.episodeInfo?.sub || item.tvInfo?.sub || item.tvInfo?.eps,
-          score: item.tvInfo?.rating || "N/A",
-          source: 'watch' as const
-        });
+          image: item.poster || item.snapshot || "",
+          session: item.session,
+          type: item.type,
+          status: item.status,
+          episodes: item.episodes,
+          score: item.score,
+          source: 'apex'
+        }));
+        setAnimeList(mapped.sort(() => 0.5 - Math.random()).slice(0, 18));
 
-        setWatchHome({
-          spotlights: (watchData.results.spotlights || []).slice(0, 5),
-          trending: (watchData.results.trending || []).map(mapIota),
-          topTenToday: (watchData.results.topTen?.today || []).map(mapIota),
-          topAiring: (watchData.results.topAiring || []).map(mapIota),
-          mostPopular: (watchData.results.mostPopular || []).map(mapIota),
-          mostFavorite: (watchData.results.mostFavorite || []).map(mapIota),
-          latestCompleted: (watchData.results.latestCompleted || []).map(mapIota),
-          latestEpisode: (watchData.results.latestEpisode || []).map(mapIota),
-        });
+        const watchRes = await fetch(`https://anime-api-iota-six.vercel.app/api/`);
+        const watchData = await watchRes.json();
+        if (watchData.success && watchData.results) {
+          const mapIota = (item: any) => ({
+            title: item.title,
+            image: item.poster || "",
+            session: item.id,
+            description: item.description || "",
+            type: item.tvInfo?.showType || "TV",
+            episodes: item.tvInfo?.episodeInfo?.sub || item.tvInfo?.sub || item.tvInfo?.eps,
+            score: item.tvInfo?.rating || "N/A",
+            source: 'watch' as const
+          });
+
+          setWatchHome({
+            spotlights: (watchData.results.spotlights || []).slice(0, 5),
+            trending: (watchData.results.trending || []).map(mapIota),
+            topTenToday: (watchData.results.topTen?.today || []).map(mapIota),
+            topAiring: (watchData.results.topAiring || []).map(mapIota),
+            mostPopular: (watchData.results.mostPopular || []).map(mapIota),
+            mostFavorite: (watchData.results.mostFavorite || []).map(mapIota),
+            latestCompleted: (watchData.results.latestCompleted || []).map(mapIota),
+            latestEpisode: (watchData.results.latestEpisode || []).map(mapIota),
+          });
+        }
       }
     } catch (error) {
       console.error("Error fetching anime data:", error);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [animeSource]);
 
   useEffect(() => {
     fetchAnimeList();
   }, [fetchAnimeList]);
 
-  // Infinite Spotlight Timer logic
   useEffect(() => {
     if (!watchHome?.spotlights?.length || searchMode !== 'watch' || !isAutoPlaying) {
       if (autoPlayTimerRef.current) clearInterval(autoPlayTimerRef.current);
@@ -145,7 +228,29 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
     setSearchResults([]);
     
     try {
-      if (searchMode === 'download') {
+      if (animeSource === 'anilist') {
+        const response = await fetch('https://graphql.anilist.co', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: ANILIST_SEARCH_QUERY, variables: { search: searchQuery } })
+        });
+        const data = await response.json();
+        
+        // Defensive parsing
+        const results = data?.data?.Page?.media || [];
+        const mappedResults: AnimeSeries[] = results.map((item: any) => ({
+          title: item.title.english || item.title.romaji || item.title.native,
+          image: item.coverImage.extraLarge || item.coverImage.large,
+          session: item.id.toString(),
+          description: item.description?.replace(/<[^>]*>?/gm, ''),
+          type: item.format,
+          status: item.status,
+          episodes: item.episodes,
+          score: item.averageScore ? (item.averageScore / 10).toFixed(1) : "N/A",
+          source: 'anilist'
+        }));
+        setSearchResults(mappedResults);
+      } else if (searchMode === 'download') {
         const response = await fetch(`https://anime.apex-cloud.workers.dev/?method=search&query=${encodeURIComponent(searchQuery)}`);
         const data = await response.json();
         const results = data.data || [];
@@ -213,7 +318,6 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
     return spotlightIndex % watchHome.spotlights.length;
   }, [spotlightIndex, watchHome?.spotlights]);
 
-  // Swipe logic optimization
   const handleDragStart = () => {
     setIsAutoPlaying(false);
   };
@@ -222,7 +326,6 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
     const threshold = 50;
     const velocityThreshold = 500;
     
-    // Determine direction based on drag distance and velocity for snappiness
     if (info.offset.x < -threshold || info.velocity.x < -velocityThreshold) {
       setSpotlightIndex(prev => prev + 1);
     } else if (info.offset.x > threshold || info.velocity.x > velocityThreshold) {
@@ -231,7 +334,6 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
       }
     }
     
-    // Resume autoplay after 5 seconds to ensure the user is done interacting
     setTimeout(() => setIsAutoPlaying(true), 5000);
   };
 
@@ -245,21 +347,64 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
           <p className="text-[10px] uppercase font-bold text-base-content/20 tracking-[0.2em]">Neural Database Search</p>
         </div>
 
-        <div className="flex p-0.5 bg-base-content/5 rounded-full border border-base-content/10">
-           <button 
-            onClick={() => setSearchMode('watch')}
-            className={`px-6 py-2 rounded-full transition-all ${searchMode === 'watch' ? 'bg-base-content text-base-100 shadow-lg' : 'text-base-content/40'}`}
-            title="Watch Mode"
-           >
-             <Play size={14} className={searchMode === 'watch' ? 'fill-current' : ''} />
-           </button>
-           <button 
-            onClick={() => setSearchMode('download')}
-            className={`px-6 py-2 rounded-full transition-all ${searchMode === 'download' ? 'bg-base-content text-base-100 shadow-lg' : 'text-base-content/40'}`}
-            title="Download Mode"
-           >
-             <Download size={14} />
-           </button>
+        <div className="flex flex-col items-center gap-4 w-full">
+            <div className="flex p-0.5 bg-base-content/5 rounded-full border border-base-content/10">
+               <button 
+                onClick={() => setSearchMode('watch')}
+                className={`px-6 py-2 rounded-full transition-all ${searchMode === 'watch' ? 'bg-base-content text-base-100 shadow-lg' : 'text-base-content/40'}`}
+                title="Watch Mode"
+               >
+                 <Play size={14} className={searchMode === 'watch' ? 'fill-current' : ''} />
+               </button>
+               <button 
+                onClick={() => setSearchMode('download')}
+                className={`px-6 py-2 rounded-full transition-all ${searchMode === 'download' ? 'bg-base-content text-base-100 shadow-lg' : 'text-base-content/40'}`}
+                title="Download Mode"
+               >
+                 <Download size={14} />
+               </button>
+            </div>
+
+            {/* Source Dropdown */}
+            <div className="relative w-full md:w-56" ref={sourceDropdownRef}>
+                <button
+                    onClick={() => setIsSourceDropdownOpen(!isSourceDropdownOpen)}
+                    className="w-full flex items-center justify-between px-4 py-2 bg-base-content/5 border border-base-content/10 rounded-xl hover:border-primary/50 transition-all group shadow-sm"
+                >
+                    <div className="flex items-center gap-2">
+                        <Database size={12} className="text-base-content/30 group-hover:text-primary" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-base-content group-hover:text-primary">
+                            {animeSource === 'default' ? 'Default Source' : 'Anilist Source'}
+                        </span>
+                    </div>
+                    <ChevronDown size={14} className={`text-base-content/40 group-hover:text-primary transition-all duration-300 ${isSourceDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                <AnimatePresence>
+                    {isSourceDropdownOpen && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                            className="absolute top-full left-0 mt-2 w-full bg-base-100 border border-base-content/10 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 z-[100]"
+                        >
+                            <button
+                                onClick={() => { setAnimeSource('default'); setIsSourceDropdownOpen(false); }}
+                                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${animeSource === 'default' ? 'bg-primary text-primary-content' : 'text-base-content/60 hover:bg-base-content/10 hover:text-base-content'}`}
+                            >
+                                Default API
+                                {animeSource === 'default' && <CheckCircle size={12} />}
+                            </button>
+                            <button
+                                onClick={() => { setAnimeSource('anilist'); setIsSourceDropdownOpen(false); }}
+                                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${animeSource === 'anilist' ? 'bg-primary text-primary-content' : 'text-base-content/60 hover:bg-base-content/10 hover:text-base-content'}`}
+                            >
+                                Anilist + Metadata
+                                {animeSource === 'anilist' && <CheckCircle size={12} />}
+                            </button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
         </div>
 
         <form onSubmit={handleSearch} className="relative w-full">
@@ -336,14 +481,13 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                       ))}
                   </div>
                 </motion.div>
-              ) : watchHome ? (
+              ) : animeSource === 'default' && watchHome ? (
                 <motion.div 
                   key="content-watch"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.5 }}
                 >
-                  {/* Spotlight Continuous Slider */}
                   <section className="space-y-3">
                     <div ref={spotlightRef} className="relative w-full rounded-2xl h-[250px] md:h-[350px] shadow-xl border border-base-content/10 overflow-hidden group bg-black touch-pan-y">
                       <motion.div 
@@ -367,13 +511,11 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                             key={`${item.id}-${idx}`} 
                             className="relative w-full h-full cursor-pointer shrink-0 select-none overflow-hidden"
                             onClick={() => {
-                              // Direct action if it wasn't a significant drag
                               onSelectAnime({
                                 title: item.title, image: item.poster, session: item.id, description: item.description, source: 'watch'
                               });
                             }}
                           >
-                            {/* Removed scale-105 to prevent zoom zoom bug */}
                             <img 
                               src={item.poster} 
                               className="w-full h-full object-cover pointer-events-none transition-opacity duration-500" 
@@ -431,7 +573,6 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                     </div>
                   </section>
 
-                  {/* Continue Watching */}
                   <ContinueWatching 
                     history={filteredHistory} 
                     onSelect={onHistorySelect} 
@@ -440,10 +581,8 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                     title="Stream History"
                   />
 
-                  {/* Trending Section */}
                   {renderHorizontalSection("Trending Now", watchHome.trending, <Flame size={18} className="text-base-content" />)}
 
-                  {/* Top 10 Today Section */}
                   <section className="space-y-4">
                     <div className="flex items-center gap-2 border-l-2 border-base-content pl-3">
                       <Trophy size={18} className="text-base-content" />
@@ -458,7 +597,6 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                     >
                       {watchHome.topTenToday.map((anime, idx) => (
                         <motion.div variants={itemVariants} key={idx} className="relative min-w-[160px] md:min-w-[200px] snap-start group">
-                           {/* Giant Ranking Number */}
                            <div className="absolute -left-6 -bottom-4 z-10 select-none pointer-events-none">
                               <span className="text-7xl md:text-9xl font-black italic text-base-content/10 group-hover:text-base-content/20 transition-colors duration-500" style={{ WebkitTextStroke: '2px rgba(128,128,128,0.1)' }}>
                                 {idx + 1}
@@ -470,22 +608,29 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                     </motion.div>
                   </section>
 
-                  {/* Top Airing */}
                   {renderHorizontalSection("Top Airing", watchHome.topAiring, <Activity size={18} className="text-base-content" />)}
-
-                  {/* Most Popular */}
                   {renderHorizontalSection("Most Popular", watchHome.mostPopular, <Star size={18} className="text-base-content" />)}
-
-                  {/* Most Favorite */}
                   {renderHorizontalSection("Most Favorite", watchHome.mostFavorite, <Heart size={18} className="text-base-content" />)}
-
-                  {/* Latest Releases */}
                   {renderHorizontalSection("Latest Episodes", watchHome.latestEpisode, <Zap size={18} className="text-base-content" />)}
-
-                  {/* Just Completed */}
                   {renderHorizontalSection("Just Completed", watchHome.latestCompleted, <CheckCircle size={18} className="text-base-content" />)}
                 </motion.div>
-              ) : null}
+              ) : (
+                <motion.div 
+                    key="content-anilist-discovery"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="space-y-8"
+                >
+                    <ContinueWatching 
+                        history={filteredHistory} 
+                        onSelect={onHistorySelect} 
+                        onRemove={onHistoryRemove} 
+                        onViewAll={() => onViewAllHistory('anime-watch')}
+                        title="Anilist Watch History"
+                    />
+                    {renderHorizontalSection("Trending Anilist", animeList, <Flame size={18} className="text-base-content" />)}
+                </motion.div>
+              )}
             </AnimatePresence>
           ) : (
             <div className="space-y-8 md:space-y-12">

@@ -52,6 +52,15 @@
         scrollbar-width: none;
       }
 
+      /* Moving Grid Animation */
+      @keyframes grid-move {
+        0% { background-position: 0 0; }
+        100% { background-position: 0 24px; }
+      }
+      .animate-grid {
+        animation: grid-move 2s linear infinite;
+      }
+
       /* STRICT MONOCHROME OVERRIDES FOR MODERN THEME ONLY */
       [data-theme="modern"] {
         /* Primary becomes White */

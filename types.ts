@@ -9,7 +9,7 @@ export interface AnimeSeries {
   type?: string;
   episodes?: number;
   score?: number | string;
-  source?: 'apex' | 'watch';
+  source?: 'apex' | 'watch' | 'anilist';
 }
 
 export interface AnimeEpisode {
@@ -63,7 +63,7 @@ export interface WatchHistoryItem {
   image: string;
   type: 'anime' | 'movie' | 'tv';
   timestamp: number;
-  source?: 'apex' | 'watch';
+  source?: 'apex' | 'watch' | 'anilist';
   mode?: 'watch' | 'download';
   episodeNumber?: string | number;
   episodeTitle?: string;

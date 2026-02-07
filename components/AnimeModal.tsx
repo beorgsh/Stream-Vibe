@@ -130,7 +130,20 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
     if (!anime.session) return;
     setIsLoading(true);
     try {
-      if (anime.source === 'watch') {
+      if (anime.source === 'anilist') {
+          // Robust mapping for Anilist episodes
+          const totalEps = anime.episodes || 1;
+          const genList: AnimeEpisode[] = [];
+          for (let i = 1; i <= totalEps; i++) {
+              genList.push({
+                  episode: i.toString(),
+                  session: i.toString(),
+                  snapshot: anime.image,
+                  title: `Episode ${i}`
+              });
+          }
+          setEpisodes(genList);
+      } else if (anime.source === 'watch') {
         const response = await fetch(`https://anime-api-iota-six.vercel.app/api/episodes/${anime.session}`);
         const data = await response.json();
         if (data.success && data.results?.episodes) {
@@ -139,7 +152,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
              session: item.id, 
              snapshot: item.image || item.thumbnail || anime.image,
              title: item.title,
-             overview: item.description // Map description if available
+             overview: item.description 
           }));
           setEpisodes(epList);
         }
@@ -147,10 +160,29 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
         const response = await fetch(`https://anime.apex-cloud.workers.dev/?method=series&session=${anime.session}`);
         const data = await response.json();
         const epList = data.episodes || data.data || (Array.isArray(data) ? data : []);
-        setEpisodes(epList);
+        const mappedList: AnimeEpisode[] = epList.map((item: any) => ({
+          episode: item.episode || item.episode_no || '?',
+          session: item.session || item.id,
+          snapshot: item.snapshot || item.image || anime.image,
+          title: item.title,
+          overview: item.overview || item.description
+        }));
+        
+        // Ensure at least one episode if it's a movie/single
+        if (mappedList.length === 0) {
+            mappedList.push({
+                episode: "1",
+                session: "1",
+                snapshot: anime.image,
+                title: "Full Movie"
+            });
+        }
+        setEpisodes(mappedList);
       }
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error fetching episodes:", error);
+      // Fail-safe Episode 1
+      setEpisodes([{ episode: "1", session: "1", snapshot: anime.image, title: "Episode 1" }]);
     } finally {
       setIsLoading(false);
     }
@@ -179,6 +211,16 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
       markAsWatched(originalEp.session);
     }
 
+    if (anime.source === 'anilist') {
+        const ep = epId || "1";
+        const constructionUrl = serverName.toLowerCase() === 'pahe'
+            ? `https://vidnest.fun/animepahe/${anime.session}/${ep}/${type}`
+            : `https://vidnest.fun/anime/${anime.session}/${ep}/${type}`;
+        setIframeUrl(constructionUrl);
+        setIsLinksLoading(false);
+        return;
+    }
+
     try {
       const response = await fetch(`https://anime-api-iota-six.vercel.app/api/stream?id=${encodeURIComponent(epId)}&server=${serverName.toLowerCase()}&type=${type}`);
       const data = await response.json();
@@ -195,7 +237,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
         setIsIframeLoading(false);
       }
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Stream Fetch Error:", error);
       setIsIframeLoading(false);
     } finally {
       setIsLinksLoading(false);
@@ -210,6 +252,26 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
     setGroupedLinks([]);
     setWatchServers([]);
     setActiveWatchServer(null);
+
+    if (anime.source === 'anilist') {
+        const servers: WatchServer[] = [
+            { type: 'sub', serverName: 'Pahe', data_id: 'pahe', server_id: 'pahe' },
+            { type: 'sub', serverName: 'Server 1', data_id: 'server1', server_id: 'server1' },
+            { type: 'dub', serverName: 'Pahe', data_id: 'pahe', server_id: 'pahe' },
+            { type: 'dub', serverName: 'Server 1', data_id: 'server1', server_id: 'server1' }
+        ];
+        setWatchServers(servers);
+        setActiveWatchType('sub');
+        setActiveWatchServer('sub-Pahe');
+        
+        const epNum = ep.session || "1";
+        setIframeUrl(`https://vidnest.fun/animepahe/${anime.session}/${epNum}/sub`);
+        
+        setIsLinksLoading(false);
+        if (onPlay) onPlay(ep);
+        markAsWatched(ep.session);
+        return;
+    }
 
     try {
       if (anime.source === 'watch') {
@@ -281,11 +343,11 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
         markAsWatched(ep.session);
       }
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Link Fetch Error:", error);
       setIsIframeLoading(false);
     } finally {
       setIsLinksLoading(false);
-      if (anime.source !== 'watch') {
+      if (anime.source !== 'watch' && anime.source !== 'anilist') {
         setIsIframeLoading(false);
       }
     }
@@ -330,8 +392,8 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
     const active = watchServersByType[serverCategory]?.find(srv => 
       activeWatchServer?.toLowerCase() === `${serverCategory}-${srv.serverName}`.toLowerCase()
     );
-    return active?.serverName || 'HD-1 (Default)';
-  }, [activeWatchServer, serverCategory, watchServersByType]);
+    return active?.serverName || (anime.source === 'anilist' ? 'Pahe' : 'HD-1 (Default)');
+  }, [activeWatchServer, serverCategory, watchServersByType, anime.source]);
 
   return (
     <motion.div 
@@ -412,7 +474,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                     <Loader2 size={32} className="text-primary animate-spin" />
                   ) : (
                     <>
-                      {anime.source === 'watch' ? (
+                      {(anime.source === 'watch' || anime.source === 'anilist') ? (
                         <div className="space-y-6 w-full max-w-2xl">
                           <p className="text-white/40 text-[10px] uppercase font-black tracking-widest">Select a server to initialize</p>
                         </div>
@@ -445,7 +507,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
               )}
             </div>
 
-            {anime.source === 'watch' && iframeUrl && (
+            {(anime.source === 'watch' || anime.source === 'anilist') && iframeUrl && (
               <div className="p-4 bg-base-100 border-t border-base-content/5 flex flex-col items-center gap-4 animate-in fade-in slide-in-from-top-2 relative z-50">
                  
                  <div className="flex items-center gap-4 w-full max-w-2xl justify-center">
@@ -470,7 +532,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                       </div>
                     )}
 
-                    {/* Server Dropdown */}
                     <div className="relative z-[60] flex-1 max-w-[220px]" ref={serverDropdownRef}>
                         <button
                           onClick={() => setIsServerDropdownOpen(!isServerDropdownOpen)}
@@ -496,7 +557,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                                <div className="px-3 py-2 border-b border-base-content/10 mb-1 bg-base-200/50 rounded-t-xl">
                                   <span className="text-[9px] font-black uppercase tracking-widest text-base-content/40">Available Nodes</span>
                                </div>
-                               <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                               <div className="max-h-60 overflow-y-auto custom-scrollbar bg-base-100">
                                   {watchServersByType[serverCategory]?.length > 0 ? (
                                     watchServersByType[serverCategory].map(srv => {
                                       const isActive = activeWatchServer?.toLowerCase() === `${serverCategory}-${srv.serverName}`.toLowerCase();
@@ -507,7 +568,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                                           className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${isActive ? 'bg-primary text-primary-content' : 'text-base-content/60 hover:bg-base-content/10 hover:text-base-content'}`}
                                         >
                                           <div className="flex items-center gap-2">
-                                            {srv.serverName === 'hd-1' && <Star size={10} className={isActive ? 'text-primary-content' : 'text-yellow-500 fill-current'} />}
+                                            {(srv.serverName === 'hd-1' || srv.serverName === 'Pahe') && <Star size={10} className={isActive ? 'text-primary-content' : 'text-yellow-500 fill-current'} />}
                                             {srv.serverName}
                                           </div>
                                           {isActive && <div className="w-1.5 h-1.5 rounded-full bg-primary-content" />}
@@ -625,10 +686,28 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                               onClick={() => fetchEpisodeLinks(ep)}
                               className={`group flex items-start gap-4 p-3 rounded-xl bg-base-content/5 hover:bg-base-content/10 transition-all cursor-pointer border border-transparent hover:border-base-content/5 ${isEpWatched ? 'opacity-50' : ''}`}
                             >
-                              <div className="w-20 md:w-24 aspect-video rounded-lg bg-base-300 flex items-center justify-center shrink-0 border border-base-content/5 group-hover:border-primary/50 relative overflow-hidden shadow-sm">
-                                <span className="text-[10px] font-black text-base-content/40 group-hover:text-primary transition-colors z-10">{ep.episode}</span>
-                                {isEpWatched && <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg ring-2 ring-base-100 z-20"><CheckCircle2 size={10} className="text-white" /></div>}
-                                <div className="absolute inset-0 bg-base-content/5 group-hover:bg-primary/5 transition-colors" />
+                              {/* Relative container that allows badges to overflow without clipping */}
+                              <div className="relative shrink-0">
+                                <div className="w-20 md:w-24 aspect-video rounded-lg bg-base-300 flex items-center justify-center border border-base-content/5 group-hover:border-primary/50 overflow-hidden shadow-sm">
+                                  {ep.snapshot ? (
+                                    <img 
+                                      src={ep.snapshot} 
+                                      className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" 
+                                      alt="" 
+                                      onError={(e) => { (e.target as HTMLImageElement).src = anime.image; }}
+                                    />
+                                  ) : (
+                                    <span className="text-[10px] font-black text-base-content/40 group-hover:text-primary transition-colors z-10">{ep.episode}</span>
+                                  )}
+                                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Play size={16} className="fill-white text-white drop-shadow-lg" />
+                                  </div>
+                                </div>
+                                {isEpWatched && (
+                                  <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg ring-2 ring-base-100 z-20">
+                                    <CheckCircle2 size={10} className="text-white" />
+                                  </div>
+                                )}
                               </div>
                               <div className="flex-1 min-w-0 pt-0.5">
                                 <div className="flex items-center justify-between mb-1">
@@ -646,7 +725,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                                   </p>
                                 )}
                               </div>
-                              <Play size={14} className="text-base-content/20 group-hover:text-primary group-hover:scale-110 transition-all mt-1" />
                             </div>
                           );
                         })
