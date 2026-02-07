@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { AppTab } from '../types';
 import { 
   Play, Globe, Home, Palette, Bookmark, X, CheckCircle2, 
@@ -40,15 +40,20 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isPWA, current
     setTimeout(() => setIsThemeModalOpen(false), 200);
   };
 
-  const navButtons = [
-    { id: AppTab.HOME, label: 'Home', icon: Home },
-    { id: AppTab.ANIME, label: 'Anime', icon: Play },
-    { id: AppTab.GLOBAL, label: 'Global', icon: Globe },
-    { id: AppTab.SAVED, label: 'Saved', icon: Bookmark }
-  ];
+  const navButtons = useMemo(() => {
+    const allButtons = [
+      { id: AppTab.HOME, label: 'Home', icon: Home },
+      { id: AppTab.ANIME, label: 'Anime', icon: Play },
+      { id: AppTab.GLOBAL, label: 'Global', icon: Globe },
+      { id: AppTab.SAVED, label: 'Saved', icon: Bookmark }
+    ];
 
-  // Exclude Home tab if in PWA mode to keep the interface streamlined
-  const filteredNavButtons = navButtons.filter(btn => !isPWA || btn.id !== AppTab.HOME);
+    // Strictly exclude Home tab if in PWA mode
+    return allButtons.filter(btn => {
+      if (isPWA && btn.id === AppTab.HOME) return false;
+      return true;
+    });
+  }, [isPWA]);
 
   return (
     <>
@@ -63,7 +68,7 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isPWA, current
           </div>
 
           <div className="hidden md:flex items-center gap-1 bg-base-content/5 rounded-full p-1">
-            {filteredNavButtons.map(({ id, label, icon: Icon }) => (
+            {navButtons.map(({ id, label, icon: Icon }) => (
               <button 
                 key={id}
                 onClick={() => setActiveTab(id)}
@@ -84,7 +89,7 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isPWA, current
       {/* Mobile Bottom Navigation */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-[100] bg-base-100/95 backdrop-blur-2xl border-t border-base-content/10 pb-6 pt-3 px-6">
         <div className="flex items-center justify-around">
-          {filteredNavButtons.map(({ id, label, icon: Icon }) => (
+          {navButtons.map(({ id, label, icon: Icon }) => (
             <button key={id} onClick={() => setActiveTab(id)} className={`flex flex-col items-center gap-1 transition-all ${activeTab === id ? 'text-primary scale-110' : 'opacity-50 text-base-content'}`}>
               <Icon size={20} />
               <span className="text-[8px] font-black uppercase tracking-widest">{label}</span>

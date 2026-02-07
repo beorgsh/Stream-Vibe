@@ -15,21 +15,31 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Bookmark, CheckCircle2 } from 'lucide-react';
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<AppTab>(AppTab.HOME);
+  const [theme, setTheme] = useState<string>(() => {
+    return localStorage.getItem('sv_theme') || 'black';
+  });
+
+  // Comprehensive PWA detection helper
+  const detectPWA = () => {
+    if (typeof window === 'undefined') return false;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                         window.matchMedia('(display-mode: minimal-ui)').matches ||
+                         window.matchMedia('(display-mode: fullscreen)').matches ||
+                         (window.navigator as any).standalone === true;
+    return isStandalone;
+  };
+
+  const [isPWA, setIsPWA] = useState(detectPWA());
+  const [activeTab, setActiveTab] = useState<AppTab>(isPWA ? AppTab.ANIME : AppTab.HOME);
   const [selectedAnime, setSelectedAnime] = useState<AnimeSeries | null>(null);
   const [selectedMedia, setSelectedMedia] = useState<TMDBMedia | null>(null);
   const [mediaMode, setMediaMode] = useState<'watch' | 'download'>('watch');
   const [showAdBlockModal, setShowAdBlockModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all');
-  const [isPWA, setIsPWA] = useState(false);
   const [isNotFound, setIsNotFound] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
   
-  const [theme, setTheme] = useState<string>(() => {
-    return localStorage.getItem('sv_theme') || 'black';
-  });
-
   const [resumeData, setResumeData] = useState<{
     episodeId?: string | number;
     seasonNumber?: number;
@@ -44,7 +54,6 @@ const App: React.FC = () => {
 
   const TMDB_KEY = "7519c82c82dd0265f5b5d599e59e972a";
 
-  // Scroll to top whenever active tab changes
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [activeTab]);
@@ -79,16 +88,12 @@ const App: React.FC = () => {
     checkRoute();
     window.addEventListener('popstate', checkRoute);
 
-    const checkPWA = () => {
-      const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || (window.navigator as any).standalone === true;
-      setIsPWA(isStandalone);
-      if (isStandalone) {
-        setActiveTab(AppTab.ANIME);
-      } else {
-        if (!isNotFound) setActiveTab(AppTab.HOME);
-      }
-    };
-    checkPWA();
+    // Ensure PWA state is accurate on mount and set initial tab
+    const pwaStatus = detectPWA();
+    setIsPWA(pwaStatus);
+    if (pwaStatus) {
+      setActiveTab(prev => prev === AppTab.HOME ? AppTab.ANIME : prev);
+    }
 
     const hasSeenReminder = localStorage.getItem('sv_adblock_reminder_seen');
     if (!hasSeenReminder) {
@@ -175,13 +180,13 @@ const App: React.FC = () => {
         console.warn("Could not push state", e);
     }
     setIsNotFound(false);
-    setActiveTab(AppTab.HOME);
+    setActiveTab(isPWA ? AppTab.ANIME : AppTab.HOME);
   };
 
   const renderContent = () => {
     switch (activeTab) {
       case AppTab.HOME:
-        return <HomeTab setActiveTab={setActiveTab} />;
+        return isPWA ? <AnimeTab onSelectAnime={(anime) => { setResumeData(null); setSelectedAnime(anime); }} history={watchHistory.filter(h => h.type === 'anime')} onHistorySelect={handleSelectFromHistory} onHistoryRemove={removeFromHistory} onViewAllHistory={(filter) => { setHistoryFilter(filter || 'all'); setShowHistoryModal(true); }} /> : <HomeTab setActiveTab={setActiveTab} />;
       case AppTab.ANIME:
         return (
           <AnimeTab 
@@ -237,7 +242,6 @@ const App: React.FC = () => {
       
       <div className="fixed inset-0 z-0 pointer-events-none">
         <div className="animate-grid absolute inset-0 [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
-        {/* Decorative glow that follows theme primary */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-96 bg-primary/5 blur-[120px] rounded-full" />
       </div>
 
