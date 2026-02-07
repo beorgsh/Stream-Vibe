@@ -240,7 +240,7 @@ const App: React.FC = () => {
           onThemeChange={setTheme}
         />
         
-        <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-4 md:py-8">
+        <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-4 md:py-8 pb-24 md:pb-8">
           <AnimatePresence mode="wait">
           <motion.div
               key={activeTab}
@@ -254,7 +254,7 @@ const App: React.FC = () => {
           </AnimatePresence>
         </main>
 
-        <footer className="p-8 footer bg-base-200/80 backdrop-blur-md border-t border-base-content/10 text-base-content mt-8 transition-colors duration-500">
+        <footer className="p-8 footer bg-base-200/80 backdrop-blur-md border-t border-base-content/10 text-base-content mt-8 transition-colors duration-500 pb-32 md:pb-8">
           <aside>
             <div className="flex items-center gap-2">
               <div 
@@ -294,7 +294,7 @@ const App: React.FC = () => {
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="fixed bottom-8 right-8 z-[3000]"
+            className="fixed bottom-24 md:bottom-8 right-8 z-[3000]"
           >
             <div className={`flex items-center gap-3 px-6 py-3 rounded-2xl shadow-2xl border backdrop-blur-xl ${toast.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-primary/10 border-primary/20 text-primary'}`}>
               {toast.type === 'success' ? <CheckCircle2 size={18} /> : <Bookmark size={18} />}

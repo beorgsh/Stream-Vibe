@@ -103,6 +103,8 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
     // Fetch Airing Info based on source
     if (anime.source === 'watch') {
       fetchDefaultAiringInfo();
+      // Also try AniList for better schedule accuracy by searching title
+      fetchAniListAiringByTitle(anime.title);
     } else if (anime.source === 'anilist') {
       fetchAniListAiringInfo();
     }
@@ -117,6 +119,39 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
     if (hours > 0) str += `${hours}h `;
     str += `${mins}m`;
     return str;
+  };
+
+  const fetchAniListAiringByTitle = async (title: string) => {
+    try {
+      const searchRes = await fetch('https://graphql.anilist.co', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `query($search: String){ Media(search: $search, type: ANIME){ id } }`,
+          variables: { search: title }
+        })
+      });
+      const searchData = await searchRes.json();
+      const id = searchData?.data?.Media?.id;
+      if (id) {
+         const airingRes = await fetch('https://graphql.anilist.co', {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({
+             query: ANILIST_AIRING_QUERY,
+             variables: { id: id }
+           })
+         });
+         const airingData = await airingRes.json();
+         const airing = airingData?.data?.Media?.nextAiringEpisode;
+         if (airing) {
+           setAiringInfo({
+             airing_episode: airing.episode,
+             remaining_time: formatDuration(airing.timeUntilAiring)
+           });
+         }
+      }
+    } catch (e) { console.warn("AniList Airing by title failed"); }
   };
 
   const fetchAniListAiringInfo = async () => {
@@ -561,16 +596,15 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
         className={`bg-base-100 border border-base-content/20 w-full max-w-5xl ${selectedEpisode ? 'h-auto' : 'max-h-[85vh]'} rounded-2xl overflow-hidden relative flex flex-col shadow-2xl`}
       >
-        {/* Action Buttons - Top Right */}
+        {/* SMALLER TOP-RIGHT BUTTONS */}
         <div className="absolute top-4 right-4 z-[60] flex gap-2">
-            {/* Save Button only shows in Info View (selectedEpisode is null) */}
             {!selectedEpisode && onToggleSave && (
               <button 
                 onClick={onToggleSave}
                 className={`btn btn-circle btn-sm md:btn-md border border-base-content/10 ${isSaved ? 'bg-primary text-primary-content' : 'bg-base-100/40 text-base-content'} hover:bg-base-content/20 transition-all shadow-lg`}
                 title={isSaved ? "Saved" : "Save to Vault"}
               >
-                {isSaved ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
+                {isSaved ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
               </button>
             )}
             <button 
@@ -578,7 +612,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
               className="btn btn-circle btn-sm md:btn-md btn-ghost bg-base-100/40 border border-base-content/10 text-base-content hover:bg-base-content/20 shadow-lg"
               title="Close Hub"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
         </div>
 

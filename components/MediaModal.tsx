@@ -252,15 +252,15 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
         className={`bg-base-100 border border-base-content/20 w-full max-w-5xl ${isPlaying ? 'h-auto' : 'max-h-[85vh]'} rounded-2xl overflow-hidden relative flex flex-col shadow-2xl`}
       >
+        {/* SMALLER TOP-RIGHT BUTTONS */}
         <div className="absolute top-4 right-4 z-[60] flex gap-2">
-            {/* Save Button only shows in Abstract View (isPlaying is false) */}
             {!isPlaying && onToggleSave && (
               <button 
                 onClick={onToggleSave}
                 className={`btn btn-circle btn-sm md:btn-md border border-base-content/10 ${isSaved ? 'bg-primary text-primary-content' : 'bg-base-100/40 text-base-content'} hover:bg-base-content/20 transition-all shadow-lg`}
                 title={isSaved ? "Saved" : "Save to Vault"}
               >
-                {isSaved ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
+                {isSaved ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
               </button>
             )}
             <button 
@@ -268,7 +268,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
               className="btn btn-circle btn-sm md:btn-md btn-ghost bg-base-100/40 border border-base-content/10 text-base-content hover:bg-base-content/20 shadow-lg"
               title="Close Hub"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
         </div>
 
