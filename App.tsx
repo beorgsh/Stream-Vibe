@@ -4,12 +4,14 @@ import Navbar from './components/Navbar';
 import HomeTab from './components/HomeTab';
 import AnimeTab from './components/AnimeTab';
 import GlobalTab from './components/GlobalTab';
+import SavedTab from './components/SavedTab';
 import AnimeModal from './components/AnimeModal';
 import MediaModal from './components/MediaModal';
 import AdBlockModal from './components/AdBlockModal';
 import HistoryModal from './components/HistoryModal';
 import NotFoundPage from './components/NotFoundPage';
 import { AnimatePresence, motion } from 'framer-motion';
+import { Bookmark, CheckCircle2 } from 'lucide-react';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AppTab>(AppTab.HOME);
@@ -21,8 +23,8 @@ const App: React.FC = () => {
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all');
   const [isPWA, setIsPWA] = useState(false);
   const [isNotFound, setIsNotFound] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
   
-  // Theme State
   const [theme, setTheme] = useState<string>(() => {
     return localStorage.getItem('sv_theme') || 'black';
   });
@@ -34,21 +36,33 @@ const App: React.FC = () => {
   } | null>(null);
 
   const [watchHistory, setWatchHistory] = useState<WatchHistoryItem[]>([]);
+  const [savedItems, setSavedItems] = useState<any[]>(() => {
+    const saved = localStorage.getItem('sv_bookmarks_v1');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   const TMDB_KEY = "7519c82c82dd0265f5b5d599e59e972a";
 
   useEffect(() => {
-    // Apply theme to HTML tag
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('sv_theme', theme);
   }, [theme]);
 
   useEffect(() => {
-    // Route checking
+    localStorage.setItem('sv_bookmarks_v1', JSON.stringify(savedItems));
+  }, [savedItems]);
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  useEffect(() => {
     const checkRoute = () => {
       const path = window.location.pathname;
       const cleanPath = path.replace(/\/$/, '') || '/';
-      
       if (cleanPath !== '/' && cleanPath !== '/index.html') {
         setIsNotFound(true);
       } else {
@@ -59,7 +73,6 @@ const App: React.FC = () => {
     checkRoute();
     window.addEventListener('popstate', checkRoute);
 
-    // Check if running as PWA
     const checkPWA = () => {
       const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || (window.navigator as any).standalone === true;
       setIsPWA(isStandalone);
@@ -103,6 +116,20 @@ const App: React.FC = () => {
 
   const removeFromHistory = useCallback((id: string | number) => {
     setWatchHistory(prev => prev.filter(item => item.id.toString() !== id.toString()));
+  }, []);
+
+  const toggleBookmark = useCallback((item: any) => {
+    setSavedItems(prev => {
+      const idStr = (item.id || item.session).toString();
+      const exists = prev.find(i => (i.id || i.session).toString() === idStr);
+      if (exists) {
+        setToast({ message: "Removed from vault", type: 'info' });
+        return prev.filter(i => (i.id || i.session).toString() !== idStr);
+      } else {
+        setToast({ message: "Saved to vault", type: 'success' });
+        return [item, ...prev];
+      }
+    });
   }, []);
 
   const handleSelectFromHistory = (item: WatchHistoryItem) => {
@@ -179,6 +206,15 @@ const App: React.FC = () => {
             }}
           />
         );
+      case AppTab.SAVED:
+        return (
+          <SavedTab 
+            items={savedItems}
+            onSelectAnime={(anime) => { setResumeData(null); setSelectedAnime(anime); }}
+            onSelectMedia={(media) => { setResumeData(null); setSelectedMedia(media); setMediaMode('watch'); }}
+            onToggleBookmark={toggleBookmark}
+          />
+        );
       default:
         return null;
     }
@@ -191,9 +227,8 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col bg-base-100 text-base-content font-sans selection:bg-primary/30 relative overflow-x-hidden transition-colors duration-500">
       
-      {/* Background Grid & Vignette */}
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="animate-grid absolute inset-0 bg-[linear-gradient(to_right,rgba(128,128,128,0.15)_1px,transparent_1px),linear-gradient(to_bottom,rgba(128,128,128,0.15)_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
+        <div className="animate-grid absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.1)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
       </div>
 
       <div className="relative z-10 flex flex-col min-h-screen">
@@ -219,7 +254,7 @@ const App: React.FC = () => {
           </AnimatePresence>
         </main>
 
-        <footer className="p-8 footer bg-base-200/50 backdrop-blur-md border-t border-base-content/5 text-base-content mt-8 transition-colors duration-500">
+        <footer className="p-8 footer bg-base-200/80 backdrop-blur-md border-t border-base-content/10 text-base-content mt-8 transition-colors duration-500">
           <aside>
             <div className="flex items-center gap-2">
               <div 
@@ -237,20 +272,37 @@ const App: React.FC = () => {
               />
               <div className="text-xl font-bold tracking-tighter text-base-content">StreamVibe</div>
             </div>
-            <p className="text-xs opacity-50 uppercase tracking-widest font-bold mt-1 text-base-content/60">Neural Engine v4.0</p>
+            <p className="text-xs opacity-80 uppercase tracking-widest font-bold mt-1 text-base-content/80">Neural Engine v4.0</p>
           </aside> 
           <nav>
-            <header className="footer-title opacity-40 uppercase text-[10px] tracking-widest text-base-content">Links</header> 
-            {!isPWA && <a className="link link-hover text-xs opacity-60 hover:opacity-100 text-base-content" onClick={() => setActiveTab(AppTab.HOME)}>Home</a>}
-            <a className="link link-hover text-xs opacity-60 hover:opacity-100 text-base-content" onClick={() => setActiveTab(AppTab.ANIME)}>Anime</a>
-            <a className="link link-hover text-xs opacity-60 hover:opacity-100 text-base-content" onClick={() => setActiveTab(AppTab.GLOBAL)}>Global</a>
-            <a className="link link-hover text-xs opacity-60 hover:opacity-100 text-base-content" onClick={() => {
+            <header className="footer-title opacity-60 uppercase text-[10px] tracking-widest text-base-content">Links</header> 
+            {!isPWA && <a className="link link-hover text-xs opacity-80 hover:opacity-100 text-base-content cursor-pointer" onClick={() => setActiveTab(AppTab.HOME)}>Home</a>}
+            <a className="link link-hover text-xs opacity-80 hover:opacity-100 text-base-content cursor-pointer" onClick={() => setActiveTab(AppTab.ANIME)}>Anime</a>
+            <a className="link link-hover text-xs opacity-80 hover:opacity-100 text-base-content cursor-pointer" onClick={() => setActiveTab(AppTab.GLOBAL)}>Global</a>
+            <a className="link link-hover text-xs opacity-80 hover:opacity-100 text-base-content cursor-pointer" onClick={() => setActiveTab(AppTab.SAVED)}>Saved</a>
+            <a className="link link-hover text-xs opacity-80 hover:opacity-100 text-base-content cursor-pointer" onClick={() => {
               setHistoryFilter('all');
               setShowHistoryModal(true);
             }}>History</a>
           </nav>
         </footer>
       </div>
+
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-8 right-8 z-[3000]"
+          >
+            <div className={`flex items-center gap-3 px-6 py-3 rounded-2xl shadow-2xl border backdrop-blur-xl ${toast.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-primary/10 border-primary/20 text-primary'}`}>
+              {toast.type === 'success' ? <CheckCircle2 size={18} /> : <Bookmark size={18} />}
+              <span className="text-xs font-black uppercase tracking-widest">{toast.message}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showAdBlockModal && (
@@ -279,6 +331,8 @@ const App: React.FC = () => {
             anime={selectedAnime} 
             onClose={handleCloseModals} 
             initialEpisodeId={resumeData?.episodeId as string}
+            isSaved={!!savedItems.find(i => i.session === selectedAnime.session)}
+            onToggleSave={() => toggleBookmark(selectedAnime)}
             onPlay={(ep) => {
             addToHistory({
                 id: selectedAnime.session,
@@ -306,6 +360,8 @@ const App: React.FC = () => {
             apiKey={TMDB_KEY}
             mode={mediaMode}
             initialResumeData={resumeData}
+            isSaved={!!savedItems.find(i => i.id === selectedMedia.id)}
+            onToggleSave={() => toggleBookmark(selectedMedia)}
             onPlay={(ep) => {
             addToHistory({
                 id: selectedMedia.id,

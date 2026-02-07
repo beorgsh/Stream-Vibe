@@ -1,4 +1,3 @@
-
 export interface AnimeSeries {
   title: string;
   image: string;
@@ -10,6 +9,7 @@ export interface AnimeSeries {
   episodes?: number;
   score?: number | string;
   source?: 'apex' | 'watch' | 'anilist';
+  banner?: string;
 }
 
 export interface AnimeEpisode {
@@ -75,7 +75,8 @@ export interface WatchHistoryItem {
 export enum AppTab {
   HOME = 'home',
   ANIME = 'anime',
-  GLOBAL = 'global'
+  GLOBAL = 'global',
+  SAVED = 'saved'
 }
 
 export type HistoryFilter = 'all' | 'anime-watch' | 'anime-download' | 'global-watch' | 'global-download';

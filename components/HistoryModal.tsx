@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { WatchHistoryItem, HistoryFilter } from '../types';
-import { X, Trash2, Play, History, Search, Download, Tv, Clapperboard, MonitorPlay } from 'lucide-react';
+import { X, Trash2, Play, History, Search, Download, Tv, Clapperboard, MonitorPlay, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface HistoryModalProps {
@@ -15,17 +15,16 @@ interface HistoryModalProps {
 const HistoryModal: React.FC<HistoryModalProps> = ({ history, onClose, onSelect, onRemove, onClearAll, initialFilter = 'all' }) => {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<HistoryFilter>(initialFilter);
+  const [deletingId, setDeletingId] = useState<string | number | null>(null);
 
   const filteredHistory = useMemo(() => {
     return history.filter(item => {
-      // First filter by search term
       const matchesSearch = item.title.toLowerCase().includes(search.toLowerCase());
       if (!matchesSearch) return false;
 
-      // Then filter by category
       switch (category) {
         case 'anime-watch':
-          return item.type === 'anime' && item.source === 'watch';
+          return item.type === 'anime' && (item.source === 'watch' || item.source === 'anilist');
         case 'anime-download':
           return item.type === 'anime' && item.source === 'apex';
         case 'global-watch':
@@ -61,18 +60,18 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ history, onClose, onSelect,
         animate={{ scale: 1, y: 0, opacity: 1 }}
         exit={{ scale: 0.9, y: 30, opacity: 0 }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className="bg-base-100 border border-base-content/10 w-full max-w-5xl h-[90vh] rounded-3xl overflow-hidden relative flex flex-col shadow-2xl"
+        className="bg-base-100 border border-base-content/20 w-full max-w-5xl h-[90vh] rounded-3xl overflow-hidden relative flex flex-col shadow-2xl"
       >
         
-        <div className="flex flex-col border-b border-base-content/5 bg-base-200/50">
+        <div className="flex flex-col border-b border-base-content/10 bg-base-200/50">
           <div className="flex items-center justify-between p-6 pb-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                 <History size={20} />
               </div>
               <div>
-                <h2 className="text-xl font-black text-base-content uppercase tracking-tighter">History</h2>
-                <p className="text-[9px] font-bold text-base-content/20 uppercase tracking-[0.2em]">Central Database</p>
+                <h2 className="text-xl font-black text-white uppercase tracking-tighter">History</h2>
+                <p className="text-[9px] font-bold text-white/40 uppercase tracking-[0.2em]">Central Database</p>
               </div>
             </div>
             
@@ -80,12 +79,12 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ history, onClose, onSelect,
               {history.length > 0 && (
                 <button 
                   onClick={onClearAll}
-                  className="btn btn-ghost btn-xs text-[9px] font-black uppercase tracking-widest text-red-500/50 hover:text-red-500 hover:bg-red-500/10 rounded-full"
+                  className="btn btn-ghost btn-xs text-[9px] font-black uppercase tracking-widest text-red-500 hover:text-red-600 hover:bg-red-500/10 rounded-full"
                 >
                   Clear All
                 </button>
               )}
-              <button onClick={onClose} className="btn btn-circle btn-sm btn-ghost bg-base-content/5 border border-base-content/10 text-base-content">
+              <button onClick={onClose} className="btn btn-circle btn-sm btn-ghost bg-base-content/10 border border-base-content/20 text-white">
                 <X size={18} />
               </button>
             </div>
@@ -96,11 +95,11 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ history, onClose, onSelect,
               <input 
                 type="text" 
                 placeholder="Search database..." 
-                className="w-full bg-base-content/5 border border-base-content/10 rounded-full py-2.5 pl-10 pr-4 text-[11px] font-bold uppercase tracking-widest focus:border-primary focus:outline-none transition-all placeholder:text-base-content/30 text-base-content"
+                className="w-full bg-base-content/5 border border-base-content/20 rounded-full py-2.5 pl-10 pr-4 text-[11px] font-bold uppercase tracking-widest focus:border-primary focus:outline-none transition-all placeholder:text-white/40 text-white"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-base-content/20" size={14} />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={14} />
             </div>
             
             <div className="flex gap-1 overflow-x-auto no-scrollbar pb-1 md:pb-0">
@@ -108,7 +107,7 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ history, onClose, onSelect,
                  <button
                    key={tab.id}
                    onClick={() => setCategory(tab.id)}
-                   className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap transition-all ${category === tab.id ? 'bg-primary text-primary-content shadow-lg' : 'bg-base-content/5 text-base-content/40 hover:bg-base-content/10 hover:text-base-content'}`}
+                   className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap transition-all ${category === tab.id ? 'bg-primary text-primary-content shadow-lg' : 'bg-base-content/10 text-white/70 hover:bg-base-content/20 hover:text-white'}`}
                  >
                    {tab.icon}
                    {tab.label}
@@ -129,9 +128,42 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ history, onClose, onSelect,
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
                     key={item.id}
-                    className="group flex flex-col rounded-2xl bg-base-100 border border-base-content/5 overflow-hidden hover:border-primary/30 transition-all hover:translate-y-[-2px] hover:shadow-xl hover:shadow-primary/5"
+                    className="group flex flex-col rounded-2xl bg-base-100 border border-base-content/10 overflow-hidden hover:border-primary/30 transition-all hover:translate-y-[-2px] hover:shadow-xl hover:shadow-primary/5"
                   >
                     <div className="aspect-video relative overflow-hidden bg-base-300">
+                      {/* Confirmation Overlay for History Modal */}
+                      <AnimatePresence>
+                        {deletingId === item.id && (
+                          <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 z-40 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-4 text-center space-y-3"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <AlertTriangle className="text-red-500" size={24} />
+                            <p className="text-[10px] font-black text-white uppercase tracking-widest">Remove this entry?</p>
+                            <div className="flex gap-2 w-full">
+                              <button 
+                                onClick={() => {
+                                  onRemove(item.id);
+                                  setDeletingId(null);
+                                }}
+                                className="flex-1 bg-red-500 text-white py-2 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-red-600 transition-colors shadow-lg"
+                              >
+                                Delete
+                              </button>
+                              <button 
+                                onClick={() => setDeletingId(null)}
+                                className="flex-1 bg-white/10 text-white py-2 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-white/20 transition-colors"
+                              >
+                                Back
+                              </button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
                       <img src={item.image} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all duration-700" alt="" onError={(e) => (e.target as HTMLImageElement).src = "https://placehold.co/400x225/222/555?text=No+Preview"} />
                       <div className="absolute inset-0 bg-gradient-to-t from-base-100 to-transparent" />
                       
@@ -142,29 +174,33 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ history, onClose, onSelect,
                       </div>
 
                       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all" onClick={() => onSelect(item)}>
-                        <div className="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center shadow-2xl scale-75 group-hover:scale-100 transition-transform cursor-pointer">
-                          <Play className="fill-current ml-1" size={16} />
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-2xl scale-75 group-hover:scale-100 transition-transform cursor-pointer ${item.source === 'anilist' ? 'bg-white text-black' : 'bg-primary text-primary-content'}`}>
+                          <Play className="fill-current ml-1" size={18} />
                         </div>
                       </div>
+                      
                       <button 
-                        onClick={() => onRemove(item.id)}
-                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/40 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeletingId(item.id);
+                        }}
+                        className="absolute top-2 right-2 w-10 h-10 rounded-full bg-black/60 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:text-red-500 hover:bg-red-500/20 transition-all z-20 shadow-xl"
                       >
-                        <Trash2 size={12} />
+                        <Trash2 size={16} />
                       </button>
                     </div>
                     
                     <div className="p-3 space-y-2">
                       <div className="flex items-center justify-between">
-                         <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${((item.source === 'watch' || item.mode === 'watch') ? 'text-emerald-500 bg-emerald-500/10' : 'text-orange-500 bg-orange-500/10')}`}>
-                           {(item.source === 'watch' || item.mode === 'watch') ? 'WATCH' : 'DOWNLOAD'}
+                         <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${((item.source === 'watch' || item.source === 'anilist' || item.mode === 'watch') ? 'text-emerald-500 bg-emerald-500/10' : 'text-orange-500 bg-orange-500/10')}`}>
+                           {(item.source === 'watch' || item.source === 'anilist' || item.mode === 'watch') ? 'WATCH' : 'DOWNLOAD'}
                          </span>
-                         <span className="text-[9px] font-bold text-base-content/30">
+                         <span className="text-[9px] font-bold text-white/60">
                            {new Date(item.timestamp).toLocaleDateString()}
                          </span>
                       </div>
-                      <h4 className="font-black text-[11px] text-base-content uppercase tracking-tight line-clamp-1 group-hover:text-primary transition-colors">{item.title}</h4>
-                      <p className="text-[9px] font-bold text-base-content/40 uppercase truncate">
+                      <h4 className="font-black text-[11px] text-white uppercase tracking-tight line-clamp-1 group-hover:text-primary transition-colors">{item.title}</h4>
+                      <p className="text-[9px] font-bold text-white/70 uppercase truncate">
                         {item.type === 'movie' ? 'Resume Playback' : (item.episodeTitle || `Episode ${item.episodeNumber}`)}
                       </p>
                     </div>
@@ -173,7 +209,7 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ history, onClose, onSelect,
               </AnimatePresence>
             </div>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-20 text-base-content">
+            <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-20 text-white">
               <History size={48} />
               <div className="space-y-1">
                 <p className="text-sm font-black uppercase tracking-tighter">No Records Found</p>
