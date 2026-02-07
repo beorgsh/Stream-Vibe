@@ -76,42 +76,57 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
     if (!anime.session) return;
     setIsLoading(true);
     try {
+      let epList: AnimeEpisode[] = [];
       if (anime.source === 'anilist') {
           const totalEps = anime.episodes || 1;
-          const genList: AnimeEpisode[] = Array.from({ length: totalEps }, (_, i) => ({
+          epList = Array.from({ length: totalEps }, (_, i) => ({
               episode: (i + 1).toString(),
               session: (i + 1).toString(),
               snapshot: anime.image,
               poster: anime.image,
               title: `Episode ${i + 1}`
           }));
-          setEpisodes(genList);
       } else if (anime.source === 'watch') {
         const response = await fetch(`https://anime-api-iota-six.vercel.app/api/episodes/${anime.session}`);
         const data = await response.json();
         if (data.success && data.results?.episodes) {
-          setEpisodes(data.results.episodes.map((item: any) => ({
+          epList = data.results.episodes.map((item: any) => ({
              episode: item.episode_no.toString(),
              session: item.id, 
              snapshot: item.image || item.thumbnail,
              poster: item.poster || anime.image,
              title: item.title,
              overview: item.description 
-          })));
+          }));
         }
       } else {
         const response = await fetch(`https://anime.apex-cloud.workers.dev/?method=series&session=${anime.session}`);
         const data = await response.json();
-        const epList = data.episodes || data.data || (Array.isArray(data) ? data : []);
-        setEpisodes(epList.map((item: any) => ({
+        const rawEps = data.episodes || data.data || (Array.isArray(data) ? data : []);
+        epList = rawEps.map((item: any) => ({
           episode: item.episode || item.episode_no || '?',
           session: item.session || item.id,
           snapshot: item.snapshot || item.image,
           poster: item.poster || anime.image,
           title: item.title
-        })));
+        }));
       }
-    } catch (error) { setEpisodes([{ episode: "1", session: "1", snapshot: anime.image, poster: anime.image, title: "Episode 1" }]); } finally { setIsLoading(false); }
+      
+      setEpisodes(epList);
+
+      // Auto-resume logic: If opened from history, jump straight to player
+      if (initialEpisodeId && epList.length > 0) {
+        const targetEp = epList.find(e => e.session.toString() === initialEpisodeId.toString());
+        if (targetEp) {
+          fetchEpisodeLinks(targetEp);
+        }
+      }
+
+    } catch (error) { 
+      setEpisodes([{ episode: "1", session: "1", snapshot: anime.image, poster: anime.image, title: "Episode 1" }]); 
+    } finally { 
+      setIsLoading(false); 
+    }
   };
 
   const filteredEpisodes = useMemo(() => {

@@ -12,6 +12,7 @@ interface MediaModalProps {
   initialResumeData?: {
     seasonNumber?: number;
     episodeNumber?: string | number;
+    episodeId?: string | number;
   } | null;
   isSaved?: boolean;
   onToggleSave?: () => void;
@@ -73,10 +74,15 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
         const res = await fetch(`https://api.themoviedb.org/3/${type}/${media.id}?api_key=${apiKey}`);
         const data = await res.json();
         setDetails(data);
+        
+        // Auto-resume logic for Movies
+        if (!isTv && initialResumeData) {
+          handleAction();
+        }
       } catch (e) { console.error(e); } finally { setIsLoading(false); }
     };
     fetchDetails();
-  }, [media.id, type, apiKey]);
+  }, [media.id, type, apiKey, isTv]);
 
   useEffect(() => {
     if (!isTv) return;
@@ -84,7 +90,16 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
       try {
         const epRes = await fetch(`https://api.themoviedb.org/3/tv/${media.id}/season/${selectedSeason}?api_key=${apiKey}`);
         const epData = await epRes.json();
-        setEpisodes(epData.episodes || []);
+        const epList = epData.episodes || [];
+        setEpisodes(epList);
+
+        // Auto-resume logic for TV Shows
+        if (initialResumeData?.episodeId && epList.length > 0) {
+          const targetEp = epList.find((e: TMDBEpisode) => e.id.toString() === initialResumeData.episodeId?.toString());
+          if (targetEp) {
+            handleAction(targetEp);
+          }
+        }
       } catch (e) { console.error(e); }
     };
     fetchEpisodes();
