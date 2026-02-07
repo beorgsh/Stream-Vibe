@@ -41,23 +41,29 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isPWA, current
   };
 
   const navButtons = [
-    { id: AppTab.HOME, label: 'Home', icon: Home, pwaOnly: false },
-    { id: AppTab.ANIME, label: 'Anime', icon: Play, pwaOnly: false },
-    { id: AppTab.GLOBAL, label: 'Global', icon: Globe, pwaOnly: false },
-    { id: AppTab.SAVED, label: 'Saved', icon: Bookmark, pwaOnly: false }
+    { id: AppTab.HOME, label: 'Home', icon: Home },
+    { id: AppTab.ANIME, label: 'Anime', icon: Play },
+    { id: AppTab.GLOBAL, label: 'Global', icon: Globe },
+    { id: AppTab.SAVED, label: 'Saved', icon: Bookmark }
   ];
+
+  // Exclude Home tab if in PWA mode to keep the interface streamlined
+  const filteredNavButtons = navButtons.filter(btn => !isPWA || btn.id !== AppTab.HOME);
 
   return (
     <>
       <nav className="sticky top-0 z-50 bg-base-100/90 backdrop-blur-xl border-b border-base-content/10 px-4 md:px-6 py-3 transition-all duration-300">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setActiveTab(AppTab.HOME)}>
+          <div 
+            className="flex items-center gap-3 cursor-pointer group" 
+            onClick={() => setActiveTab(isPWA ? AppTab.ANIME : AppTab.HOME)}
+          >
             <div className="w-8 h-8 md:w-10 md:h-10 bg-primary rounded-lg" style={{ maskImage: 'url(https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png)', maskSize: 'contain', WebkitMaskImage: 'url(https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png)', WebkitMaskSize: 'contain' }} />
             <span className="text-lg md:text-xl font-black uppercase tracking-tighter italic">StreamVibe</span>
           </div>
 
           <div className="hidden md:flex items-center gap-1 bg-base-content/5 rounded-full p-1">
-            {navButtons.map(({ id, label, icon: Icon }) => (
+            {filteredNavButtons.map(({ id, label, icon: Icon }) => (
               <button 
                 key={id}
                 onClick={() => setActiveTab(id)}
@@ -75,9 +81,10 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isPWA, current
         </div>
       </nav>
 
+      {/* Mobile Bottom Navigation */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-[100] bg-base-100/95 backdrop-blur-2xl border-t border-base-content/10 pb-6 pt-3 px-6">
         <div className="flex items-center justify-around">
-          {navButtons.map(({ id, label, icon: Icon }) => (
+          {filteredNavButtons.map(({ id, label, icon: Icon }) => (
             <button key={id} onClick={() => setActiveTab(id)} className={`flex flex-col items-center gap-1 transition-all ${activeTab === id ? 'text-primary scale-110' : 'opacity-50 text-base-content'}`}>
               <Icon size={20} />
               <span className="text-[8px] font-black uppercase tracking-widest">{label}</span>
