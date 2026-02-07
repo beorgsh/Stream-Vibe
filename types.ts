@@ -16,6 +16,7 @@ export interface AnimeEpisode {
   episode: string;
   session: string;
   snapshot: string;
+  poster?: string;
   title?: string;
   overview?: string;
 }

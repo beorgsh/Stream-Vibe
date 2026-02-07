@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { TMDBMedia, WatchHistoryItem, HistoryFilter } from '../types';
-import { Search, Loader2, Download, Play, Star, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Download, Play, Star, ChevronLeft, ChevronRight, Flame, Trophy, Film, Tv, BarChart3 } from 'lucide-react';
 import MediaCard from './MediaCard';
 import { SkeletonMediaCard, SkeletonBanner } from './Skeleton';
 import ContinueWatching from './ContinueWatching';
@@ -14,25 +14,14 @@ interface GlobalTabProps {
   onViewAllHistory: (filter?: HistoryFilter) => void;
 }
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.05 }
-  }
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0 }
-};
-
 const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistorySelect, onHistoryRemove, onViewAllHistory }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'watch' | 'download'>('watch');
   const [trending, setTrending] = useState<TMDBMedia[]>([]);
-  const [latestMovies, setLatestMovies] = useState<TMDBMedia[]>([]);
-  const [latestTV, setLatestTV] = useState<TMDBMedia[]>([]);
+  const [popMovies, setPopMovies] = useState<TMDBMedia[]>([]);
+  const [topMovies, setTopMovies] = useState<TMDBMedia[]>([]);
+  const [popTV, setPopTV] = useState<TMDBMedia[]>([]);
+  const [topTV, setTopTV] = useState<TMDBMedia[]>([]);
   const [searchResults, setSearchResults] = useState<TMDBMedia[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
@@ -55,17 +44,21 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
   const fetchGlobalData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [trendingRes, moviesRes, tvRes] = await Promise.all([
-        fetch(`${BASE_URL}/trending/all/week?api_key=${TMDB_KEY}`),
-        fetch(`${BASE_URL}/movie/now_playing?api_key=${TMDB_KEY}`),
-        fetch(`${BASE_URL}/tv/on_the_air?api_key=${TMDB_KEY}`)
-      ]);
-      const trendingData = await trendingRes.json();
-      const moviesData = await moviesRes.json();
-      const tvData = await tvRes.json();
-      setTrending(trendingData.results || []);
-      setLatestMovies(moviesData.results?.map((m: any) => ({ ...m, media_type: 'movie' })) || []);
-      setLatestTV(tvData.results?.map((m: any) => ({ ...m, media_type: 'tv' })) || []);
+      const endpoints = [
+        `${BASE_URL}/trending/all/week?api_key=${TMDB_KEY}`,
+        `${BASE_URL}/movie/popular?api_key=${TMDB_KEY}`,
+        `${BASE_URL}/movie/top_rated?api_key=${TMDB_KEY}`,
+        `${BASE_URL}/tv/popular?api_key=${TMDB_KEY}`,
+        `${BASE_URL}/tv/top_rated?api_key=${TMDB_KEY}`
+      ];
+      
+      const [trend, pm, tm, pt, tt] = await Promise.all(endpoints.map(url => fetch(url).then(r => r.json())));
+      
+      setTrending(trend.results || []);
+      setPopMovies(pm.results?.map((m: any) => ({ ...m, media_type: 'movie' })) || []);
+      setTopMovies(tm.results?.map((m: any) => ({ ...m, media_type: 'movie' })) || []);
+      setPopTV(pt.results?.map((m: any) => ({ ...m, media_type: 'tv' })) || []);
+      setTopTV(tt.results?.map((m: any) => ({ ...m, media_type: 'tv' })) || []);
     } catch (error) {
       console.error("Fetch Error:", error);
     } finally {
@@ -118,12 +111,31 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
     }
   };
 
+  const renderSection = (title: string, items: TMDBMedia[], icon: React.ReactNode) => {
+    if (!items.length) return null;
+    return (
+      <section className="space-y-4">
+        <div className="flex items-center gap-2 border-l-2 border-primary pl-3">
+          {icon}
+          <h2 className="text-sm md:text-lg font-black text-base-content uppercase tracking-tighter italic">{title}</h2>
+        </div>
+        <div className="flex gap-4 overflow-x-auto pb-6 custom-scrollbar snap-x snap-mandatory">
+          {items.map((media) => (
+            <div key={media.id} className="min-w-[140px] md:min-w-[200px] snap-start">
+              <MediaCard media={media} onClick={() => onSelectMedia(media, viewMode)} />
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  };
+
   return (
     <div className="space-y-6 md:space-y-10 pb-10">
       <section className="flex flex-col items-center space-y-4">
         <div className="text-center space-y-1">
           <h1 className="text-2xl md:text-3xl font-black text-base-content uppercase tracking-tighter italic">Global Discovery</h1>
-          <p className="text-[10px] uppercase font-bold text-base-content/60 tracking-[0.2em]">TMDB Cloud Access</p>
+          <p className="text-[10px] uppercase font-bold text-base-content/60 tracking-[0.2em]">Neural Satellite Uplink</p>
         </div>
 
         <div className="flex p-0.5 bg-base-content/10 rounded-full border border-base-content/20">
@@ -132,7 +144,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
         </div>
 
         <form onSubmit={handleSearch} className="relative w-full max-w-xl px-2">
-          <input type="text" placeholder="Search film & TV..." className="input input-sm h-10 md:h-12 w-full bg-base-content/5 border border-base-content/20 rounded-full pl-10 pr-24 text-xs font-medium focus:border-primary transition-colors text-base-content" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+          <input type="text" placeholder="Search film & TV archive..." className="input input-sm h-10 md:h-12 w-full bg-base-content/5 border border-base-content/20 rounded-full pl-10 pr-24 text-xs font-medium focus:border-primary transition-colors text-base-content" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
           <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-base-content/40" size={14} />
           <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 btn btn-primary btn-xs h-8 md:h-10 rounded-full px-4 font-black uppercase text-[8px]" disabled={isSearching}>Search</button>
         </form>
@@ -145,7 +157,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
               {isLoading ? (
                 <div className="space-y-12"><SkeletonBanner className="h-[250px] md:h-[400px]" /><div className="flex gap-4 overflow-hidden">{[...Array(6)].map((_, i) => <div key={i} className="min-w-[140px] md:min-w-[200px]"><SkeletonMediaCard /></div>)}</div></div>
               ) : (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-10">
                   {extendedSpotlights.length > 0 && (
                     <section className="space-y-3 relative group">
                       <div className="relative w-full rounded-2xl h-[250px] md:h-[400px] shadow-2xl border border-base-content/10 overflow-hidden bg-black">
@@ -181,13 +193,14 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                       </div>
                     </section>
                   )}
+
                   <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('global-watch')} title="Recently Played" />
-                  <section className="space-y-4">
-                    <h2 className="text-sm md:text-lg font-black text-base-content uppercase tracking-tighter border-l-2 border-primary pl-3">Global Trending</h2>
-                    <div className="flex gap-4 overflow-x-auto pb-6 no-scrollbar snap-x snap-mandatory">
-                      {trending.map((media) => (<div key={media.id} className="min-w-[140px] md:min-w-[200px] snap-start"><MediaCard media={media} onClick={() => onSelectMedia(media, viewMode)} /></div>))}
-                    </div>
-                  </section>
+
+                  {renderSection("Global Trending", trending, <Flame size={18} className="text-primary" />)}
+                  {renderSection("Popular Movies", popMovies, <Film size={18} className="text-primary" />)}
+                  {renderSection("Top Rated Cinema", topMovies, <Trophy size={18} className="text-primary" />)}
+                  {renderSection("Most Popular Shows", popTV, <Tv size={18} className="text-primary" />)}
+                  {renderSection("Top Rated Television", topTV, <BarChart3 size={18} className="text-primary" />)}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -195,7 +208,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
             <div className="space-y-8 md:space-y-12">
                <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('global-download')} title="Archive Access" />
                <section className="space-y-4">
-                 <h2 className="text-sm md:text-lg font-black text-base-content uppercase tracking-tighter border-l-2 border-primary pl-3">Cloud Resources</h2>
+                 <h2 className="text-sm md:text-lg font-black text-base-content uppercase tracking-tighter border-l-2 border-primary pl-3">Cloud Storage Search</h2>
                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
                    {trending.map((media) => (<MediaCard key={media.id} media={media} onClick={() => onSelectMedia(media, viewMode)} />))}
                  </div>
@@ -203,6 +216,18 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
             </div>
           )}
         </div>
+      )}
+
+      {(isSearching || searchResults.length > 0) && (
+        <section className="space-y-4">
+          <div className="flex items-center justify-between border-b border-base-content/10 pb-1">
+            <h2 className="text-sm font-black text-base-content uppercase tracking-tighter italic">Search Results ({searchResults.length})</h2>
+            <button onClick={() => setSearchResults([])} className="text-[8px] uppercase font-black text-base-content/50">Clear</button>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+            {searchResults.map((media) => (<MediaCard key={media.id} media={media} onClick={() => onSelectMedia(media, viewMode)} />))}
+          </div>
+        </section>
       )}
     </div>
   );

@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { AppTab, AnimeSeries, TMDBMedia, WatchHistoryItem, HistoryFilter } from './types';
-import Navbar from './components/Navbar';
-import HomeTab from './components/HomeTab';
-import AnimeTab from './components/AnimeTab';
-import GlobalTab from './components/GlobalTab';
-import SavedTab from './components/SavedTab';
-import DocsTab from './components/DocsTab';
-import AnimeModal from './components/AnimeModal';
-import MediaModal from './components/MediaModal';
-import AdBlockModal from './components/AdBlockModal';
-import HistoryModal from './components/HistoryModal';
-import NotFoundPage from './components/NotFoundPage';
+import { AppTab, AnimeSeries, TMDBMedia, WatchHistoryItem, HistoryFilter } from './types.ts';
+import Navbar from './components/Navbar.tsx';
+import HomeTab from './components/HomeTab.tsx';
+import AnimeTab from './components/AnimeTab.tsx';
+import GlobalTab from './components/GlobalTab.tsx';
+import SavedTab from './components/SavedTab.tsx';
+import DocsTab from './components/DocsTab.tsx';
+import AnimeModal from './components/AnimeModal.tsx';
+import MediaModal from './components/MediaModal.tsx';
+import AdBlockModal from './components/AdBlockModal.tsx';
+import HistoryModal from './components/HistoryModal.tsx';
+import NotFoundPage from './components/NotFoundPage.tsx';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Bookmark, CheckCircle2 } from 'lucide-react';
 

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { AnimeSeries, TMDBMedia } from '../types';
 import AnimeCard from './AnimeCard';
 import MediaCard from './MediaCard';
-import { Bookmark, Search, Filter, Tv, Clapperboard, MonitorPlay } from 'lucide-react';
+import { Bookmark, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface SavedTabProps {
@@ -25,7 +25,10 @@ const SavedTab: React.FC<SavedTabProps> = ({ items, onSelectAnime, onSelectMedia
   const [filter, setFilter] = useState<'all' | 'anime' | 'global'>('all');
 
   const filteredItems = useMemo(() => {
+    // Safety check: ensure item is an object before filtering
     return items.filter(item => {
+      if (!item || typeof item !== 'object') return false;
+
       const title = (item.title || item.name || '').toLowerCase();
       const matchesSearch = title.includes(search.toLowerCase());
       if (!matchesSearch) return false;
@@ -89,6 +92,7 @@ const SavedTab: React.FC<SavedTabProps> = ({ items, onSelectAnime, onSelectMedia
         >
             <AnimatePresence mode="popLayout">
                 {filteredItems.map((item) => {
+                    if (!item || typeof item !== 'object') return null;
                     const isAnime = 'session' in item && 'source' in item;
                     return (
                         <motion.div 

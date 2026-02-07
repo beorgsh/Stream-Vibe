@@ -36,10 +36,7 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isPWA, current
   ];
 
   const handleThemeSelect = (themeId: string) => {
-    if (onThemeChange) {
-      onThemeChange(themeId);
-    }
-    // Briefly keep modal open to show feedback, then close
+    if (onThemeChange) onThemeChange(themeId);
     setTimeout(() => setIsThemeModalOpen(false), 200);
   };
 
@@ -52,163 +49,58 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isPWA, current
 
   return (
     <>
-      <nav className="sticky top-0 z-50 bg-base-100/90 backdrop-blur-xl border-b border-base-content/10 px-4 md:px-6 py-3 md:py-4 transition-colors duration-500">
+      <nav className="sticky top-0 z-50 bg-base-100/90 backdrop-blur-xl border-b border-base-content/10 px-4 md:px-6 py-3 transition-all duration-300">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          {/* Logo Section */}
-          <div 
-            className="flex items-center gap-3 cursor-pointer group"
-            onClick={() => !isPWA && setActiveTab(AppTab.HOME)}
-          >
-            <div 
-              className="w-8 h-8 md:w-10 md:h-10 bg-primary shadow-lg shadow-primary/20 group-hover:rotate-12 transition-transform duration-500 rounded-lg"
-              style={{
-                maskImage: 'url(https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png)',
-                maskSize: 'contain',
-                maskRepeat: 'no-repeat',
-                maskPosition: 'center',
-                WebkitMaskImage: 'url(https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png)',
-                WebkitMaskSize: 'contain',
-                WebkitMaskRepeat: 'no-repeat',
-                WebkitMaskPosition: 'center'
-              }}
-            />
-            <span className="text-lg md:text-xl font-black tracking-tighter text-base-content uppercase italic">
-              <span className="md:hidden">SV</span>
-              <span className="hidden md:inline">Stream Vibe</span>
-            </span>
+          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setActiveTab(AppTab.HOME)}>
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-primary rounded-lg" style={{ maskImage: 'url(https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png)', maskSize: 'contain', WebkitMaskImage: 'url(https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png)', WebkitMaskSize: 'contain' }} />
+            <span className="text-lg md:text-xl font-black uppercase tracking-tighter italic">StreamVibe</span>
           </div>
 
-          {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-1 bg-base-content/5 rounded-full p-1 border border-base-content/10">
-            {navButtons.map(({ id, label, icon: Icon }) => {
-              if (id === AppTab.HOME && isPWA) return null;
-              
-              const isActive = activeTab === id;
-              return (
-                <button 
-                  key={id}
-                  onClick={() => setActiveTab(id)}
-                  className={`px-6 py-2.5 rounded-full flex items-center gap-2 transition-all duration-300 ${isActive ? 'bg-primary text-primary-content shadow-lg scale-105' : 'text-base-content/60 hover:text-base-content hover:bg-base-content/10'}`}
-                >
-                  <Icon size={14} className={isActive ? 'fill-current' : ''} />
-                  <span className="text-[11px] font-black uppercase tracking-wider">{label}</span>
-                </button>
-              );
-            })}
+          <div className="hidden md:flex items-center gap-1 bg-base-content/5 rounded-full p-1">
+            {navButtons.map(({ id, label, icon: Icon }) => (
+              <button 
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className={`px-6 py-2 rounded-full flex items-center gap-2 transition-all ${activeTab === id ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/60 hover:text-base-content hover:bg-base-content/10'}`}
+              >
+                <Icon size={14} />
+                <span className="text-[10px] font-black uppercase tracking-wider">{label}</span>
+              </button>
+            ))}
           </div>
 
-          {/* Theme Palette Toggle */}
-          <div className="flex items-center">
-            <button 
-              onClick={() => setIsThemeModalOpen(true)}
-              className="btn btn-ghost btn-circle btn-sm text-base-content/80 hover:text-base-content"
-            >
-              <Palette size={20} />
-            </button>
-          </div>
+          <button onClick={() => setIsThemeModalOpen(true)} className="btn btn-ghost btn-circle btn-sm text-base-content/80">
+            <Palette size={20} />
+          </button>
         </div>
       </nav>
 
-      {/* Mobile Nav Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-[100] bg-base-100/90 backdrop-blur-2xl border-t border-base-content/10 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3 px-6 transition-colors duration-500">
-        <div className="flex items-center justify-around max-w-lg mx-auto">
-          {navButtons.map(({ id, label, icon: Icon }) => {
-            if (id === AppTab.HOME && isPWA) return null;
-            
-            const isActive = activeTab === id;
-            return (
-              <button
-                key={id}
-                onClick={() => setActiveTab(id)}
-                className={`flex flex-col items-center gap-1.5 transition-all duration-300 ${isActive ? 'scale-110 text-primary' : 'opacity-50 text-base-content'}`}
-              >
-                <div className={`relative px-6 py-2.5 rounded-2xl transition-all duration-300 ${isActive ? 'bg-primary/10' : ''}`}>
-                  <Icon size={20} className={isActive ? 'fill-current' : ''} />
-                  {isActive && <motion.div layoutId="nav-glow-mobile" className="absolute inset-0 bg-primary/20 blur-lg rounded-full" />}
-                </div>
-                <span className={`text-[9px] font-black uppercase tracking-widest`}>
-                  {label}
-                </span>
-              </button>
-            );
-          })}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-[100] bg-base-100/95 backdrop-blur-2xl border-t border-base-content/10 pb-6 pt-3 px-6">
+        <div className="flex items-center justify-around">
+          {navButtons.map(({ id, label, icon: Icon }) => (
+            <button key={id} onClick={() => setActiveTab(id)} className={`flex flex-col items-center gap-1 transition-all ${activeTab === id ? 'text-primary scale-110' : 'opacity-50 text-base-content'}`}>
+              <Icon size={20} />
+              <span className="text-[8px] font-black uppercase tracking-widest">{label}</span>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Theme Selection Modal */}
       <AnimatePresence>
         {isThemeModalOpen && (
-          <div 
-            className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
-            onClick={(e) => e.target === e.currentTarget && setIsThemeModalOpen(false)}
-          >
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="bg-base-100 border border-base-content/20 w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
-            >
-              {/* Modal Header */}
-              <div className="p-6 pb-4 border-b border-base-content/10 flex items-center justify-between bg-base-200/50">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-xl text-primary">
-                    <Palette size={20} />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-black text-base-content uppercase tracking-tighter">Neural Themes</h2>
-                    <p className="text-[9px] font-bold text-base-content/40 uppercase tracking-widest">Aesthetic Interface Vault</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setIsThemeModalOpen(false)}
-                  className="btn btn-circle btn-sm btn-ghost hover:bg-base-content/10"
-                >
-                  <X size={20} />
-                </button>
+          <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md" onClick={(e) => e.target === e.currentTarget && setIsThemeModalOpen(false)}>
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="bg-base-100 border border-base-content/20 w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+              <div className="p-6 border-b border-base-content/10 flex items-center justify-between">
+                <h2 className="text-lg font-black uppercase tracking-tighter">Neural Themes</h2>
+                <button onClick={() => setIsThemeModalOpen(false)} className="btn btn-circle btn-sm btn-ghost"><X size={20} /></button>
               </div>
-
-              {/* Theme Grid */}
-              <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 custom-scrollbar">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {themes.map((t) => {
-                    const isActive = currentTheme === t.id;
-                    const IconComponent = t.icon;
-                    return (
-                      <button 
-                        key={t.id}
-                        onClick={() => handleThemeSelect(t.id)}
-                        className={`group relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all duration-300 ${isActive ? 'bg-primary/5 border-primary shadow-lg' : 'bg-base-200/50 border-base-content/5 hover:border-base-content/20'}`}
-                      >
-                        {/* Theme Icon Preview */}
-                        <div className="w-10 h-10 flex items-center justify-center mb-3 rounded-xl bg-base-content/5 group-hover:bg-base-content/10 transition-colors shadow-inner">
-                          <IconComponent 
-                            size={24} 
-                            style={{ color: t.color }} 
-                            className="drop-shadow-sm filter" 
-                          />
-                        </div>
-
-                        <span className={`text-[10px] font-black uppercase tracking-widest text-center ${isActive ? 'text-primary' : 'text-base-content/60 group-hover:text-base-content'}`}>
-                          {t.name}
-                        </span>
-                        
-                        {isActive && (
-                          <motion.div 
-                            layoutId="activeThemeCheck"
-                            className="absolute top-2 right-2 text-primary"
-                          >
-                            <CheckCircle2 size={14} />
-                          </motion.div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Modal Footer */}
-              <div className="p-4 bg-base-200/50 border-t border-base-content/10 text-center">
-                 <p className="text-[8px] font-bold text-base-content/30 uppercase tracking-[0.3em]">Neural Interface Engine v4.1</p>
+              <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 sm:grid-cols-3 gap-3 custom-scrollbar">
+                {themes.map((t) => (
+                  <button key={t.id} onClick={() => handleThemeSelect(t.id)} className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all ${currentTheme === t.id ? 'bg-primary/5 border-primary' : 'bg-base-200 border-transparent hover:border-base-content/20'}`}>
+                    <t.icon size={24} style={{ color: t.color }} className="mb-2" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">{t.name}</span>
+                  </button>
+                ))}
               </div>
             </motion.div>
           </div>

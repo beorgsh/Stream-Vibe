@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Book, Code, Globe, Terminal, Play, Link, Server, Info, Layers, Cpu, Copy, CheckCircle2 } from 'lucide-react';
+import { Book, Code, Globe, Terminal, Play, Link, Server, Info, Layers, Cpu, Copy, CheckCircle2, MonitorPlay, Zap } from 'lucide-react';
 
 const DocsTab: React.FC = () => {
   const [previewId, setPreviewId] = useState('110972'); // Default to a popular anime ID for preview
@@ -39,22 +39,31 @@ const DocsTab: React.FC = () => {
         { path: "{tv/movie}/{id}", method: "GET", desc: "Detailed metadata for a specific title." },
         { path: "tv/{id}/season/{num}", method: "GET", desc: "Retrieve episode lists for TV seasons." }
       ]
-    },
-    {
-      title: "Archive Hub (Apex Cloud)",
-      base: "https://anime.apex-cloud.workers.dev/",
-      description: "Direct server-side mapping for high-quality archival access.",
-      endpoints: [
-        { path: "?method=search&query={q}", method: "GET", desc: "Search the cloud archive." },
-        { path: "?method=series&session={id}", method: "GET", desc: "Get archive session details." }
-      ]
     }
   ];
 
-  const embedRules = [
-    { name: "VidRock", url: "https://vidrock.net/{type}/{id}" },
-    { name: "VidNest", url: "https://vidnest.fun/{type}/{id}" },
-    { name: "VidSrc", url: "https://vidsrc.to/embed/{type}/{id}" }
+  const playerProtocols = [
+    {
+      title: "Global Multi-Node Protocol",
+      description: "Structures used for TMDB-based movie and TV content across multiple mirrors.",
+      providers: [
+        { name: "VidNest", url: "https://vidnest.fun/{type}/{id}" },
+        { name: "VidUp", url: "https://vidup.to/{type}/{id}?autoPlay=true" },
+        { name: "VidFast", url: "https://vidfast.pro/{type}/{id}?autoPlay=true" },
+        { name: "VidSrc.to", url: "https://vidsrc.to/embed/{type}/{id}" },
+        { name: "RiveStream", url: "https://rivestream.org/embed?type={type}&id={id}" },
+        { name: "VidZee", url: "https://player.vidzee.wtf/embed/{type}/{id}" },
+        { name: "VidSrc.wtf", url: "https://vidsrc.wtf/api/1/{type}/?id={id}" }
+      ]
+    },
+    {
+      title: "Anime Direct Link Protocol",
+      description: "Pahe and Iota based structures for high-performance anime delivery.",
+      providers: [
+        { name: "VidNest (Pahe)", url: "https://vidnest.fun/animepahe/{session}/{ep_id}/{type}" },
+        { name: "Iota Proxy", url: "https://anime-api-iota-six.vercel.app/api/stream?id={id}" }
+      ]
+    }
   ];
 
   return (
@@ -81,9 +90,9 @@ const DocsTab: React.FC = () => {
           <p className="text-[10px] text-base-content/60 leading-relaxed font-medium">Distributed content delivery network for low-latency streaming across all nodes.</p>
         </div>
         <div className="bg-base-200/50 p-6 rounded-3xl border border-base-content/10 space-y-3">
-          <div className="text-primary"><Layers size={20} /></div>
-          <h3 className="font-black text-xs uppercase tracking-widest">Schema</h3>
-          <p className="text-[10px] text-base-content/60 leading-relaxed font-medium">Standardized data objects for seamless integration between Anime and Global modules.</p>
+          <div className="text-primary"><MonitorPlay size={20} /></div>
+          <h3 className="font-black text-xs uppercase tracking-widest">Embedded Nodes</h3>
+          <p className="text-[10px] text-base-content/60 leading-relaxed font-medium">Multi-source redundancy for maximum availability of film and animation data.</p>
         </div>
       </section>
 
@@ -152,23 +161,54 @@ const DocsTab: React.FC = () => {
                         </AnimatePresence>
                       </div>
                     </div>
-
-                    <AnimatePresence>
-                      {copiedId === endpointId && (
-                        <motion.div 
-                          initial={{ x: '-100%' }}
-                          animate={{ x: '100%' }}
-                          transition={{ duration: 0.5 }}
-                          className="absolute inset-0 bg-primary/5 pointer-events-none"
-                        />
-                      )}
-                    </AnimatePresence>
                   </button>
                 );
               })}
             </div>
           </section>
         ))}
+
+        {/* Player Protocols Section */}
+        <div className="pt-10 border-t border-base-content/10 space-y-16">
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl font-black text-base-content uppercase tracking-tighter italic">Embedded Node Infrastructure</h2>
+            <p className="text-[10px] font-bold text-base-content/40 uppercase tracking-widest">Player API & Routing Mappings</p>
+          </div>
+
+          {playerProtocols.map((protocol, pIdx) => (
+            <section key={pIdx} className="space-y-6">
+              <div className="flex items-center gap-3 border-l-4 border-primary pl-4">
+                <div className="space-y-1">
+                  <h3 className="text-xl font-black text-base-content uppercase tracking-tight italic">{protocol.title}</h3>
+                  <p className="text-xs text-base-content/60">{protocol.description}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {protocol.providers.map((p, iIdx) => (
+                  <div key={iIdx} className="bg-base-200/50 p-6 rounded-3xl border border-base-content/10 group hover:border-primary/40 transition-all flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                      <div className="text-[10px] font-black uppercase text-primary tracking-widest">{p.name}</div>
+                      <Zap size={14} className="text-base-content/20 group-hover:text-primary transition-colors" />
+                    </div>
+                    <div className="bg-black/20 p-3 rounded-xl border border-base-content/5 overflow-hidden">
+                      <code className="text-[9px] font-mono text-base-content/60 break-all leading-relaxed group-hover:text-base-content transition-colors">
+                        {p.url}
+                      </code>
+                    </div>
+                    <button 
+                      onClick={() => copyToClipboard(p.url, `provider-${pIdx}-${iIdx}`)}
+                      className="btn btn-xs btn-ghost self-end rounded-full text-[8px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 flex items-center gap-1"
+                    >
+                      {copiedId === `provider-${pIdx}-${iIdx}` ? <CheckCircle2 size={10} className="text-emerald-500" /> : <Copy size={10} />}
+                      {copiedId === `provider-${pIdx}-${iIdx}` ? "Copied" : "Copy Template"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
       </div>
 
       {/* Embed Preview Section */}
@@ -201,7 +241,7 @@ const DocsTab: React.FC = () => {
 
           <div className="aspect-video w-full bg-black relative">
             <iframe 
-              src={previewType === 'anime' ? `https://vidnest.fun/animepahe/${previewId}/1/sub` : `https://vidrock.net/${previewType}/${previewId}`} 
+              src={previewType === 'anime' ? `https://vidnest.fun/animepahe/${previewId}/1/sub` : `https://vidnest.fun/${previewType}/${previewId}`} 
               className="w-full h-full border-none"
               allowFullScreen
             />
@@ -216,9 +256,7 @@ const DocsTab: React.FC = () => {
                </div>
              </div>
              <div className="flex items-center gap-1.5">
-               {embedRules.map((rule, idx) => (
-                 <div key={idx} className="badge badge-outline text-[8px] font-black uppercase px-3 py-3 border-base-content/10 opacity-50">{rule.name}</div>
-               ))}
+                <span className="badge badge-outline text-[8px] font-black uppercase px-3 py-3 border-base-content/10 opacity-50">Redundant Node Ready</span>
              </div>
           </div>
         </div>
