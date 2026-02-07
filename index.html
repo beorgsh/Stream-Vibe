@@ -21,11 +21,16 @@
       body {
         font-family: 'Inter', sans-serif;
         overflow-x: hidden;
-        transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease;
+        /* Hardware acceleration for the root container */
+        transform: translateZ(0);
+        backface-visibility: hidden;
       }
       
-      body *, body *:before, body *:after {
-        transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+      /* Optimized transitions: only on specific properties and elements */
+      .theme-transition {
+        transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                    color 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                    border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
       :root {
@@ -37,12 +42,12 @@
       
       /* Globally remove scroll indicators but keep scrolling functional */
       * {
-        -ms-overflow-style: none;  /* Internet Explorer 10+ */
-        scrollbar-width: none;  /* Firefox */
+        -ms-overflow-style: none;
+        scrollbar-width: none;
       }
       
       *::-webkit-scrollbar {
-        display: none; /* Safari and Chrome */
+        display: none;
       }
 
       @keyframes grid-move {
@@ -50,15 +55,27 @@
         100% { background-position: 0 24px; }
       }
       .animate-grid {
-        animation: grid-move 2s linear infinite;
+        animation: grid-move 3s linear infinite; /* Slowed down for CPU efficiency */
         background-image: 
-          linear-gradient(to right, color-mix(in srgb, currentColor, transparent 90%) 1px, transparent 1px),
-          linear-gradient(to bottom, color-mix(in srgb, currentColor, transparent 90%) 1px, transparent 1px);
+          linear-gradient(to right, color-mix(in srgb, currentColor, transparent 94%) 1px, transparent 1px),
+          linear-gradient(to bottom, color-mix(in srgb, currentColor, transparent 94%) 1px, transparent 1px);
         background-size: 24px 24px;
+        pointer-events: none;
       }
 
-      img, .animate-spin, .animate-ping, .animate-pulse {
-        transition: none !important;
+      /* Reduce motion for users who prefer it */
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+          scroll-behavior: auto !important;
+        }
+      }
+
+      /* Performance: hint the browser about upcoming transforms */
+      .will-change-modal {
+        will-change: transform, opacity;
       }
     </style>
   <script type="importmap">
@@ -74,7 +91,7 @@
 }
 </script>
 </head>
-  <body>
+  <body class="theme-transition bg-base-100 text-base-content">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

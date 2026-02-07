@@ -179,12 +179,20 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
   }, []);
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+    <motion.div 
+      initial={{ opacity: 0 }} 
+      animate={{ opacity: 1 }} 
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
       className="fixed inset-0 z-[1000] flex items-center justify-center p-2 bg-black/70 backdrop-blur-md"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-        className={`bg-base-100 border border-base-content/10 w-full max-w-5xl ${isPlaying ? 'h-auto' : 'max-h-[90vh] h-[90vh] md:h-auto'} rounded-[2.5rem] overflow-hidden relative flex flex-col shadow-2xl transition-all duration-300`}
+      <motion.div 
+        initial={{ scale: 0.95, opacity: 0, y: 10 }} 
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.95, opacity: 0, y: 10 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        className={`will-change-modal bg-base-100 border border-base-content/10 w-full max-w-5xl ${isPlaying ? 'h-auto' : 'max-h-[90vh] h-[90vh] md:h-auto'} rounded-[2.5rem] overflow-hidden relative flex flex-col shadow-2xl transition-all duration-300`}
       >
         <div className="absolute top-4 right-4 z-[60] flex gap-2">
             {!isPlaying && onToggleSave && (
@@ -209,7 +217,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                       </span>
                     </div>
 
-                    <div className="w-12" /> {/* Space balancer */}
+                    <div className="w-12" />
                 </div>
                 
                 <div className="aspect-video w-full bg-black relative">
@@ -218,7 +226,6 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                 </div>
 
                 <div className="p-4 flex flex-col items-center gap-4 bg-base-100 border-t border-base-content/10">
-                    {/* Navigation Buttons Row - Positioned "Top of the server" */}
                     {isTv && (
                         <div className="flex items-center justify-between w-full max-w-2xl px-2">
                             <button disabled={currentIndex <= 0} onClick={() => handleNavigateEpisode('prev')} className="btn btn-xs h-8 px-4 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2">

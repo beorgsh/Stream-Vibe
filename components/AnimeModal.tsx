@@ -25,7 +25,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
   const [episodes, setEpisodes] = useState<AnimeEpisode[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'info' | 'episodes'>('info');
-  const [displayImage, setDisplayImage] = useState<string>(anime.image);
   const [selectedEpisode, setSelectedEpisode] = useState<AnimeEpisode | null>(null);
   const [isLinksLoading, setIsLinksLoading] = useState(false);
   const [isIframeLoading, setIsIframeLoading] = useState(false);
@@ -231,12 +230,20 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
   }, []);
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+    <motion.div 
+      initial={{ opacity: 0 }} 
+      animate={{ opacity: 1 }} 
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
       className="fixed inset-0 z-[1000] flex items-center justify-center p-2 bg-black/70 backdrop-blur-md"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-        className={`bg-base-100 border border-base-content/10 w-full max-w-5xl ${selectedEpisode ? 'h-auto' : 'max-h-[90vh] h-[90vh] md:h-auto'} rounded-[2.5rem] overflow-hidden relative flex flex-col shadow-2xl transition-all duration-300`}
+      <motion.div 
+        initial={{ scale: 0.95, opacity: 0, y: 10 }} 
+        animate={{ scale: 1, opacity: 1, y: 0 }} 
+        exit={{ scale: 0.95, opacity: 0, y: 10 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        className={`will-change-modal bg-base-100 border border-base-content/10 w-full max-w-5xl ${selectedEpisode ? 'h-auto' : 'max-h-[90vh] h-[90vh] md:h-auto'} rounded-[2.5rem] overflow-hidden relative flex flex-col shadow-2xl transition-all duration-300`}
       >
         <div className="absolute top-4 right-4 z-[60] flex gap-2">
             {!selectedEpisode && onToggleSave && (
@@ -259,20 +266,19 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                 <span className="text-[7px] font-black text-base-content/40 uppercase tracking-widest truncate max-w-[150px]">{selectedEpisode.title || 'In Transmission'}</span>
               </div>
 
-              <div className="w-12" /> {/* Space balancer */}
+              <div className="w-12" />
             </div>
             
             <div className="w-full aspect-video bg-black relative">
               {iframeUrl ? (
                 <>
                   {(isIframeLoading || isLinksLoading) && <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-10"><div className="w-10 h-10 border-2 border-white/10 border-t-white rounded-full animate-spin" /><p className="mt-4 text-[8px] font-black uppercase tracking-widest text-white/60">Linking Node...</p></div>}
-                  <iframe key={iframeUrl} src={iframeUrl} allowFullScreen className={`w-full h-full border-none transition-opacity duration-700 ${isIframeLoading ? 'opacity-0' : 'opacity-100'}`} onLoad={() => setIsIframeLoading(false)} />
+                  <iframe key={iframeUrl} src={iframeUrl} allowFullScreen className={`w-full h-full border-none transition-opacity duration-300 ${isIframeLoading ? 'opacity-0' : 'opacity-100'}`} onLoad={() => setIsIframeLoading(false)} />
                 </>
               ) : <div className="w-full h-full flex items-center justify-center bg-black"><Loader2 size={24} className="text-white animate-spin" /></div>}
             </div>
 
             <div className="p-4 bg-base-100 border-t border-base-content/10 flex flex-col items-center gap-4">
-                 {/* Navigation Buttons Row - Positioned "Top of the server" */}
                  <div className="flex items-center justify-between w-full max-w-2xl px-2">
                     <button disabled={currentIndexInFlatList <= 0} onClick={() => handleNavigateEpisode('prev')} className="btn btn-xs h-8 px-4 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2">
                         <ChevronLeft size={14} />
@@ -308,8 +314,8 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
         ) : (
           <div className="flex flex-col md:flex-row h-full overflow-hidden bg-base-100 relative">
             <div className="w-full md:w-48 shrink-0 bg-base-200 relative border-r border-base-content/10">
-              <img src={displayImage} className="w-full h-full object-cover hidden md:block" />
-              <div className="md:hidden h-40 relative"><img src={displayImage} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-base-100 to-transparent" /></div>
+              <img src={anime.image} className="w-full h-full object-cover hidden md:block" />
+              <div className="md:hidden h-40 relative"><img src={anime.image} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-base-100 to-transparent" /></div>
             </div>
             <div className="flex-1 flex flex-col text-base-content overflow-hidden">
               <div className="p-6 pb-4">
@@ -362,7 +368,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                       {paginatedEpisodes.length > 0 ? paginatedEpisodes.map(ep => {
                         const isWatched = watchedEpisodes.has(ep.session);
                         const isHighlighted = lastHistoryItem?.episodeId === ep.session;
-                        // Prioritize poster then snapshot then series poster as thumbnail
                         const thumbImage = ep.poster || ep.snapshot || anime.image;
                         
                         return (
