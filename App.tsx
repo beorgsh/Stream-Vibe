@@ -5,6 +5,7 @@ import HomeTab from './components/HomeTab';
 import AnimeTab from './components/AnimeTab';
 import GlobalTab from './components/GlobalTab';
 import SavedTab from './components/SavedTab';
+import DocsTab from './components/DocsTab';
 import AnimeModal from './components/AnimeModal';
 import MediaModal from './components/MediaModal';
 import AdBlockModal from './components/AdBlockModal';
@@ -42,6 +43,11 @@ const App: React.FC = () => {
   });
 
   const TMDB_KEY = "7519c82c82dd0265f5b5d599e59e972a";
+
+  // Scroll to top whenever active tab changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [activeTab]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -215,6 +221,8 @@ const App: React.FC = () => {
             onToggleBookmark={toggleBookmark}
           />
         );
+      case AppTab.DOCS:
+        return <DocsTab />;
       default:
         return null;
     }
@@ -286,6 +294,7 @@ const App: React.FC = () => {
               setHistoryFilter('all');
               setShowHistoryModal(true);
             }}>History</a>
+            <a className="link link-hover text-xs font-black text-primary uppercase tracking-widest cursor-pointer mt-2" onClick={() => setActiveTab(AppTab.DOCS)}>Docs</a>
           </nav>
         </footer>
       </div>

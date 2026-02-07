@@ -1,7 +1,11 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { AppTab } from '../types';
-import { Play, Globe, Home, Palette, Bookmark } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { 
+  Play, Globe, Home, Palette, Bookmark, X, CheckCircle2, 
+  Moon, Crown, TreePine, Heart, Cloud, Gamepad2, Zap, 
+  Coffee, Sparkles, Ghost, Gem, Briefcase, Sun, Droplets 
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface NavbarProps {
   activeTab: AppTab;
@@ -12,43 +16,31 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isPWA, currentTheme, onThemeChange }) => {
-  const detailsRef = useRef<HTMLDetailsElement>(null);
+  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   
   const themes = [
-    { id: 'black', name: 'Dark Core' },
-    { id: 'luxury', name: 'Royal Gold' },
-    { id: 'forest', name: 'Matrix' },
-    { id: 'valentine', name: 'Sweetheart' },
-    { id: 'pastel', name: 'Soft Dream' },
-    { id: 'retro', name: 'Old School' },
-    { id: 'cyberpunk', name: 'Neon City' },
-    { id: 'coffee', name: 'Warm Brew' },
-    { id: 'midnight', name: 'Deep Sea' },
-    { id: 'dracula', name: 'Nightshade' },
-    { id: 'emerald', name: 'Jade' },
-    { id: 'corporate', name: 'Office' },
-    { id: 'synthwave', name: 'Retro Neon' },
-    { id: 'aqua', name: 'Ocean' }
+    { id: 'black', name: 'Dark Core', icon: Moon, color: '#ffffff' },
+    { id: 'luxury', name: 'Royal Gold', icon: Crown, color: '#e5c07b' },
+    { id: 'forest', name: 'Matrix', icon: TreePine, color: '#1eb854' },
+    { id: 'valentine', name: 'Sweetheart', icon: Heart, color: '#e96d7b' },
+    { id: 'pastel', name: 'Soft Dream', icon: Cloud, color: '#d1c1d7' },
+    { id: 'retro', name: 'Old School', icon: Gamepad2, color: '#ef9995' },
+    { id: 'cyberpunk', name: 'Neon City', icon: Zap, color: '#ff7598' },
+    { id: 'coffee', name: 'Warm Brew', icon: Coffee, color: '#db924b' },
+    { id: 'midnight', name: 'Deep Sea', icon: Sparkles, color: '#1d4ed8' },
+    { id: 'dracula', name: 'Nightshade', icon: Ghost, color: '#bd93f9' },
+    { id: 'emerald', name: 'Jade', icon: Gem, color: '#66cc8a' },
+    { id: 'corporate', name: 'Office', icon: Briefcase, color: '#4b6bfb' },
+    { id: 'synthwave', name: 'Retro Neon', icon: Sun, color: '#e779c1' },
+    { id: 'aqua', name: 'Ocean', icon: Droplets, color: '#09ecf3' }
   ];
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (detailsRef.current && !detailsRef.current.contains(event.target as Node)) {
-        detailsRef.current.removeAttribute('open');
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   const handleThemeSelect = (themeId: string) => {
     if (onThemeChange) {
       onThemeChange(themeId);
     }
-    if (detailsRef.current) {
-      detailsRef.current.removeAttribute('open');
-    }
+    // Briefly keep modal open to show feedback, then close
+    setTimeout(() => setIsThemeModalOpen(false), 200);
   };
 
   const navButtons = [
@@ -89,7 +81,6 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isPWA, current
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-1 bg-base-content/5 rounded-full p-1 border border-base-content/10">
             {navButtons.map(({ id, label, icon: Icon }) => {
-              // HIDE HOME IN PWA VERSION
               if (id === AppTab.HOME && isPWA) return null;
               
               const isActive = activeTab === id;
@@ -106,30 +97,14 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isPWA, current
             })}
           </div>
 
-          {/* Theme Dropdown */}
+          {/* Theme Palette Toggle */}
           <div className="flex items-center">
-              {onThemeChange && (
-                <details className="dropdown dropdown-end" ref={detailsRef}>
-                  <summary tabIndex={0} role="button" className="btn btn-ghost btn-circle btn-sm text-base-content/80 hover:text-base-content">
-                    <Palette size={20} />
-                  </summary>
-                  <ul tabIndex={0} className="dropdown-content z-[100] menu flex-col p-2 shadow-2xl bg-base-200 border border-base-content/10 rounded-box w-52 mt-4 max-h-64 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-primary/20">
-                    {themes.map((t) => (
-                      <li key={t.id} className="w-full">
-                        <button 
-                          onClick={() => handleThemeSelect(t.id)}
-                          className={`w-full text-[10px] font-black uppercase tracking-widest flex items-center justify-between px-4 py-3 rounded-lg mb-1 ${currentTheme === t.id ? 'bg-primary text-primary-content shadow-md' : 'text-base-content/80 hover:bg-base-content/10'}`}
-                        >
-                          {t.name}
-                          {currentTheme === t.id && (
-                            <motion.div layoutId="activeTheme" className="w-1.5 h-1.5 rounded-full bg-current" />
-                          )}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              )}
+            <button 
+              onClick={() => setIsThemeModalOpen(true)}
+              className="btn btn-ghost btn-circle btn-sm text-base-content/80 hover:text-base-content"
+            >
+              <Palette size={20} />
+            </button>
           </div>
         </div>
       </nav>
@@ -138,7 +113,6 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isPWA, current
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-[100] bg-base-100/90 backdrop-blur-2xl border-t border-base-content/10 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3 px-6 transition-colors duration-500">
         <div className="flex items-center justify-around max-w-lg mx-auto">
           {navButtons.map(({ id, label, icon: Icon }) => {
-            // HIDE HOME IN PWA VERSION
             if (id === AppTab.HOME && isPWA) return null;
             
             const isActive = activeTab === id;
@@ -160,6 +134,86 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isPWA, current
           })}
         </div>
       </div>
+
+      {/* Theme Selection Modal */}
+      <AnimatePresence>
+        {isThemeModalOpen && (
+          <div 
+            className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+            onClick={(e) => e.target === e.currentTarget && setIsThemeModalOpen(false)}
+          >
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-base-100 border border-base-content/20 w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+            >
+              {/* Modal Header */}
+              <div className="p-6 pb-4 border-b border-base-content/10 flex items-center justify-between bg-base-200/50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 rounded-xl text-primary">
+                    <Palette size={20} />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-black text-base-content uppercase tracking-tighter">Neural Themes</h2>
+                    <p className="text-[9px] font-bold text-base-content/40 uppercase tracking-widest">Aesthetic Interface Vault</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsThemeModalOpen(false)}
+                  className="btn btn-circle btn-sm btn-ghost hover:bg-base-content/10"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Theme Grid */}
+              <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 custom-scrollbar">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {themes.map((t) => {
+                    const isActive = currentTheme === t.id;
+                    const IconComponent = t.icon;
+                    return (
+                      <button 
+                        key={t.id}
+                        onClick={() => handleThemeSelect(t.id)}
+                        className={`group relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all duration-300 ${isActive ? 'bg-primary/5 border-primary shadow-lg' : 'bg-base-200/50 border-base-content/5 hover:border-base-content/20'}`}
+                      >
+                        {/* Theme Icon Preview */}
+                        <div className="w-10 h-10 flex items-center justify-center mb-3 rounded-xl bg-base-content/5 group-hover:bg-base-content/10 transition-colors shadow-inner">
+                          <IconComponent 
+                            size={24} 
+                            style={{ color: t.color }} 
+                            className="drop-shadow-sm filter" 
+                          />
+                        </div>
+
+                        <span className={`text-[10px] font-black uppercase tracking-widest text-center ${isActive ? 'text-primary' : 'text-base-content/60 group-hover:text-base-content'}`}>
+                          {t.name}
+                        </span>
+                        
+                        {isActive && (
+                          <motion.div 
+                            layoutId="activeThemeCheck"
+                            className="absolute top-2 right-2 text-primary"
+                          >
+                            <CheckCircle2 size={14} />
+                          </motion.div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 bg-base-200/50 border-t border-base-content/10 text-center">
+                 <p className="text-[8px] font-bold text-base-content/30 uppercase tracking-[0.3em]">Neural Interface Engine v4.1</p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </>
   );
 };

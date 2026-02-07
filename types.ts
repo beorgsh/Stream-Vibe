@@ -76,7 +76,8 @@ export enum AppTab {
   HOME = 'home',
   ANIME = 'anime',
   GLOBAL = 'global',
-  SAVED = 'saved'
+  SAVED = 'saved',
+  DOCS = 'docs'
 }
 
 export type HistoryFilter = 'all' | 'anime-watch' | 'anime-download' | 'global-watch' | 'global-download';
