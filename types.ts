@@ -1,3 +1,4 @@
+
 export interface AnimeSeries {
   title: string;
   image: string;
@@ -56,6 +57,8 @@ export interface TMDBEpisode {
   season_number: number;
   still_path: string;
   overview: string;
+  // Added vote_average property to fix type errors in MediaModal.tsx
+  vote_average: number;
 }
 
 export interface WatchHistoryItem {

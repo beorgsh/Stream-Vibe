@@ -10,6 +10,7 @@ interface AnimeModalProps {
   initialEpisodeId?: string;
   isSaved?: boolean;
   onToggleSave?: () => void;
+  setToast?: (toast: { message: string; type: 'success' | 'info' | 'error' } | null) => void;
 }
 
 interface WatchServer {
@@ -22,7 +23,7 @@ interface WatchServer {
 
 const EPISODES_PER_PAGE = 30;
 
-const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initialEpisodeId, isSaved, onToggleSave }) => {
+const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initialEpisodeId, isSaved, onToggleSave, setToast }) => {
   const [episodes, setEpisodes] = useState<AnimeEpisode[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'info' | 'episodes'>('info');
@@ -44,7 +45,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
   const [episodeSearch, setEpisodeSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
 
-  // Background lookup to interconnect Anilist player with other sources (Default, Archive, Schedule)
+  // Sync with Anilist DB for additional server redundancy
   useEffect(() => {
     if (anime.source === 'anilist') {
       setMappedAnilistId(anime.session);
@@ -53,7 +54,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
 
     const mapId = async () => {
       const searchTerms = [anime.title];
-      // If title contains brackets or extra info, try a cleaned version too
       if (anime.title.includes('(')) searchTerms.push(anime.title.split('(')[0].trim());
       
       for (const term of searchTerms) {
@@ -70,10 +70,10 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
           const id = data?.data?.Media?.id;
           if (id) {
             setMappedAnilistId(id.toString());
-            break; // Found it!
+            break;
           }
         } catch (e) {
-          console.warn(`Interconnection lookup failed for term: ${term}`, e);
+          console.warn(`Anilist node lookup failed for term: ${term}`, e);
         }
       }
     };
@@ -84,8 +84,8 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
     const sub = [...watchServers.filter(s => s.type === 'sub')];
     const dub = [...watchServers.filter(s => s.type === 'dub')];
 
-    // Inject hybrid Anilist node if ID is mapped and it's not already an Anilist source
-    if (mappedAnilistId && anime.source !== 'anilist') {
+    // Inject Anilist Server as a "Hybrid" redundancy node
+    if (mappedAnilistId) {
       const hybridServerSub: WatchServer = { 
         type: 'sub', 
         data_id: 'hybrid-anilist-sub', 
@@ -101,13 +101,12 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
         isHybrid: true 
       };
 
-      // Add if not already present (prevents duplicates during re-renders)
-      if (!sub.some(s => s.data_id === 'hybrid-anilist-sub')) sub.push(hybridServerSub);
-      if (!dub.some(s => s.data_id === 'hybrid-anilist-dub')) dub.push(hybridServerDub);
+      if (!sub.some(s => s.serverName.includes('Anilist Core'))) sub.push(hybridServerSub);
+      if (!dub.some(s => s.serverName.includes('Anilist Core'))) dub.push(hybridServerDub);
     }
 
     return { sub, dub };
-  }, [watchServers, mappedAnilistId, anime.source]);
+  }, [watchServers, mappedAnilistId]);
 
   useEffect(() => {
     const savedHistory = localStorage.getItem('sv_watch_history_v2');
@@ -137,16 +136,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
     setIsLoading(true);
     try {
       let epList: AnimeEpisode[] = [];
-      if (anime.source === 'anilist') {
-          const totalEps = anime.episodes || 1;
-          epList = Array.from({ length: totalEps }, (_, i) => ({
-              episode: (i + 1).toString(),
-              session: (i + 1).toString(),
-              snapshot: anime.image,
-              poster: anime.image,
-              title: `Episode ${i + 1}`
-          }));
-      } else if (anime.source === 'watch') {
+      if (anime.source === 'watch') {
         const response = await fetch(`https://anime-api-iota-six.vercel.app/api/episodes/${anime.session}`);
         const data = await response.json();
         if (data.success && data.results?.episodes) {
@@ -174,7 +164,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
       
       setEpisodes(epList);
 
-      // Auto-resume logic: If opened from history, jump straight to player
       if (initialEpisodeId && epList.length > 0) {
         const targetEp = epList.find(e => e.session.toString() === initialEpisodeId.toString());
         if (targetEp) {
@@ -221,6 +210,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
     setIframeUrl(null);
     setActiveWatchServer(`${type}-${serverName}`);
     setActiveWatchType(type);
+    setServerCategory(type);
     setIsServerDropdownOpen(false);
     
     if (isManual && onPlay) onPlay(originalEp);
@@ -235,12 +225,9 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
         });
     }
 
-    // Handle Hybrid or Anilist Source VidNest player
-    if (isHybrid || anime.source === 'anilist') {
-        const targetId = isHybrid ? mappedAnilistId : anime.session;
-        // For VidNest/Pahe, we use the episode number (relative index), not the data session ID
+    if (isHybrid) {
         const epNum = originalEp.episode;
-        setIframeUrl(`https://vidnest.fun/animepahe/${targetId}/${epNum}/${type}`);
+        setIframeUrl(`https://vidnest.fun/animepahe/${mappedAnilistId}/${epNum}/${type}`);
         setIsLinksLoading(false);
         return;
     }
@@ -256,28 +243,32 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
     } catch (error) { setIsIframeLoading(false); } finally { setIsLinksLoading(false); }
   };
 
+  const handleCategoryChange = (newCategory: 'sub' | 'dub') => {
+    if (!selectedEpisode) return;
+
+    const availableTargets = watchServersByType[newCategory];
+    if (availableTargets.length === 0) {
+       if (setToast) setToast({ message: `No ${newCategory.toUpperCase()} audio tracks found`, type: 'error' });
+       return;
+    }
+
+    const currentServerName = activeWatchServer?.split('-')[1];
+    const match = availableTargets.find(s => s.serverName === currentServerName);
+
+    if (match) {
+        fetchStreamData(selectedEpisode.session, match.serverName, newCategory, selectedEpisode, true, match.isHybrid);
+    } else {
+        const fallback = availableTargets[0];
+        fetchStreamData(selectedEpisode.session, fallback.serverName, newCategory, selectedEpisode, true, fallback.isHybrid);
+    }
+  };
+
   const fetchEpisodeLinks = async (ep: AnimeEpisode) => {
     setIsLinksLoading(true);
     setIsIframeLoading(true); 
     setIframeUrl(null); 
     setSelectedEpisode(ep);
     
-    // Default fallback when mapping is available or source is Anilist
-    if (anime.source === 'anilist' || mappedAnilistId) {
-        const typeToUse = activeWatchType || 'sub';
-        setActiveWatchType(typeToUse);
-        
-        // If it's a native anilist source, we only have VidNest
-        if (anime.source === 'anilist') {
-            setWatchServers([{ type: 'sub', serverName: 'VidNest', data_id: 'vn', server_id: 'vn' }]);
-            setActiveWatchServer(`${typeToUse}-VidNest`);
-            setIframeUrl(`https://vidnest.fun/animepahe/${anime.session}/${ep.session}/${typeToUse}`);
-            setIsLinksLoading(false);
-            if (onPlay) onPlay(ep);
-            return;
-        }
-    }
-
     try {
       const typeToUse = activeWatchType || 'sub';
       const response = await fetch(`https://anime-api-iota-six.vercel.app/api/stream?id=${encodeURIComponent(ep.session)}&server=hd-1&type=${typeToUse}`);
@@ -286,6 +277,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
         const servers: WatchServer[] = data.results.servers || [];
         setWatchServers(servers);
         setActiveWatchType(typeToUse);
+        setServerCategory(typeToUse);
         let match = servers.find((s: any) => s.type === typeToUse);
         if (match) {
           setActiveWatchServer(`${typeToUse}-${match.serverName}`);
@@ -294,7 +286,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
               if (onPlay) onPlay(ep);
           } else setIsIframeLoading(false);
         } else {
-            // If no servers found for selected type, check if we can use hybrid instead
+            // Check if we can fall back to the Anilist Core server immediately
             if (mappedAnilistId) {
                 setActiveWatchServer(`${typeToUse}-VidNest (Anilist Core)`);
                 setIframeUrl(`https://vidnest.fun/animepahe/${mappedAnilistId}/${ep.episode}/${typeToUse}`);
@@ -303,7 +295,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
             setIsIframeLoading(false);
         }
       } else {
-          // Final fallback to Hybrid if API fails
           if (mappedAnilistId) {
               setActiveWatchServer(`${typeToUse}-VidNest (Anilist Core)`);
               setIframeUrl(`https://vidnest.fun/animepahe/${mappedAnilistId}/${ep.episode}/${typeToUse}`);
@@ -403,8 +394,8 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
 
                  <div className="flex flex-col md:flex-row items-center gap-4 w-full max-w-2xl justify-center">
                     <div className="flex p-0.5 bg-base-content/5 rounded-full border border-base-content/10">
-                        <button onClick={() => setServerCategory('sub')} className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${serverCategory === 'sub' ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/60'}`}>Sub</button>
-                        <button onClick={() => setServerCategory('dub')} className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${serverCategory === 'dub' ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/60'}`}>Dub</button>
+                        <button onClick={() => handleCategoryChange('sub')} className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${serverCategory === 'sub' ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/60'}`}>Sub</button>
+                        <button onClick={() => handleCategoryChange('dub')} className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${serverCategory === 'dub' ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/60'}`}>Dub</button>
                     </div>
                     <div className="relative flex-1 w-full md:max-w-[220px]" ref={serverDropdownRef}>
                         <button onClick={() => setIsServerDropdownOpen(!isServerDropdownOpen)} className="w-full flex items-center justify-between px-3 py-2 bg-base-content/5 border border-base-content/10 rounded-xl text-base-content transition-all hover:bg-base-content/10"><span className="text-[9px] font-black uppercase tracking-widest truncate">{activeWatchServer || 'Select Server'}</span><ChevronDown size={12} className={isServerDropdownOpen ? 'rotate-180 transition-transform' : 'transition-transform'} /></button>
@@ -418,7 +409,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                                     className={`w-full text-left px-3 py-2 rounded-lg text-[9px] font-bold uppercase flex items-center justify-between gap-2 ${activeWatchServer === `${serverCategory}-${srv.serverName}` ? 'bg-primary text-primary-content' : 'text-base-content hover:bg-base-content/10'}`}
                                   >
                                     <span className="truncate">{srv.serverName}</span>
-                                    {srv.isHybrid && <Cpu size={10} className="text-primary shrink-0" />}
+                                    {srv.isHybrid && <Cpu size={10} className="shrink-0" />}
                                   </button>
                                 ))}
                             </motion.div>

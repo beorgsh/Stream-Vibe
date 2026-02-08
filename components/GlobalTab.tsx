@@ -4,7 +4,7 @@ import { Search, Download, Play, Star, ChevronLeft, ChevronRight, Flame, Trophy,
 import MediaCard from './MediaCard';
 import { SkeletonMediaCard, SkeletonBanner } from './Skeleton';
 import ContinueWatching from './ContinueWatching';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 
 interface GlobalTabProps {
   onSelectMedia: (media: TMDBMedia, mode: 'watch' | 'download') => void;
@@ -25,6 +25,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
   const [searchResults, setSearchResults] = useState<TMDBMedia[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
+  const controls = useAnimation();
 
   const [spotlightIndex, setSpotlightIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
@@ -96,12 +97,15 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
     return spotlightIndex % originalSpotlights.length;
   }, [spotlightIndex, originalSpotlights]);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
+  const handleSearch = async (e: React.FormEvent | string) => {
+    if (typeof e !== 'string') e.preventDefault();
+    const query = typeof e === 'string' ? e : searchQuery;
+    if (!query.trim()) return;
+    
     setIsSearching(true);
+    
     try {
-      const response = await fetch(`${BASE_URL}/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(searchQuery)}`);
+      const response = await fetch(`${BASE_URL}/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}`);
       const data = await response.json();
       setSearchResults(data.results.filter((item: any) => item.media_type !== 'person'));
     } catch (error) {
@@ -109,6 +113,15 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
     } finally {
       setIsSearching(false);
     }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    controls.start({
+       scale: [1, 1.04, 1],
+       y: [0, -2, 0],
+       transition: { duration: 0.1, ease: "easeOut" }
+    });
   };
 
   const renderSection = (title: string, items: TMDBMedia[], icon: React.ReactNode) => {
@@ -135,7 +148,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
       <section className="flex flex-col items-center space-y-4">
         <div className="text-center space-y-1">
           <h1 className="text-2xl md:text-3xl font-black text-base-content uppercase tracking-tighter italic">Global Discovery</h1>
-          <p className="text-[10px] uppercase font-bold text-base-content/60 tracking-[0.2em]">Neural Satellite Uplink</p>
+          <p className="text-[10px] uppercase font-bold text-base-content/60 tracking-[0.2em]">Synchronized Database</p>
         </div>
 
         <div className="flex p-0.5 bg-base-content/10 rounded-full border border-base-content/20">
@@ -143,11 +156,23 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
            <button onClick={() => setViewMode('download')} className={`px-6 py-2 rounded-full transition-all ${viewMode === 'download' ? 'btn-primary text-primary-content shadow-lg' : 'text-base-content/60 hover:text-base-content'}`}><Download size={14} /></button>
         </div>
 
-        <form onSubmit={handleSearch} className="relative w-full max-w-xl px-2">
-          <input type="text" placeholder="Search film & TV archive..." className="input input-sm h-10 md:h-12 w-full bg-base-content/5 border border-base-content/20 rounded-full pl-10 pr-24 text-xs font-medium focus:border-primary transition-colors text-base-content" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-base-content/40" size={14} />
-          <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 btn btn-primary btn-xs h-8 md:h-10 rounded-full px-4 font-black uppercase text-[8px]" disabled={isSearching}>Search</button>
-        </form>
+        <div className="relative w-full max-w-xl px-2">
+          <motion.div animate={controls} className="relative w-full group">
+            <input 
+              type="text" 
+              placeholder="Search film & TV archive..." 
+              className="input input-sm h-10 md:h-12 w-full bg-base-content/5 border border-base-content/20 rounded-full pl-10 pr-24 text-xs font-medium focus:border-primary transition-all text-base-content relative z-10" 
+              value={searchQuery} 
+              onChange={handleInputChange} 
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSearch(searchQuery);
+              }}
+            />
+            <div className="absolute inset-0 rounded-full bg-base-content/5 -z-10 group-focus-within:bg-base-content/10 transition-colors" />
+            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-base-content/40 z-20" size={14} />
+            <button onClick={() => handleSearch(searchQuery)} className="absolute right-3 top-1/2 -translate-y-1/2 btn btn-primary btn-xs h-8 md:h-10 rounded-full px-4 font-black uppercase text-[8px] z-20" disabled={isSearching}>Search</button>
+          </motion.div>
+        </div>
       </section>
 
       {!searchResults.length && !isSearching && (

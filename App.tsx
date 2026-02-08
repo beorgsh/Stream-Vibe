@@ -37,7 +37,7 @@ const App: React.FC = () => {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all');
   const [isNotFound, setIsNotFound] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
   
   const [resumeData, setResumeData] = useState<{
     episodeId?: string | number;
@@ -53,7 +53,6 @@ const App: React.FC = () => {
 
   const TMDB_KEY = "7519c82c82dd0265f5b5d599e59e972a";
 
-  // Effect to lock body scroll when any modal is open
   useEffect(() => {
     const isModalOpen = !!selectedAnime || !!selectedMedia || showAdBlockModal || showHistoryModal;
     if (isModalOpen) {
@@ -325,7 +324,7 @@ const App: React.FC = () => {
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
             className="fixed bottom-24 md:bottom-8 right-8 z-[3000]"
           >
-            <div className={`flex items-center gap-3 px-6 py-3 rounded-2xl shadow-2xl border backdrop-blur-xl ${toast.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-primary/10 border-primary/20 text-primary'}`}>
+            <div className={`flex items-center gap-3 px-6 py-3 rounded-2xl shadow-2xl border backdrop-blur-xl ${toast.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : toast.type === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-primary/10 border-primary/20 text-primary'}`}>
               {toast.type === 'success' ? <CheckCircle2 size={18} /> : <Bookmark size={18} />}
               <span className="text-xs font-black uppercase tracking-widest">{toast.message}</span>
             </div>
@@ -362,6 +361,7 @@ const App: React.FC = () => {
             initialEpisodeId={resumeData?.episodeId as string}
             isSaved={!!savedItems.find(i => i.session === selectedAnime.session)}
             onToggleSave={() => toggleBookmark(selectedAnime)}
+            setToast={setToast}
             onPlay={(ep) => {
             addToHistory({
                 id: selectedAnime.session,

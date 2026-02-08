@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { AnimeSeries, WatchHistoryItem, HistoryFilter } from '../types';
-import { Search, Loader2, RefreshCw, Play, Trophy, Zap, Flame, Heart, Star, Activity, CheckCircle, Download, Database, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Loader2, RefreshCw, Play, Star, Zap, Flame, Download, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import AnimeCard from './AnimeCard';
 import { SkeletonAnimeCard, SkeletonBanner } from './Skeleton';
 import ContinueWatching from './ContinueWatching';
 import ScheduleSection from './ScheduleSection';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 
 interface AnimeTabProps {
   onSelectAnime: (anime: AnimeSeries) => void;
@@ -30,47 +30,13 @@ const itemVariants = {
   show: { opacity: 1, y: 0 }
 };
 
-const MEDIA_FIELDS = `
-  id
-  title { romaji english native }
-  coverImage { large extraLarge }
-  bannerImage
-  description
-  episodes
-  status
-  format
-  averageScore
-`;
-
-const ANILIST_HOME_QUERY = `
-query {
-  trending: Page(page: 1, perPage: 15) {
-    media(type: ANIME, sort: [TRENDING_DESC, POPULARITY_DESC]) { ${MEDIA_FIELDS} }
-  }
-  popular: Page(page: 1, perPage: 15) {
-    media(type: ANIME, sort: [POPULARITY_DESC]) { ${MEDIA_FIELDS} }
-  }
-  latest: Page(page: 1, perPage: 15) {
-    media(type: ANIME, sort: [START_DATE_DESC], status: RELEASING) { ${MEDIA_FIELDS} }
-  }
-}
-`;
-
-const ANILIST_SEARCH_QUERY = `
-query ($search: String) {
-  Page(page: 1, perPage: 24) {
-    media(search: $search, type: ANIME, sort: [POPULARITY_DESC]) { ${MEDIA_FIELDS} }
-  }
-}
-`;
-
 const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySelect, onHistoryRemove, onViewAllHistory }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'watch' | 'download' | 'schedule'>('watch');
-  const [animeSource, setAnimeSource] = useState<'default' | 'anilist'>('default');
   const [searchResults, setSearchResults] = useState<AnimeSeries[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
+  const controls = useAnimation();
 
   const [watchHome, setWatchHome] = useState<{
     spotlights: AnimeSeries[];
@@ -83,21 +49,11 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
     latestEpisode: AnimeSeries[];
   } | null>(null);
 
-  const [anilistHome, setAnilistHome] = useState<{
-    spotlights: AnimeSeries[];
-    trending: AnimeSeries[];
-    popular: AnimeSeries[];
-    latest: AnimeSeries[];
-  } | null>(null);
-
   const [spotlightIndex, setSpotlightIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const autoPlayTimerRef = useRef<number | null>(null);
 
-  const activeSpotlights = useMemo(() => {
-    if (animeSource === 'anilist') return anilistHome?.spotlights || [];
-    return watchHome?.spotlights || [];
-  }, [animeSource, anilistHome, watchHome]);
+  const activeSpotlights = useMemo(() => watchHome?.spotlights || [], [watchHome]);
 
   const extendedSpotlights = useMemo(() => {
     if (!activeSpotlights.length) return [];
@@ -107,89 +63,45 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
   const filteredHistory = useMemo(() => {
     return history.filter(h => {
       if (viewMode === 'download') return h.source === 'apex';
-      return h.source === (animeSource === 'anilist' ? 'anilist' : 'watch');
+      return h.source === 'watch';
     });
-  }, [history, viewMode, animeSource]);
-
-  const mapAnilistMedia = (item: any): AnimeSeries => ({
-    title: item.title.english || item.title.romaji || item.title.native,
-    image: item.coverImage.extraLarge || item.coverImage.large,
-    banner: item.bannerImage || item.coverImage.extraLarge || item.coverImage.large,
-    session: item.id.toString(),
-    description: item.description?.replace(/<[^>]*>?/gm, ''),
-    type: item.format,
-    status: item.status,
-    episodes: item.episodes,
-    score: item.averageScore ? (item.averageScore / 10).toFixed(1) : "N/A",
-    source: 'anilist'
-  });
-
-  const fetchAnilistDiscovery = async () => {
-    try {
-      const response = await fetch('https://graphql.anilist.co', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: ANILIST_HOME_QUERY })
-      });
-      const data = await response.json();
-      
-      const trending = data?.data?.trending?.media?.map(mapAnilistMedia) || [];
-      const popular = data?.data?.popular?.media?.map(mapAnilistMedia) || [];
-      const latest = data?.data?.latest?.media?.map(mapAnilistMedia) || [];
-
-      setAnilistHome({
-        spotlights: trending.slice(0, 5),
-        trending: trending,
-        popular: popular,
-        latest: latest
-      });
-    } catch (e) {
-      console.error("Anilist Discovery Error:", e);
-      setAnilistHome(null);
-    }
-  };
+  }, [history, viewMode]);
 
   const fetchAnimeList = useCallback(async () => {
     setIsLoading(true);
     try {
-      if (animeSource === 'anilist') {
-        await fetchAnilistDiscovery();
-        setWatchHome(null); 
-      } else {
-        const watchRes = await fetch(`https://anime-api-iota-six.vercel.app/api/`);
-        const watchData = await watchRes.json();
-        if (watchData.success && watchData.results) {
-          const mapIota = (item: any): AnimeSeries => ({
-            title: item.title,
-            image: item.poster || "",
-            banner: item.poster || "",
-            session: item.id,
-            description: item.description || "",
-            type: item.tvInfo?.showType || "TV",
-            episodes: item.tvInfo?.episodeInfo?.sub || item.tvInfo?.sub || item.tvInfo?.eps,
-            score: item.tvInfo?.rating || "N/A",
-            source: 'watch' as const
-          });
+      const response = await fetch(`https://anime-api-iota-six.vercel.app/api/`);
+      const data = await response.json();
+      if (data.success && data.results) {
+        const mapIota = (item: any): AnimeSeries => ({
+          title: item.title,
+          image: item.poster || "",
+          banner: item.poster || "",
+          session: item.id,
+          description: item.description || "",
+          type: item.tvInfo?.showType || "TV",
+          episodes: item.tvInfo?.episodeInfo?.sub || item.tvInfo?.sub || item.tvInfo?.eps,
+          score: item.tvInfo?.rating || "N/A",
+          source: 'watch' as const
+        });
 
-          setWatchHome({
-            spotlights: (watchData.results.spotlights || []).slice(0, 5).map(mapIota),
-            trending: (watchData.results.trending || []).map(mapIota),
-            topTenToday: (watchData.results.topTen?.today || []).map(mapIota),
-            topAiring: (watchData.results.topAiring || []).map(mapIota),
-            mostPopular: (watchData.results.mostPopular || []).map(mapIota),
-            mostFavorite: (watchData.results.mostFavorite || []).map(mapIota),
-            latestCompleted: (watchData.results.latestCompleted || []).map(mapIota),
-            latestEpisode: (watchData.results.latestEpisode || []).map(mapIota),
-          });
-          setAnilistHome(null);
-        }
+        setWatchHome({
+          spotlights: (data.results.spotlights || []).slice(0, 5).map(mapIota),
+          trending: (data.results.trending || []).map(mapIota),
+          topTenToday: (data.results.topTen?.today || []).map(mapIota),
+          topAiring: (data.results.topAiring || []).map(mapIota),
+          mostPopular: (data.results.mostPopular || []).map(mapIota),
+          mostFavorite: (data.results.mostFavorite || []).map(mapIota),
+          latestCompleted: (data.results.latestCompleted || []).map(mapIota),
+          latestEpisode: (data.results.latestEpisode || []).map(mapIota),
+        });
       }
     } catch (error) {
       console.error("Error fetching anime data:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [animeSource]);
+  }, []);
 
   useEffect(() => {
     fetchAnimeList();
@@ -210,27 +122,20 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
     };
   }, [activeSpotlights, viewMode, isAutoPlaying]);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
+  const handleSearch = async (e: React.FormEvent | string) => {
+    if (typeof e !== 'string') e.preventDefault();
+    const query = typeof e === 'string' ? e : searchQuery;
+    if (!query.trim()) return;
+    
     setIsSearching(true);
     setSearchResults([]);
     
     try {
-      if (animeSource === 'anilist') {
-        const response = await fetch('https://graphql.anilist.co', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: ANILIST_SEARCH_QUERY, variables: { search: searchQuery } })
-        });
-        const data = await response.json();
-        const results = data?.data?.Page?.media || [];
-        setSearchResults(results.map(mapAnilistMedia));
-      } else if (viewMode === 'download') {
-        const response = await fetch(`https://anime.apex-cloud.workers.dev/?method=search&query=${encodeURIComponent(searchQuery)}`);
+      if (viewMode === 'download') {
+        const response = await fetch(`https://anime.apex-cloud.workers.dev/?method=search&query=${encodeURIComponent(query)}`);
         const data = await response.json();
         const results = data.data || [];
-        const mappedResults: AnimeSeries[] = results.map((item: any) => ({
+        setSearchResults(results.map((item: any) => ({
           title: item.title,
           image: item.poster || item.snapshot || "",
           session: item.session,
@@ -239,13 +144,12 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
           episodes: item.episodes,
           score: item.score,
           source: 'apex'
-        }));
-        setSearchResults(mappedResults);
+        })));
       } else {
-        const response = await fetch(`https://anime-api-iota-six.vercel.app/api/search?keyword=${encodeURIComponent(searchQuery)}`);
+        const response = await fetch(`https://anime-api-iota-six.vercel.app/api/search?keyword=${encodeURIComponent(query)}`);
         const data = await response.json();
         if (data.success && data.results?.data) {
-          const mappedResults: AnimeSeries[] = data.results.data.map((item: any) => ({
+          setSearchResults(data.results.data.map((item: any) => ({
             title: item.title,
             image: item.poster || "",
             session: item.id,
@@ -253,8 +157,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
             episodes: item.tvInfo?.episodeInfo?.sub || item.tvInfo?.sub || item.tvInfo?.eps,
             score: item.tvInfo?.rating || "N/A",
             source: 'watch'
-          }));
-          setSearchResults(mappedResults);
+          })));
         }
       }
     } catch (error) {
@@ -262,6 +165,15 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
     } finally {
       setIsSearching(false);
     }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    controls.start({
+       scale: [1, 1.04, 1],
+       y: [0, -2, 0],
+       transition: { duration: 0.1, ease: "easeOut" }
+    });
   };
 
   const handlePrev = () => {
@@ -337,7 +249,6 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
             ))}
           </motion.div>
 
-          {/* Navigation Buttons */}
           <div className="absolute inset-y-0 left-0 flex items-center px-4 md:opacity-0 group-hover:opacity-100 transition-opacity">
             <button onClick={(e) => { e.stopPropagation(); handlePrev(); }} className="p-2 rounded-full bg-black/40 backdrop-blur-md text-white hover:bg-primary transition-colors border border-white/10 shadow-2xl">
               <ChevronLeft size={20} />
@@ -404,7 +315,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
           <h1 className="text-2xl md:text-3xl font-black text-base-content uppercase tracking-tighter italic">
             {viewMode === 'download' ? 'Archive Hub' : viewMode === 'schedule' ? 'Live Grid' : 'Discovery Node'}
           </h1>
-          <p className="text-[10px] uppercase font-bold text-base-content/60 tracking-[0.2em]">Neural Database Sync</p>
+          <p className="text-[10px] uppercase font-bold text-base-content/60 tracking-[0.2em]">Synchronized Database</p>
         </div>
 
         <div className="flex flex-col items-center gap-4 w-full">
@@ -431,33 +342,28 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                  <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Schedule</span>
                </button>
             </div>
-
-            {viewMode === 'watch' && (
-              <div className="flex p-0.5 bg-base-content/5 rounded-xl border border-base-content/10 w-full md:w-auto">
-                  <button onClick={() => setAnimeSource('default')} className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${animeSource === 'default' ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/60 hover:text-base-content'}`}>
-                    Default
-                  </button>
-                  <button onClick={() => setAnimeSource('anilist')} className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${animeSource === 'anilist' ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/60 hover:text-base-content'}`}>
-                    Anilist
-                  </button>
-              </div>
-            )}
         </div>
 
         {viewMode !== 'schedule' && (
-          <form onSubmit={handleSearch} className="relative w-full">
-            <input 
-              type="text" 
-              placeholder="Search database..."
-              className="input input-sm h-10 md:h-12 w-full bg-base-content/5 border-base-content/20 rounded-full pl-10 pr-24 text-xs font-medium focus:border-primary transition-all text-base-content placeholder:text-base-content/60"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/40" size={14} />
-            <button type="submit" className="absolute right-1 top-1/2 -translate-y-1/2 btn btn-primary btn-xs h-8 md:h-10 rounded-full px-4 font-black uppercase text-[8px]" disabled={isSearching}>
-              {isSearching ? <Loader2 className="animate-spin" size={12} /> : "Query"}
-            </button>
-          </form>
+          <div className="relative w-full">
+            <motion.div animate={controls} className="relative w-full group">
+              <input 
+                type="text" 
+                placeholder="Search database..."
+                className="input input-sm h-10 md:h-12 w-full bg-base-content/5 border-base-content/20 rounded-full pl-10 pr-24 text-xs font-medium focus:border-primary transition-all text-base-content placeholder:text-base-content/40 relative z-10"
+                value={searchQuery}
+                onChange={handleInputChange}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSearch(searchQuery);
+                }}
+              />
+              <div className="absolute inset-0 rounded-full bg-base-content/5 -z-10 group-focus-within:bg-base-content/10 transition-colors" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/40 z-20" size={14} />
+              <button onClick={() => handleSearch(searchQuery)} className="absolute right-1 top-1/2 -translate-y-1/2 btn btn-primary btn-xs h-8 md:h-10 rounded-full px-4 font-black uppercase text-[8px] z-20" disabled={isSearching}>
+                {isSearching ? <Loader2 className="animate-spin" size={12} /> : "Query"}
+              </button>
+            </motion.div>
+          </div>
         )}
       </section>
 
@@ -506,19 +412,13 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                     <motion.div key="content-watch" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
                       {renderSpotlight()}
                       <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('anime-watch')} title={`Watch History`} />
-                      {animeSource === 'default' && watchHome ? (
+                      {watchHome && (
                         <>
                           {renderHorizontalSection("Trending", watchHome.trending, <Flame size={18} className="text-primary" />)}
-                          {renderHorizontalSection("Most Popular", watchHome.mostPopular, <Star size={18} className="text-primary" />)}
+                          {renderHorizontalSection("Top Airing", watchHome.topAiring, <Star size={18} className="text-primary" />)}
                           {renderHorizontalSection("Latest Releases", watchHome.latestEpisode, <Zap size={18} className="text-primary" />)}
                         </>
-                      ) : anilistHome ? (
-                        <>
-                          {renderHorizontalSection("Anilist Trending", anilistHome.trending, <Flame size={18} className="text-primary" />)}
-                          {renderHorizontalSection("Popular Classics", anilistHome.popular, <Star size={18} className="text-primary" />)}
-                          {renderHorizontalSection("New Releases", anilistHome.latest, <Zap size={18} className="text-primary" />)}
-                        </>
-                      ) : null}
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -536,7 +436,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                       </div>
                     ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                        {(animeSource === 'anilist' ? (anilistHome?.trending || []) : (watchHome?.trending || [])).map((anime, idx) => (
+                        {(watchHome?.trending || []).map((anime, idx) => (
                           <div key={`${anime.session}-${idx}`}><AnimeCard anime={anime} onClick={() => onSelectAnime(anime)} /></div>
                         ))}
                       </div>
