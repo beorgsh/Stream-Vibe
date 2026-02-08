@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AnimeSeries, AnimeEpisode, WatchHistoryItem } from '../types';
-import { X, Play, Loader2, ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Bookmark, BookmarkCheck, CheckCircle2, Search, Hash, LayoutGrid, MonitorPlay, Layers, Cpu } from 'lucide-react';
+import { X, Play, Loader2, ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Bookmark, BookmarkCheck, CheckCircle2, Search, LayoutGrid, MonitorPlay, Cpu, Download, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface AnimeModalProps {
   anime: AnimeSeries;
   onClose: () => void;
+  mode?: 'watch' | 'download';
   onPlay?: (episode: AnimeEpisode) => void;
   initialEpisodeId?: string;
   isSaved?: boolean;
@@ -21,9 +22,14 @@ interface WatchServer {
   isHybrid?: boolean;
 }
 
+interface DownloadLink {
+  quality: string;
+  url: string;
+}
+
 const EPISODES_PER_PAGE = 30;
 
-const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initialEpisodeId, isSaved, onToggleSave, setToast }) => {
+const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch', onPlay, initialEpisodeId, isSaved, onToggleSave, setToast }) => {
   const [episodes, setEpisodes] = useState<AnimeEpisode[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'info' | 'episodes'>('info');
@@ -35,7 +41,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
   const [activeWatchType, setActiveWatchType] = useState<'sub' | 'dub'>('sub');
   const [serverCategory, setServerCategory] = useState<'sub' | 'dub'>('sub');
   const [isServerDropdownOpen, setIsServerDropdownOpen] = useState(false);
-  const [isPageModalOpen, setIsPageModalOpen] = useState(false);
   const [mappedAnilistId, setMappedAnilistId] = useState<string | null>(null);
   
   const serverDropdownRef = useRef<HTMLDivElement>(null);
@@ -45,7 +50,9 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
   const [episodeSearch, setEpisodeSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
 
-  // Sync with Anilist DB for additional server redundancy
+  const [downloadLinks, setDownloadLinks] = useState<DownloadLink[]>([]);
+  const [isFetchingDownloads, setIsFetchingDownloads] = useState(false);
+
   useEffect(() => {
     if (anime.source === 'anilist') {
       setMappedAnilistId(anime.session);
@@ -84,7 +91,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
     const sub = [...watchServers.filter(s => s.type === 'sub')];
     const dub = [...watchServers.filter(s => s.type === 'dub')];
 
-    // Inject Anilist Server as a "Hybrid" redundancy node
     if (mappedAnilistId) {
       const hybridServerSub: WatchServer = { 
         type: 'sub', 
@@ -143,65 +149,87 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
           epList = data.results.episodes.map((item: any) => ({
              episode: item.episode_no.toString(),
              session: item.id, 
-             snapshot: item.image || item.thumbnail,
+             snapshot: item.poster || item.thumbnail || anime.image,
              poster: item.poster || anime.image,
              title: item.title,
              overview: item.description 
           }));
         }
       } else {
-        const response = await fetch(`https://anime.apex-cloud.workers.dev/?method=series&session=${anime.session}`);
-        const data = await response.json();
-        const rawEps = data.episodes || data.data || (Array.isArray(data) ? data : []);
-        epList = rawEps.map((item: any) => ({
-          episode: item.episode || item.episode_no || '?',
-          session: item.session || item.id,
-          snapshot: item.snapshot || item.image,
+        // Apex Anime API - Logic to handle long-running series like One Piece (fetch all pages)
+        const firstRes = await fetch(`https://anime.apex-cloud.workers.dev/?method=series&session=${anime.session}&page=1`);
+        const firstData = await firstRes.json();
+        
+        const firstPageEps = firstData.episodes || firstData.data || (Array.isArray(firstData) ? firstData : []);
+        let aggregatedEps = [...firstPageEps];
+
+        // Apex metadata often includes total_pages or we can infer it
+        const totalApiPages = firstData.total_pages || firstData.total_page || (firstData.total ? Math.ceil(firstData.total / firstPageEps.length) : 1);
+        
+        if (totalApiPages > 1) {
+          const pagePromises = [];
+          // Safety cap at 50 pages to prevent infinite loops, though One Piece is usually covered in 30-40
+          const maxPages = Math.min(totalApiPages, 50); 
+          for (let p = 2; p <= maxPages; p++) {
+            pagePromises.push(fetch(`https://anime.apex-cloud.workers.dev/?method=series&session=${anime.session}&page=${p}`).then(r => r.json()));
+          }
+          const pageResults = await Promise.all(pagePromises);
+          pageResults.forEach(pData => {
+            const pEps = pData.episodes || pData.data || (Array.isArray(pData) ? pData : []);
+            aggregatedEps = [...aggregatedEps, ...pEps];
+          });
+        }
+
+        epList = aggregatedEps.map((item: any, idx: number) => ({
+          episode: item.episode || (idx + 1).toString(),
+          session: item.id || item.session || anime.session,
+          snapshot: item.poster || item.snapshot || item.image || anime.image,
           poster: item.poster || anime.image,
-          title: item.title
+          title: item.title || `Transmission ${item.episode || idx + 1}`
         }));
       }
-      
       setEpisodes(epList);
-
       if (initialEpisodeId && epList.length > 0) {
         const targetEp = epList.find(e => e.session.toString() === initialEpisodeId.toString());
-        if (targetEp) {
-          fetchEpisodeLinks(targetEp);
-        }
+        if (targetEp) handleAction(targetEp);
       }
-
     } catch (error) { 
-      setEpisodes([{ episode: "1", session: "1", snapshot: anime.image, poster: anime.image, title: "Episode 1" }]); 
+      console.error("Archive sync failed:", error);
+      setEpisodes([{ episode: "1", session: "1", snapshot: anime.image, poster: anime.image, title: "Archive Entry 1" }]); 
     } finally { 
       setIsLoading(false); 
     }
   };
 
-  const filteredEpisodes = useMemo(() => {
-    if (!episodeSearch.trim()) return episodes;
-    const query = episodeSearch.toLowerCase();
-    return episodes.filter(ep => 
-      ep.episode.includes(query) || 
-      (ep.title && ep.title.toLowerCase().includes(query))
-    );
-  }, [episodes, episodeSearch]);
-
-  const totalPages = useMemo(() => Math.ceil(filteredEpisodes.length / EPISODES_PER_PAGE), [filteredEpisodes]);
-  
-  const paginatedEpisodes = useMemo(() => {
-    const start = currentPage * EPISODES_PER_PAGE;
-    return filteredEpisodes.slice(start, start + EPISODES_PER_PAGE);
-  }, [filteredEpisodes, currentPage]);
-
-  const handleResume = () => {
-    if (!lastHistoryItem?.episodeId) {
-      if (episodes[0]) fetchEpisodeLinks(episodes[0]);
+  const handleAction = async (ep: AnimeEpisode) => {
+    if (mode === 'download') {
+      setSelectedEpisode(ep);
+      setDownloadLinks([]);
+      setIsFetchingDownloads(true);
+      if (setToast) setToast({ message: "Syncing Archival Node...", type: 'info' });
+      try {
+        const response = await fetch(`https://anime.apex-cloud.workers.dev/?method=episode&session=${anime.session}&ep=${ep.session}`);
+        const data = await response.json();
+        const rawLinks = Array.isArray(data) ? data : (data.data || data.results || []);
+        
+        if (Array.isArray(rawLinks) && rawLinks.length > 0) {
+          setDownloadLinks(rawLinks.map((l: any) => ({
+            quality: l.name || l.quality || l.title || 'Source Link',
+            url: l.link || l.url || l.file
+          })));
+        } else {
+          if (setToast) setToast({ message: "No active links in this sector", type: 'error' });
+        }
+      } catch (e) {
+        console.error("Decryption failed:", e);
+        if (setToast) setToast({ message: "Archival Link Interrupted", type: 'error' });
+      } finally {
+        setIsFetchingDownloads(false);
+      }
+      if (onPlay) onPlay(ep);
       return;
     }
-    const match = episodes.find(e => e.session === lastHistoryItem.episodeId);
-    if (match) fetchEpisodeLinks(match);
-    else if (episodes[0]) fetchEpisodeLinks(match || episodes[0]);
+    fetchEpisodeLinks(ep);
   };
 
   const fetchStreamData = async (epId: string, serverName: string, type: 'sub' | 'dub', originalEp: AnimeEpisode, isManual: boolean = false, isHybrid: boolean = false) => {
@@ -212,7 +240,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
     setActiveWatchType(type);
     setServerCategory(type);
     setIsServerDropdownOpen(false);
-    
     if (isManual && onPlay) onPlay(originalEp);
     if (isManual) {
         setWatchedEpisodes(prev => {
@@ -224,14 +251,12 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
             return next;
         });
     }
-
     if (isHybrid) {
         const epNum = originalEp.episode;
         setIframeUrl(`https://vidnest.fun/animepahe/${mappedAnilistId}/${epNum}/${type}`);
         setIsLinksLoading(false);
         return;
     }
-
     try {
       const response = await fetch(`https://anime-api-iota-six.vercel.app/api/stream?id=${encodeURIComponent(epId)}&server=${serverName.toLowerCase()}&type=${type}`);
       const data = await response.json();
@@ -245,19 +270,15 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
 
   const handleCategoryChange = (newCategory: 'sub' | 'dub') => {
     if (!selectedEpisode) return;
-
     const availableTargets = watchServersByType[newCategory];
     if (availableTargets.length === 0) {
-       if (setToast) setToast({ message: `No ${newCategory.toUpperCase()} audio tracks found`, type: 'error' });
+       if (setToast) setToast({ message: `No ${newCategory.toUpperCase()} tracks available`, type: 'error' });
        return;
     }
-
     const currentServerName = activeWatchServer?.split('-')[1];
     const match = availableTargets.find(s => s.serverName === currentServerName);
-
-    if (match) {
-        fetchStreamData(selectedEpisode.session, match.serverName, newCategory, selectedEpisode, true, match.isHybrid);
-    } else {
+    if (match) fetchStreamData(selectedEpisode.session, match.serverName, newCategory, selectedEpisode, true, match.isHybrid);
+    else {
         const fallback = availableTargets[0];
         fetchStreamData(selectedEpisode.session, fallback.serverName, newCategory, selectedEpisode, true, fallback.isHybrid);
     }
@@ -268,7 +289,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
     setIsIframeLoading(true); 
     setIframeUrl(null); 
     setSelectedEpisode(ep);
-    
     try {
       const typeToUse = activeWatchType || 'sub';
       const response = await fetch(`https://anime-api-iota-six.vercel.app/api/stream?id=${encodeURIComponent(ep.session)}&server=hd-1&type=${typeToUse}`);
@@ -286,7 +306,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
               if (onPlay) onPlay(ep);
           } else setIsIframeLoading(false);
         } else {
-            // Check if we can fall back to the Anilist Core server immediately
             if (mappedAnilistId) {
                 setActiveWatchServer(`${typeToUse}-VidNest (Anilist Core)`);
                 setIframeUrl(`https://vidnest.fun/animepahe/${mappedAnilistId}/${ep.episode}/${typeToUse}`);
@@ -313,11 +332,38 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
     }
   };
 
+  const filteredEpisodes = useMemo(() => {
+    if (!episodeSearch.trim()) return episodes;
+    const query = episodeSearch.toLowerCase();
+    return episodes.filter(ep => ep.episode.includes(query) || (ep.title && ep.title.toLowerCase().includes(query)));
+  }, [episodes, episodeSearch]);
+
+  const totalPages = useMemo(() => Math.ceil(filteredEpisodes.length / EPISODES_PER_PAGE), [filteredEpisodes]);
+  
+  const pageRanges = useMemo(() => {
+    const ranges = [];
+    for (let i = 0; i < totalPages; i++) {
+        const start = i * EPISODES_PER_PAGE + 1;
+        const end = Math.min((i + 1) * EPISODES_PER_PAGE, filteredEpisodes.length);
+        ranges.push({ index: i, label: `${start}-${end}` });
+    }
+    return ranges;
+  }, [totalPages, filteredEpisodes.length]);
+
+  const paginatedEpisodes = useMemo(() => {
+    const start = currentPage * EPISODES_PER_PAGE;
+    return filteredEpisodes.slice(start, start + EPISODES_PER_PAGE);
+  }, [filteredEpisodes, currentPage]);
+
   const currentIndexInFlatList = useMemo(() => selectedEpisode ? episodes.findIndex(e => e.session === selectedEpisode.session) : -1, [selectedEpisode, episodes]);
   
   const handleNavigateEpisode = (direction: 'prev' | 'next') => {
     const nextIndex = direction === 'next' ? currentIndexInFlatList + 1 : currentIndexInFlatList - 1;
-    if (nextIndex >= 0 && nextIndex < episodes.length) fetchEpisodeLinks(episodes[nextIndex]);
+    if (nextIndex >= 0 && nextIndex < episodes.length) {
+        const targetPage = Math.floor(nextIndex / EPISODES_PER_PAGE);
+        if (targetPage !== currentPage) setCurrentPage(targetPage);
+        handleAction(episodes[nextIndex]);
+    }
   };
 
   useEffect(() => {
@@ -329,21 +375,8 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
   }, []);
 
   return (
-    <motion.div 
-      initial={{ opacity: 0 }} 
-      animate={{ opacity: 1 }} 
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-[1000] flex items-center justify-center p-2 bg-black/70 backdrop-blur-md"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <motion.div 
-        initial={{ scale: 0.95, opacity: 0, y: 10 }} 
-        animate={{ scale: 1, opacity: 1, y: 0 }} 
-        exit={{ scale: 0.95, opacity: 0, y: 10 }}
-        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="will-change-modal bg-base-100 border border-base-content/10 w-full max-w-5xl h-fit max-h-[90vh] rounded-[2.5rem] overflow-hidden relative flex flex-col shadow-2xl transition-all duration-300"
-      >
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[1000] flex items-center justify-center p-2 bg-black/70 backdrop-blur-md" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }} className="will-change-modal bg-base-100 border border-base-content/10 w-full max-w-5xl h-fit max-h-[90vh] rounded-[2.5rem] overflow-hidden relative flex flex-col shadow-2xl">
         <div className="absolute top-4 right-4 z-[60] flex gap-2">
             {!selectedEpisode && onToggleSave && (
               <button onClick={onToggleSave} className={`btn btn-circle btn-xs md:btn-sm border border-base-content/20 ${isSaved ? 'bg-base-content text-base-100' : 'bg-base-100 text-base-content hover:bg-base-content/10'}`}>
@@ -352,72 +385,107 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
             )}
             <button onClick={onClose} className="btn btn-circle btn-xs md:btn-sm bg-base-100 border border-base-content/20 text-base-content hover:bg-base-content/10"><X size={14} /></button>
         </div>
-
         {selectedEpisode ? (
           <div className="flex flex-col w-full bg-base-100">
             <div className="flex items-center justify-between p-3 border-b border-base-content/10 gap-3">
-              <button onClick={() => setSelectedEpisode(null)} className="flex items-center gap-1.5 text-base-content/80 hover:text-base-content text-[9px] font-black uppercase tracking-widest transition-colors">
-                <ArrowLeft size={12} /> Hub
-              </button>
-              
+              <button onClick={() => { setSelectedEpisode(null); setDownloadLinks([]); }} className="flex items-center gap-1.5 text-base-content/80 hover:text-base-content text-[9px] font-black uppercase tracking-widest transition-colors"><ArrowLeft size={12} /> Hub</button>
               <div className="flex flex-col items-center">
                 <h2 className="text-[10px] font-black uppercase text-base-content truncate italic tracking-tighter max-w-[200px] text-center">{anime.title}</h2>
                 <span className="text-[7px] font-black text-base-content/40 uppercase tracking-widest truncate max-w-[150px]">{selectedEpisode.title || 'In Transmission'}</span>
               </div>
-
               <div className="w-12" />
             </div>
-            
-            <div className="w-full aspect-video bg-black relative">
-              {iframeUrl ? (
-                <>
-                  {(isIframeLoading || isLinksLoading) && <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-10"><div className="w-10 h-10 border-2 border-white/10 border-t-white rounded-full animate-spin" /><p className="mt-4 text-[8px] font-black uppercase tracking-widest text-white/60">Linking Node...</p></div>}
-                  <iframe key={iframeUrl} src={iframeUrl} allowFullScreen className={`w-full h-full border-none transition-opacity duration-300 ${isIframeLoading ? 'opacity-0' : 'opacity-100'}`} onLoad={() => setIsIframeLoading(false)} />
-                </>
-              ) : <div className="w-full h-full flex items-center justify-center bg-black"><Loader2 size={24} className="text-white animate-spin" /></div>}
-            </div>
-
-            <div className="p-4 bg-base-100 border-t border-base-content/10 flex flex-col items-center gap-4">
-                 <div className="flex items-center justify-between w-full max-w-2xl px-2">
-                    <button disabled={currentIndexInFlatList <= 0} onClick={() => handleNavigateEpisode('prev')} className="btn btn-xs h-8 px-4 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2">
-                        <ChevronLeft size={14} />
-                        <span className="text-[9px] font-black uppercase">Prev EP</span>
+            {mode === 'download' ? (
+              <div className="p-8 flex flex-col items-center justify-center space-y-8 min-h-[40vh]">
+                 <div className="flex flex-col items-center text-center space-y-2">
+                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-2 shadow-inner">
+                       <Download size={32} />
+                    </div>
+                    <h3 className="text-xl font-black uppercase italic tracking-tighter">Apex Archive Node</h3>
+                    <p className="text-[9px] font-bold text-base-content/40 uppercase tracking-[0.2em]">Select Direct Coordinate for E{selectedEpisode.episode}</p>
+                 </div>
+                 {isFetchingDownloads ? (
+                   <div className="flex flex-col items-center gap-4 py-10">
+                      <div className="relative">
+                        <div className="w-12 h-12 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <Cpu size={14} className="text-primary animate-pulse" />
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40">Decrypting Direct Links...</span>
+                   </div>
+                 ) : (
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
+                      {downloadLinks.length > 0 ? downloadLinks.map((link, idx) => (
+                        <a 
+                          key={idx} 
+                          href={link.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="btn btn-primary btn-outline border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content hover:border-primary rounded-2xl p-4 h-auto flex flex-col items-center gap-1 transition-all group shadow-sm hover:shadow-md"
+                        >
+                           <span className="text-[10px] font-black uppercase tracking-widest opacity-40 group-hover:opacity-100">Quality Variant</span>
+                           <span className="text-lg font-black italic tracking-tighter line-clamp-1 px-4">{link.quality}</span>
+                           <div className="flex items-center gap-1 mt-1">
+                              <ExternalLink size={10} className="opacity-40 group-hover:opacity-100" />
+                              <span className="text-[8px] font-black opacity-20 group-hover:opacity-40 uppercase tracking-widest">Apex Link</span>
+                           </div>
+                        </a>
+                      )) : (
+                        <div className="col-span-full flex flex-col items-center justify-center py-10 opacity-30 gap-3">
+                           <MonitorPlay size={40} className="animate-pulse" />
+                           <p className="text-[10px] font-black uppercase tracking-widest text-center">No Direct Links Detected for this transmission</p>
+                        </div>
+                      )}
+                   </div>
+                 )}
+                 <div className="flex items-center justify-between w-full max-w-lg pt-8 border-t border-base-content/5">
+                    <button disabled={currentIndexInFlatList <= 0} onClick={() => handleNavigateEpisode('prev')} className="btn btn-xs h-10 px-6 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2 font-black uppercase text-[9px] shadow-sm">
+                      <ChevronLeft size={14} /> Prev
                     </button>
-                    
-                    <div className="text-[10px] font-black uppercase tracking-widest text-base-content/40">EP {selectedEpisode.episode} / {episodes.length}</div>
-                    
-                    <button disabled={currentIndexInFlatList >= episodes.length - 1} onClick={() => handleNavigateEpisode('next')} className="btn btn-xs h-8 px-4 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2">
-                        <span className="text-[9px] font-black uppercase">Next EP</span>
-                        <ChevronRight size={14} />
+                    <span className="text-[9px] font-black uppercase text-base-content/30 italic">EP {selectedEpisode.episode} Archive</span>
+                    <button disabled={currentIndexInFlatList >= episodes.length - 1} onClick={() => handleNavigateEpisode('next')} className="btn btn-xs h-10 px-6 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2 font-black uppercase text-[9px] shadow-sm">
+                      Next <ChevronRight size={14} />
                     </button>
                  </div>
-
-                 <div className="flex flex-col md:flex-row items-center gap-4 w-full max-w-2xl justify-center">
-                    <div className="flex p-0.5 bg-base-content/5 rounded-full border border-base-content/10">
-                        <button onClick={() => handleCategoryChange('sub')} className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${serverCategory === 'sub' ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/60'}`}>Sub</button>
-                        <button onClick={() => handleCategoryChange('dub')} className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${serverCategory === 'dub' ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/60'}`}>Dub</button>
+              </div>
+            ) : (
+              <>
+                <div className="w-full aspect-video bg-black relative">
+                  {iframeUrl ? (
+                    <>
+                      {(isIframeLoading || isLinksLoading) && <div className="absolute inset-0 flex items-center justify-center bg-black z-10"><div className="w-10 h-10 border-2 border-white/10 border-t-white rounded-full animate-spin" /><p className="mt-4 text-[8px] font-black uppercase tracking-widest text-white/60">Linking Node...</p></div>}
+                      <iframe key={iframeUrl} src={iframeUrl} allowFullScreen className={`w-full h-full border-none transition-opacity duration-300 ${isIframeLoading ? 'opacity-0' : 'opacity-100'}`} onLoad={() => setIsIframeLoading(false)} />
+                    </>
+                  ) : <div className="w-full h-full flex items-center justify-center bg-black"><Loader2 size={24} className="text-white animate-spin" /></div>}
+                </div>
+                <div className="p-4 bg-base-100 border-t border-base-content/10 flex flex-col items-center gap-4">
+                    <div className="flex items-center justify-between w-full max-w-2xl px-2">
+                        <button disabled={currentIndexInFlatList <= 0} onClick={() => handleNavigateEpisode('prev')} className="btn btn-xs h-8 px-4 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2"><ChevronLeft size={14} /><span className="text-[9px] font-black uppercase">Prev EP</span></button>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-base-content/40">EP {selectedEpisode.episode} / {episodes.length}</div>
+                        <button disabled={currentIndexInFlatList >= episodes.length - 1} onClick={() => handleNavigateEpisode('next')} className="btn btn-xs h-8 px-4 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2"><span className="text-[9px] font-black uppercase">Next EP</span><ChevronRight size={14} /></button>
                     </div>
-                    <div className="relative flex-1 w-full md:max-w-[220px]" ref={serverDropdownRef}>
-                        <button onClick={() => setIsServerDropdownOpen(!isServerDropdownOpen)} className="w-full flex items-center justify-between px-3 py-2 bg-base-content/5 border border-base-content/10 rounded-xl text-base-content transition-all hover:bg-base-content/10"><span className="text-[9px] font-black uppercase tracking-widest truncate">{activeWatchServer || 'Select Server'}</span><ChevronDown size={12} className={isServerDropdownOpen ? 'rotate-180 transition-transform' : 'transition-transform'} /></button>
-                        <AnimatePresence>
-                          {isServerDropdownOpen && (
-                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute bottom-full left-0 mb-2 w-full bg-base-100 border border-base-content/20 rounded-xl p-1.5 z-[100] shadow-xl">
-                                {watchServersByType[serverCategory]?.map(srv => (
-                                  <button 
-                                    key={srv.data_id} 
-                                    onClick={() => fetchStreamData(selectedEpisode.session, srv.serverName, serverCategory, selectedEpisode, true, srv.isHybrid)} 
-                                    className={`w-full text-left px-3 py-2 rounded-lg text-[9px] font-bold uppercase flex items-center justify-between gap-2 ${activeWatchServer === `${serverCategory}-${srv.serverName}` ? 'bg-primary text-primary-content' : 'text-base-content hover:bg-base-content/10'}`}
-                                  >
-                                    <span className="truncate">{srv.serverName}</span>
-                                    {srv.isHybrid && <Cpu size={10} className="shrink-0" />}
-                                  </button>
-                                ))}
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                    <div className="flex flex-col md:flex-row items-center gap-4 w-full max-w-2xl justify-center">
+                        <div className="flex p-0.5 bg-base-content/5 rounded-full border border-base-content/10">
+                            <button onClick={() => handleCategoryChange('sub')} className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${serverCategory === 'sub' ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/60'}`}>Sub</button>
+                            <button onClick={() => handleCategoryChange('dub')} className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${serverCategory === 'dub' ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/60'}`}>Dub</button>
+                        </div>
+                        <div className="relative flex-1 w-full md:max-w-[220px]" ref={serverDropdownRef}>
+                            <button onClick={() => setIsServerDropdownOpen(!isServerDropdownOpen)} className="w-full flex items-center justify-between px-3 py-2 bg-base-content/5 border border-base-content/10 rounded-xl text-base-content transition-all hover:bg-base-content/10"><span className="text-[9px] font-black uppercase tracking-widest truncate">{activeWatchServer || 'Select Server'}</span><ChevronDown size={12} className={isServerDropdownOpen ? 'rotate-180 transition-transform' : 'transition-transform'} /></button>
+                            <AnimatePresence>
+                              {isServerDropdownOpen && (
+                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute bottom-full left-0 mb-2 w-full bg-base-100 border border-base-content/20 rounded-xl p-1.5 z-[100] shadow-xl">
+                                    {watchServersByType[serverCategory]?.map(srv => (
+                                      <button key={srv.data_id} onClick={() => fetchStreamData(selectedEpisode.session, srv.serverName, serverCategory, selectedEpisode, true, srv.isHybrid)} className={`w-full text-left px-3 py-2 rounded-lg text-[9px] font-bold uppercase flex items-center justify-between gap-2 ${activeWatchServer === `${serverCategory}-${srv.serverName}` ? 'bg-primary text-primary-content' : 'text-base-content hover:bg-base-content/10'}`}><span className="truncate">{srv.serverName}</span>{srv.isHybrid && <Cpu size={10} className="shrink-0" />}</button>
+                                    ))}
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                        </div>
                     </div>
-                 </div>
-            </div>
+                </div>
+              </>
+            )}
           </div>
         ) : (
           <div className="flex flex-col md:flex-row h-full overflow-hidden bg-base-100 relative">
@@ -437,80 +505,68 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
               <div className="flex-1 overflow-y-auto p-6 pt-0 custom-scrollbar">
                 {activeTab === 'info' ? (
                   <div className="space-y-6">
-                    <p className="text-base-content/80 text-xs md:text-sm leading-relaxed italic">{anime.description || "System data record offline for this entry."}</p>
-                    <button onClick={handleResume} className="btn btn-primary btn-sm rounded-full px-8 font-black uppercase text-[9px] tracking-widest hover:scale-105 transition-transform">
-                      {lastHistoryItem ? `Resume E${lastHistoryItem.episodeNumber}` : 'Initialize Transmission'}
-                    </button>
+                    <p className="text-base-content/80 text-sm md:text-lg leading-relaxed font-medium italic">{anime.description || "Archival documentation unavailable for this transmission."}</p>
+                    <div className="flex flex-wrap gap-2">
+                      <button onClick={() => { if (episodes[0]) handleAction(episodes[0]); }} className="btn btn-primary btn-sm rounded-full px-8 font-black uppercase text-[9px] tracking-widest hover:scale-105 transition-transform flex items-center gap-2 shadow-lg">
+                        {mode === 'download' ? <Download size={14} /> : <Play size={14} />}
+                        {lastHistoryItem ? (mode === 'download' ? `Archive E${lastHistoryItem.episodeNumber}` : `Resume E${lastHistoryItem.episodeNumber}`) : (mode === 'download' ? 'Init Archive' : 'Init Stream')}
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-6 pb-8">
                     <div className="sticky top-0 z-20 bg-base-100/80 backdrop-blur-md py-4 border-b border-base-content/5 flex flex-col md:flex-row gap-4">
                         <div className="relative flex-1">
-                            <input 
-                              type="text" 
-                              placeholder="Focus Episode (e.g. 104)"
-                              className="input input-sm h-10 w-full bg-base-content/5 border-base-content/10 rounded-xl pl-10 pr-4 text-[10px] font-black uppercase tracking-widest text-base-content focus:outline-none transition-all placeholder:opacity-40"
-                              value={episodeSearch}
-                              onChange={(e) => { setEpisodeSearch(e.target.value); setCurrentPage(0); }}
-                            />
+                            <input type="text" placeholder="Jump to transmission (e.g. 104)" className="input input-sm h-10 w-full bg-base-content/5 border-base-content/10 rounded-xl pl-10 pr-4 text-[10px] font-black uppercase tracking-widest text-base-content focus:outline-none transition-all placeholder:opacity-40" value={episodeSearch} onChange={(e) => { setEpisodeSearch(e.target.value); setCurrentPage(0); }} />
                             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/40" size={14} />
                         </div>
-                        
                         {totalPages > 1 && (
-                          <div className="flex items-center gap-2">
-                            <button 
-                              onClick={() => setIsPageModalOpen(true)}
-                              className="btn btn-xs h-10 rounded-xl bg-base-content/5 border-base-content/10 text-[9px] font-black uppercase tracking-widest px-4 flex items-center gap-2 hover:bg-base-content/10"
-                            >
-                              Range: {currentPage * EPISODES_PER_PAGE + 1} - {Math.min((currentPage + 1) * EPISODES_PER_PAGE, filteredEpisodes.length)}
-                              <LayoutGrid size={12} className="text-primary" />
-                            </button>
-                            <div className="hidden md:flex items-center gap-1.5 text-[8px] font-black text-base-content/40 uppercase tracking-widest">
-                               <Hash size={10} /> {filteredEpisodes.length} total
-                            </div>
+                          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-2 px-1 max-w-full">
+                            {pageRanges.map(range => (
+                                <button 
+                                    key={range.index}
+                                    onClick={() => setCurrentPage(range.index)}
+                                    className={`btn btn-xs h-10 min-w-[70px] rounded-xl border border-base-content/10 text-[8px] font-black uppercase tracking-widest px-3 flex items-center justify-center transition-all shrink-0 ${currentPage === range.index ? 'bg-primary text-primary-content shadow-lg scale-105 z-10' : 'bg-base-content/5 text-base-content/40 hover:bg-base-content/10'}`}
+                                >
+                                    {range.label}
+                                </button>
+                            ))}
                           </div>
                         )}
                     </div>
-                    
                     <div className="space-y-4">
-                      {paginatedEpisodes.length > 0 ? paginatedEpisodes.map(ep => {
+                      {isLoading ? (
+                        <div className="flex flex-col items-center justify-center py-20 gap-3 opacity-40">
+                           <Loader2 className="animate-spin" size={24} />
+                           <span className="text-[10px] font-black uppercase tracking-[0.3em]">Aggregating Archive Grid...</span>
+                        </div>
+                      ) : paginatedEpisodes.length > 0 ? paginatedEpisodes.map(ep => {
                         const isWatched = watchedEpisodes.has(ep.session);
                         const isHighlighted = lastHistoryItem?.episodeId === ep.session;
-                        const thumbImage = ep.poster || ep.snapshot || anime.image;
-                        
+                        // Use episode snapshot if valid, otherwise fallback to series image
+                        const thumbImage = ep.snapshot || ep.poster || anime.image;
                         return (
-                          <div 
-                            key={ep.session} 
-                            onClick={() => fetchEpisodeLinks(ep)} 
-                            className={`group flex items-center gap-4 p-3 rounded-2xl bg-base-content/5 border-2 transition-all cursor-pointer ${isHighlighted ? 'border-primary bg-primary/5' : 'border-transparent hover:border-base-content/10 hover:bg-base-content/10'}`}
-                          >
+                          <div key={ep.session} onClick={() => handleAction(ep)} className={`group flex items-center gap-4 p-3 rounded-2xl bg-base-content/5 border-2 transition-all cursor-pointer ${isHighlighted ? 'border-primary bg-primary/5' : 'border-transparent hover:border-base-content/10 hover:bg-base-content/10'}`}>
                             <div className="w-20 md:w-32 aspect-video rounded-xl bg-base-content/10 flex items-center justify-center overflow-hidden shrink-0 relative shadow-md">
-                               {thumbImage ? <img src={thumbImage} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="" /> : <div className="flex items-center justify-center w-full h-full bg-base-300"><Play size={14} className="text-base-content/20" /></div>}
+                               <img 
+                                 src={thumbImage} 
+                                 className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" 
+                                 alt="" 
+                                 onError={(e) => { (e.target as HTMLImageElement).src = anime.image; }}
+                               />
                                {isWatched && <div className="absolute top-1 right-1 bg-emerald-500 rounded-full p-0.5 shadow-xl"><CheckCircle2 size={8} className="text-white" /></div>}
-                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                  <MonitorPlay size={20} className="text-white" />
-                               </div>
+                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">{mode === 'download' ? <Download size={20} className="text-white" /> : <MonitorPlay size={20} className="text-white" />}</div>
                             </div>
                             <div className="flex-1 min-w-0">
                               <h4 className={`font-black text-[10px] md:text-xs uppercase truncate tracking-tight transition-colors ${isHighlighted ? 'text-primary' : 'text-base-content group-hover:text-primary'}`}>E{ep.episode}: {ep.title || `Transmission ${ep.episode}`}</h4>
                               <div className="flex items-center gap-2 mt-1">
-                                <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${isHighlighted ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-content/40'}`}>Episode {ep.episode}</span>
-                                {isHighlighted && <span className="text-[7px] font-black uppercase tracking-[0.2em] text-primary animate-pulse">Resume Point</span>}
+                                <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${isHighlighted ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-content/40'}`}>Sector {ep.episode}</span>
+                                {mode === 'download' && <span className="text-[7px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-1"><ExternalLink size={8} /> Archive</span>}
                               </div>
-                              {ep.overview && (
-                                <p className="text-[9px] text-base-content/50 line-clamp-2 mt-1 leading-relaxed italic border-l border-base-content/10 pl-2">
-                                  {ep.overview}
-                                </p>
-                              )}
                             </div>
                           </div>
                         );
-                      }) : (
-                        <div className="py-20 text-center opacity-20 space-y-2">
-                            <Search size={32} className="mx-auto" />
-                            <p className="text-[10px] font-black uppercase tracking-widest">No Transmissions Found</p>
-                        </div>
-                      )}
+                      }) : <div className="py-20 text-center opacity-20 space-y-2"><Search size={32} className="mx-auto" /><p className="text-[10px] font-black uppercase tracking-widest">Sector Empty</p></div>}
                     </div>
                   </div>
                 )}
@@ -518,58 +574,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
             </div>
           </div>
         )}
-
-        <AnimatePresence>
-          {isPageModalOpen && (
-            <motion.div 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 z-[2000] bg-base-100/60 backdrop-blur-xl flex items-center justify-center p-4 md:p-10"
-              onClick={() => setIsPageModalOpen(false)}
-            >
-              <motion.div 
-                initial={{ scale: 0.9, y: 20, opacity: 0 }}
-                animate={{ scale: 1, y: 0, opacity: 1 }}
-                exit={{ scale: 0.9, y: 20, opacity: 0 }}
-                className="bg-base-100 border border-base-content/10 rounded-[2.5rem] w-full max-w-2xl max-h-[70vh] flex flex-col shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="p-6 border-b border-base-content/5 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-xl font-black uppercase italic tracking-tighter">Transmission Range</h3>
-                    <p className="text-[9px] font-bold text-base-content/40 uppercase tracking-[0.2em]">Select Hub Coordinates</p>
-                  </div>
-                  <button onClick={() => setIsPageModalOpen(false)} className="btn btn-circle btn-sm btn-ghost bg-base-content/5"><X size={18} /></button>
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-6 grid grid-cols-2 sm:grid-cols-3 gap-3 no-scrollbar">
-                  {[...Array(totalPages)].map((_, i) => {
-                    const isActive = currentPage === i;
-                    const rangeStart = i * EPISODES_PER_PAGE + 1;
-                    const rangeEnd = Math.min((i + 1) * EPISODES_PER_PAGE, filteredEpisodes.length);
-                    
-                    return (
-                      <button 
-                        key={i} 
-                        onClick={() => { setCurrentPage(i); setIsPageModalOpen(false); }}
-                        className={`group relative flex flex-col items-center justify-center p-5 rounded-2xl border-2 transition-all duration-300 ${isActive ? 'bg-primary/5 border-primary text-primary shadow-[0_10px_30px_rgba(var(--p),0.2)]' : 'bg-base-content/5 border-transparent text-base-content/40 hover:border-base-content/10 hover:bg-base-content/10'}`}
-                      >
-                        <span className={`text-[8px] font-black uppercase tracking-widest mb-1.5 transition-colors ${isActive ? 'text-primary' : 'text-base-content/30 group-hover:text-base-content/60'}`}>Sector {i + 1}</span>
-                        <span className="text-sm font-black italic tracking-tighter">{rangeStart} — {rangeEnd}</span>
-                        {isActive && <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_10px_rgba(var(--p),1)]" />}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="p-6 bg-base-200/50 border-t border-base-content/5">
-                   <p className="text-[8px] font-black text-center uppercase tracking-[0.3em] text-base-content/30 italic">Targeting {filteredEpisodes.length} Episodes total</p>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </motion.div>
     </motion.div>
   );

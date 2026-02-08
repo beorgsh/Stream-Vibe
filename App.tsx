@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { AppTab, AnimeSeries, TMDBMedia, WatchHistoryItem, HistoryFilter } from './types.ts';
-import Navbar from './components/Navbar.tsx';
-import HomeTab from './components/HomeTab.tsx';
-import AnimeTab from './components/AnimeTab.tsx';
-import GlobalTab from './components/GlobalTab.tsx';
-import SavedTab from './components/SavedTab.tsx';
-import DocsTab from './components/DocsTab.tsx';
-import AnimeModal from './components/AnimeModal.tsx';
-import MediaModal from './components/MediaModal.tsx';
-import AdBlockModal from './components/AdBlockModal.tsx';
-import HistoryModal from './components/HistoryModal.tsx';
-import NotFoundPage from './components/NotFoundPage.tsx';
-import CategoryResultsModal from './components/CategoryResultsModal.tsx';
+import { AppTab, AnimeSeries, TMDBMedia, WatchHistoryItem, HistoryFilter } from './types';
+import Navbar from './components/Navbar';
+import HomeTab from './components/HomeTab';
+import AnimeTab from './components/AnimeTab';
+import GlobalTab from './components/GlobalTab';
+import SavedTab from './components/SavedTab';
+import DocsTab from './components/DocsTab';
+import AnimeModal from './components/AnimeModal';
+import MediaModal from './components/MediaModal';
+import AdBlockModal from './components/AdBlockModal';
+import HistoryModal from './components/HistoryModal';
+import NotFoundPage from './components/NotFoundPage';
+import CategoryResultsModal from './components/CategoryResultsModal';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Bookmark, CheckCircle2 } from 'lucide-react';
 
@@ -33,7 +33,7 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AppTab>(isPWA ? AppTab.ANIME : AppTab.HOME);
   const [selectedAnime, setSelectedAnime] = useState<AnimeSeries | null>(null);
   const [selectedMedia, setSelectedMedia] = useState<TMDBMedia | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<{ id: string, label: string } | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<{ id: string, label: string, isGenre?: boolean } | null>(null);
   const [mediaMode, setMediaMode] = useState<'watch' | 'download'>('watch');
   const [showAdBlockModal, setShowAdBlockModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -49,8 +49,13 @@ const App: React.FC = () => {
 
   const [watchHistory, setWatchHistory] = useState<WatchHistoryItem[]>([]);
   const [savedItems, setSavedItems] = useState<any[]>(() => {
-    const saved = localStorage.getItem('sv_bookmarks_v1');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('sv_bookmarks_v1');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error("Failed to parse saved items", e);
+      return [];
+    }
   });
 
   const TMDB_KEY = "7519c82c82dd0265f5b5d599e59e972a";
@@ -122,6 +127,8 @@ const App: React.FC = () => {
         setWatchHistory(JSON.parse(savedHistory));
       } catch (e) {
         console.error("Failed to parse history", e);
+        // Fallback to empty history if parsing fails
+        setWatchHistory([]);
       }
     }
 
@@ -165,13 +172,15 @@ const App: React.FC = () => {
       episodeNumber: item.episodeNumber
     });
 
+    const mode = item.mode || 'watch';
+    setMediaMode(mode);
+
     if (item.type === 'anime') {
       setActiveTab(AppTab.ANIME);
       const media = { ...item.fullMedia, source: item.source };
       setSelectedAnime(media);
     } else {
       setActiveTab(AppTab.GLOBAL);
-      setMediaMode(item.mode || 'watch');
       setSelectedMedia(item.fullMedia);
     }
     setShowHistoryModal(false);
@@ -202,11 +211,15 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (activeTab) {
       case AppTab.HOME:
-        return isPWA ? <AnimeTab onSelectAnime={(anime) => { setResumeData(null); setSelectedAnime(anime); }} history={watchHistory.filter(h => h.type === 'anime')} onHistorySelect={handleSelectFromHistory} onHistoryRemove={removeFromHistory} onViewAllHistory={(filter) => { setHistoryFilter(filter || 'all'); setShowHistoryModal(true); }} onSelectCategory={setSelectedCategory} /> : <HomeTab setActiveTab={setActiveTab} onSelectCategory={setSelectedCategory} />;
+        return isPWA ? <AnimeTab onSelectAnime={(anime, mode) => { setResumeData(null); setMediaMode(mode); setSelectedAnime(anime); }} history={watchHistory.filter(h => h.type === 'anime')} onHistorySelect={handleSelectFromHistory} onHistoryRemove={removeFromHistory} onViewAllHistory={(filter) => { setHistoryFilter(filter || 'all'); setShowHistoryModal(true); }} onSelectCategory={setSelectedCategory} /> : <HomeTab setActiveTab={setActiveTab} onSelectCategory={setSelectedCategory} />;
       case AppTab.ANIME:
         return (
           <AnimeTab 
-            onSelectAnime={(anime) => { setResumeData(null); setSelectedAnime(anime); }} 
+            onSelectAnime={(anime, mode) => { 
+              setResumeData(null); 
+              setMediaMode(mode);
+              setSelectedAnime(anime); 
+            }} 
             history={watchHistory.filter(h => h.type === 'anime')}
             onHistorySelect={handleSelectFromHistory}
             onHistoryRemove={removeFromHistory}
@@ -238,7 +251,7 @@ const App: React.FC = () => {
         return (
           <SavedTab 
             items={savedItems}
-            onSelectAnime={(anime) => { setResumeData(null); setSelectedAnime(anime); }}
+            onSelectAnime={(anime) => { setResumeData(null); setMediaMode('watch'); setSelectedAnime(anime); }}
             onSelectMedia={(media) => { setResumeData(null); setSelectedMedia(media); setMediaMode('watch'); }}
             onToggleBookmark={toggleBookmark}
           />
@@ -364,6 +377,7 @@ const App: React.FC = () => {
             onClose={() => setSelectedCategory(null)}
             onSelectAnime={(anime) => {
               setResumeData(null);
+              setMediaMode('watch');
               setSelectedAnime(anime);
             }}
           />
@@ -376,6 +390,7 @@ const App: React.FC = () => {
             key="anime-modal"
             anime={selectedAnime} 
             onClose={handleCloseModals} 
+            mode={mediaMode}
             initialEpisodeId={resumeData?.episodeId as string}
             isSaved={!!savedItems.find(i => i.session === selectedAnime.session)}
             onToggleSave={() => toggleBookmark(selectedAnime)}
@@ -387,6 +402,7 @@ const App: React.FC = () => {
                 image: selectedAnime.image,
                 type: 'anime',
                 source: selectedAnime.source,
+                mode: mediaMode,
                 episodeNumber: ep.episode,
                 episodeTitle: ep.title,
                 episodeId: ep.session,

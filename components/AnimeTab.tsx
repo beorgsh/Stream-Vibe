@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { AnimeSeries, WatchHistoryItem, HistoryFilter } from '../types';
-import { Search, Loader2, RefreshCw, Play, Star, Zap, Flame, Download, Calendar, ChevronLeft, ChevronRight, Heart, Users, CheckCircle, Clock, Film, LayoutGrid, Ghost, Sword, Music, Rocket, ChevronDown, Filter, Globe, PlusSquare, Mic } from 'lucide-react';
+import { Search, Loader2, Play, Star, Zap, Flame, Download, Calendar, ChevronLeft, ChevronRight, Heart, Users, CheckCircle, Clock, Film, LayoutGrid, PlusSquare, Mic, ShieldCheck, Database, Server, Terminal } from 'lucide-react';
 import AnimeCard from './AnimeCard';
 import { SkeletonAnimeCard, SkeletonBanner } from './Skeleton';
 import ContinueWatching from './ContinueWatching';
@@ -8,7 +8,7 @@ import ScheduleSection from './ScheduleSection';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 
 interface AnimeTabProps {
-  onSelectAnime: (anime: AnimeSeries) => void;
+  onSelectAnime: (anime: AnimeSeries, mode: 'watch' | 'download') => void;
   history: WatchHistoryItem[];
   onHistorySelect: (item: WatchHistoryItem) => void;
   onHistoryRemove: (id: string | number) => void;
@@ -108,11 +108,11 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
       if (data.success && data.results) {
         const mapIota = (item: any): AnimeSeries => ({
           title: item.title,
-          image: item.poster || "",
-          banner: item.poster || "",
+          image: item.poster || item.image || "",
+          banner: item.poster || item.image || "",
           session: item.id,
           description: item.description || "",
-          type: item.tvInfo?.showType || "TV",
+          type: item.tvInfo?.showType || item.type || "TV",
           episodes: item.tvInfo?.episodeInfo?.sub || item.tvInfo?.sub || item.tvInfo?.eps,
           score: item.tvInfo?.rating || "N/A",
           source: 'watch' as const
@@ -130,7 +130,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
         });
       }
     } catch (error) {
-      console.error("Error fetching anime data:", error);
+      console.error("Transmission sync interrupted:", error);
     } finally {
       setIsLoading(false);
     }
@@ -177,12 +177,12 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
         const results = data.data || [];
         setSearchResults(results.map((item: any) => ({
           title: item.title,
-          image: item.poster || item.snapshot || "",
-          session: item.session,
-          type: item.type,
+          image: item.poster || item.snapshot || item.image || "",
+          session: item.session || item.id,
+          type: item.type || "TV",
           status: item.status,
           episodes: item.episodes,
-          score: item.score,
+          score: item.score || "N/A",
           source: 'apex'
         })));
       } else {
@@ -201,7 +201,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
         }
       }
     } catch (error) {
-      console.error("Search failed:", error);
+      console.error("Registry scan failed:", error);
     } finally {
       setIsSearching(false);
     }
@@ -233,6 +233,11 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
     return spotlightIndex % activeSpotlights.length;
   }, [spotlightIndex, activeSpotlights]);
 
+  const handleItemSelect = (anime: AnimeSeries) => {
+    const mode = viewMode === 'schedule' ? 'watch' : viewMode;
+    onSelectAnime(anime, mode);
+  };
+
   const renderHorizontalSection = (title: string, items: AnimeSeries[], icon: React.ReactNode) => {
     if (!items.length) return null;
     return (
@@ -250,7 +255,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
         >
           {items.map((anime, idx) => (
             <motion.div variants={itemVariants} key={`${anime.session}-${idx}`} className="min-w-[140px] md:min-w-[180px] snap-start">
-              <AnimeCard anime={anime} onClick={() => onSelectAnime(anime)} />
+              <AnimeCard anime={anime} onClick={() => handleItemSelect(anime)} />
             </motion.div>
           ))}
         </motion.div>
@@ -277,7 +282,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
               <div 
                 key={`${item.session}-${idx}`} 
                 className="relative w-full h-full cursor-pointer shrink-0 select-none overflow-hidden"
-                onClick={() => onSelectAnime(item)}
+                onClick={() => handleItemSelect(item)}
               >
                 <img 
                   src={item.banner || item.image} 
@@ -324,10 +329,10 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                     className="btn btn-primary btn-xs rounded-full px-4 text-[8px] font-black uppercase pointer-events-auto shadow-lg hover:scale-105 transition-transform"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onSelectAnime(activeSpotlights[displaySpotlightIndex]);
+                      handleItemSelect(activeSpotlights[displaySpotlightIndex]);
                     }}
                   >
-                    Watch Now
+                    Watch Node
                   </button>
                 </div>
               </motion.div>
@@ -353,7 +358,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
       <section className="max-w-xl mx-auto w-full space-y-4 flex flex-col items-center relative z-40">
         <div className="text-center space-y-1">
           <h1 className="text-2xl md:text-3xl font-black text-base-content uppercase tracking-tighter italic">
-            {viewMode === 'download' ? 'Archive Hub' : viewMode === 'schedule' ? 'Live Grid' : 'Discovery Node'}
+            {viewMode === 'download' ? 'Archive Core' : viewMode === 'schedule' ? 'Live Grid' : 'Discovery Node'}
           </h1>
           <p className="text-[10px] uppercase font-bold text-base-content/60 tracking-[0.2em]">Synchronized Database</p>
         </div>
@@ -365,7 +370,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                 className={`btn btn-sm border-none rounded-full px-5 flex items-center gap-2 transition-all ${viewMode === 'watch' ? 'btn-primary text-primary-content shadow-lg' : 'btn-ghost text-base-content/60 hover:text-base-content'}`}
                >
                  <Play size={14} className={viewMode === 'watch' ? 'fill-current' : ''} />
-                 <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Watch</span>
+                 <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Stream</span>
                </button>
                <button 
                 onClick={() => setViewMode('download')} 
@@ -379,7 +384,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                 className={`btn btn-sm border-none rounded-full px-5 flex items-center gap-2 transition-all ${viewMode === 'schedule' ? 'btn-primary text-primary-content shadow-lg' : 'btn-ghost text-base-content/60 hover:text-base-content'}`}
                >
                  <Calendar size={14} />
-                 <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Schedule</span>
+                 <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Grid</span>
                </button>
             </div>
         </div>
@@ -389,8 +394,8 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
             <motion.div animate={controls} className="relative w-full group">
               <input 
                 type="text" 
-                placeholder="Search database..."
-                className="input input-sm h-10 md:h-12 w-full bg-base-content/5 border-base-content/20 rounded-full pl-10 pr-24 text-xs font-medium focus:border-primary transition-all text-base-content placeholder:text-base-content/40 relative z-10"
+                placeholder="Query database records..."
+                className="input input-sm h-10 md:h-12 w-full bg-base-content/5 border border-base-content/20 rounded-full pl-10 pr-24 text-xs font-medium focus:border-primary transition-all text-base-content placeholder:text-base-content/40 relative z-10"
                 value={searchQuery}
                 onChange={handleInputChange}
                 onKeyDown={(e) => {
@@ -401,43 +406,44 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/40 z-20" size={14} />
               
               <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1 z-20">
-                <div className="relative" ref={genreDropdownRef}>
-                  <button 
-                    onClick={() => setIsGenreOpen(!isGenreOpen)}
-                    className={`btn btn-ghost btn-xs h-8 md:h-10 rounded-full px-3 transition-colors flex items-center gap-1 ${isGenreOpen ? 'text-primary bg-primary/10' : 'text-base-content/60 hover:text-primary'}`}
-                  >
-                    <Filter size={14} />
-                    <ChevronDown size={12} className={`transition-transform duration-300 ${isGenreOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                  <AnimatePresence>
-                    {isGenreOpen && (
-                      <motion.div 
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        className="absolute right-0 mt-2 w-[300px] bg-base-100/95 backdrop-blur-xl border border-base-content/20 rounded-2xl shadow-2xl py-3 z-50 overflow-hidden"
-                      >
-                         <div className="max-h-[400px] overflow-y-auto custom-scrollbar px-3">
-                            <div className="px-1 py-1 mb-2 text-[8px] font-black uppercase tracking-[0.2em] text-base-content/30 border-b border-base-content/5">Master Genre Index</div>
-                            <div className="grid grid-cols-2 gap-1.5 pb-2">
-                                {allGenres.map(g => (
-                                <button 
-                                    key={g.id} 
-                                    onClick={() => { 
-                                      onSelectCategory?.({ id: g.id, label: g.label, isGenre: true }); 
-                                      setIsGenreOpen(false); 
-                                    }}
-                                    className="w-full text-left px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-tight hover:bg-primary hover:text-primary-content transition-all bg-base-content/5 truncate"
-                                >
-                                    {g.label}
-                                </button>
-                                ))}
-                            </div>
-                         </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                {viewMode !== 'download' && (
+                  <div className="relative" ref={genreDropdownRef}>
+                    <button 
+                      onClick={() => setIsGenreOpen(!isGenreOpen)}
+                      className={`btn btn-ghost btn-xs h-8 md:h-10 rounded-full px-3 transition-colors flex items-center gap-1 ${isGenreOpen ? 'text-primary bg-primary/10' : 'text-base-content/60 hover:text-primary'}`}
+                    >
+                      <LayoutGrid size={14} />
+                    </button>
+                    <AnimatePresence>
+                      {isGenreOpen && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          className="absolute right-0 mt-2 w-[300px] bg-base-100/95 backdrop-blur-xl border border-base-content/20 rounded-2xl shadow-2xl py-3 z-50 overflow-hidden"
+                        >
+                           <div className="max-h-[400px] overflow-y-auto custom-scrollbar px-3">
+                              <div className="px-1 py-1 mb-2 text-[8px] font-black uppercase tracking-[0.2em] text-base-content/30 border-b border-base-content/5">Genre Matrix</div>
+                              <div className="grid grid-cols-2 gap-1.5 pb-2">
+                                  {allGenres.map(g => (
+                                  <button 
+                                      key={g.id} 
+                                      onClick={() => { 
+                                        onSelectCategory?.({ id: g.id, label: g.label, isGenre: true }); 
+                                        setIsGenreOpen(false); 
+                                      }}
+                                      className="w-full text-left px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-tight hover:bg-primary hover:text-primary-content transition-all bg-base-content/5 truncate"
+                                  >
+                                      {g.label}
+                                  </button>
+                                  ))}
+                              </div>
+                           </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
                 <button onClick={() => handleSearch(searchQuery)} className="btn btn-primary btn-xs h-8 md:h-10 rounded-full px-4 font-black uppercase text-[8px]" disabled={isSearching}>
                   {isSearching ? <Loader2 className="animate-spin" size={12} /> : "Query"}
                 </button>
@@ -448,7 +454,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
       </section>
 
       {viewMode === 'schedule' ? (
-        <ScheduleSection onSelectAnime={onSelectAnime} />
+        <ScheduleSection onSelectAnime={handleItemSelect} />
       ) : (
         <>
           {(isSearching || searchResults.length > 0) && (
@@ -468,7 +474,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                   <motion.div key="results-search" variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 md:gap-3">
                     {searchResults.map((anime, idx) => (
                       <motion.div variants={itemVariants} key={`${anime.session}-${idx}`}>
-                        <AnimeCard anime={anime} onClick={() => onSelectAnime(anime)} />
+                        <AnimeCard anime={anime} onClick={() => handleItemSelect(anime)} />
                       </motion.div>
                     ))}
                   </motion.div>
@@ -491,12 +497,10 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                   ) : (
                     <motion.div key="content-watch" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-10">
                       {renderSpotlight()}
-                      
-                      {/* Neural Categories Section */}
                       <section className="w-full space-y-6">
                         <div className="flex items-center gap-2 border-l-2 border-primary pl-4">
                           <LayoutGrid size={18} className="text-primary" />
-                          <h2 className="text-lg font-black text-base-content uppercase tracking-tighter">Neural Categories</h2>
+                          <h2 className="text-lg font-black text-base-content uppercase tracking-tighter">Neural Indices</h2>
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-5 gap-4">
                           {categories.map((cat, i) => (
@@ -516,20 +520,18 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                                 <span className="text-[10px] font-black uppercase tracking-widest text-base-content group-hover:text-primary transition-colors">
                                   {cat.label}
                                 </span>
-                                <span className="text-[8px] font-bold text-base-content/30 uppercase tracking-[0.2em]">Database Node</span>
+                                <span className="text-[8px] font-bold text-base-content/30 uppercase tracking-[0.2em]">Node Link</span>
                               </div>
                             </motion.button>
                           ))}
                         </div>
                       </section>
-
-                      <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('anime-watch')} title={`Watch History`} />
-                      
+                      <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('anime-watch')} title={`Archive History`} />
                       {watchHome && (
                         <>
                           {renderHorizontalSection("Trending", watchHome.trending, <Flame size={18} className="text-primary" />)}
                           {renderHorizontalSection("Top Airing", watchHome.topAiring, <Star size={18} className="text-primary" />)}
-                          {renderHorizontalSection("Latest Releases", watchHome.latestEpisode, <Zap size={18} className="text-primary" />)}
+                          {renderHorizontalSection("New Transmissions", watchHome.latestEpisode, <Zap size={18} className="text-primary" />)}
                         </>
                       )}
                     </motion.div>
@@ -537,23 +539,56 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                 </AnimatePresence>
               ) : (
                 <div className="space-y-8 md:space-y-12">
-                   <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('anime-download')} title="Archive Records" />
-                  <section className="space-y-4">
-                    <div className="flex items-center justify-between border-l-2 border-primary pl-3">
-                      <h2 className="text-sm md:text-lg font-black text-base-content uppercase tracking-tighter">Database Scan</h2>
-                      <RefreshCw onClick={fetchAnimeList} className={`${isLoading ? 'animate-spin' : ''} text-base-content/40 cursor-pointer`} size={14} />
+                   <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('anime-download')} title="Recent Downloads" />
+                  
+                  {/* Finalized Text-Only Labeling Dashboard for Archive Hub */}
+                  <section className="bg-base-content/5 border border-base-content/10 rounded-[2.5rem] p-10 md:p-16 text-center space-y-8 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 p-6 opacity-5">
+                       <Terminal size={120} />
                     </div>
-                    {isLoading ? (
-                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 md:gap-3">
-                        {[...Array(12)].map((_, i) => <SkeletonAnimeCard key={i} />)}
+                    <div className="relative z-10 flex flex-col items-center space-y-6">
+                      <div className="flex items-center gap-3 px-4 py-2 bg-primary/10 rounded-full border border-primary/20 text-primary">
+                         <Database size={16} className="animate-pulse" />
+                         <span className="text-[10px] font-black uppercase tracking-[0.4em]">Archival Mode Active</span>
                       </div>
-                    ) : (
-                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 md:gap-3">
-                        {(watchHome?.trending || []).map((anime, idx) => (
-                          <div key={`${anime.session}-${idx}`}><AnimeCard anime={anime} onClick={() => onSelectAnime(anime)} /></div>
-                        ))}
+                      
+                      <div className="space-y-3">
+                        <h2 className="text-2xl md:text-5xl font-black text-base-content uppercase tracking-tighter italic leading-none">Global Archive Node</h2>
+                        <p className="text-[11px] font-bold text-base-content/40 uppercase tracking-[0.2em] max-w-lg mx-auto leading-relaxed">
+                          Secure archival downlink established. Use the registry query above to locate specific data sectors. High-speed multi-page synchronization enabled for long-running series.
+                        </p>
                       </div>
-                    )}
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-2xl pt-6 border-t border-base-content/5">
+                        <div className="flex flex-col items-center gap-1">
+                           <span className="text-[14px] font-black text-base-content tracking-tighter italic">V4.2.0</span>
+                           <span className="text-[8px] font-black uppercase text-base-content/30 tracking-widest">Protocol</span>
+                        </div>
+                        <div className="flex flex-col items-center gap-1">
+                           <span className="text-[14px] font-black text-emerald-500 tracking-tighter italic">STABLE</span>
+                           <span className="text-[8px] font-black uppercase text-base-content/30 tracking-widest">Status</span>
+                        </div>
+                        <div className="flex flex-col items-center gap-1">
+                           <span className="text-[14px] font-black text-primary tracking-tighter italic">APEX-C</span>
+                           <span className="text-[8px] font-black uppercase text-base-content/30 tracking-widest">Relay</span>
+                        </div>
+                        <div className="flex flex-col items-center gap-1">
+                           <span className="text-[14px] font-black text-amber-500 tracking-tighter italic">SECURE</span>
+                           <span className="text-[8px] font-black uppercase text-base-content/30 tracking-widest">Encryp</span>
+                        </div>
+                      </div>
+
+                      <div className="pt-4 flex items-center gap-6">
+                         <div className="flex items-center gap-2 opacity-30">
+                            <ShieldCheck size={14} />
+                            <span className="text-[9px] font-black uppercase">Verified Linkage</span>
+                         </div>
+                         <div className="flex items-center gap-2 opacity-30">
+                            <Server size={14} />
+                            <span className="text-[9px] font-black uppercase">Cloud Cluster A</span>
+                         </div>
+                      </div>
+                    </div>
                   </section>
                 </div>
               )}

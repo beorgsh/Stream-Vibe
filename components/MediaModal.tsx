@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { TMDBMedia, TMDBEpisode, WatchHistoryItem } from '../types';
-import { X, Play, Loader2, Star, ArrowLeft, ChevronDown, Bookmark, BookmarkCheck, CheckCircle2, Layers, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Play, Loader2, Star, ArrowLeft, ChevronDown, Bookmark, BookmarkCheck, CheckCircle2, Layers, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface MediaModalProps {
@@ -307,9 +307,16 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                                     {details?.genres?.map((g: any) => (<span key={g.id} className="px-4 py-1.5 bg-base-content/5 rounded-full text-[9px] font-black uppercase tracking-widest text-base-content/60 border border-base-content/5">{g.name}</span>))}
                                 </div>
                                 <div className="pt-4">
-                                  <button onClick={()=>handleAction()} className="btn btn-primary rounded-full px-12 h-14 font-black uppercase text-[11px] tracking-widest hover:scale-105 transition-transform shadow-2xl shadow-primary/20">
-                                     {lastHistoryItem ? `Continue Transmission` : 'Initiate Stream'}
-                                  </button>
+                                  {mode === 'watch' ? (
+                                    <button onClick={()=>handleAction()} className="btn btn-primary rounded-full px-12 h-14 font-black uppercase text-[11px] tracking-widest hover:scale-105 transition-transform shadow-2xl shadow-primary/20">
+                                       {lastHistoryItem ? `Continue Transmission` : 'Initiate Stream'}
+                                    </button>
+                                  ) : !isTv ? (
+                                    <button onClick={()=>handleAction()} className="btn btn-primary rounded-full px-12 h-14 font-black uppercase text-[11px] tracking-widest hover:scale-105 transition-transform shadow-2xl shadow-primary/20 flex items-center gap-2">
+                                       <Download size={16} />
+                                       Initialize Archive
+                                    </button>
+                                  ) : null}
                                 </div>
                             </div>
                         ) : (
