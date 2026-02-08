@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AnimeSeries, AnimeEpisode, WatchHistoryItem } from '../types';
-import { X, Play, Loader2, ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Bookmark, BookmarkCheck, CheckCircle2, Search, LayoutGrid, MonitorPlay, Cpu, Download, ExternalLink } from 'lucide-react';
+import { X, Play, Loader2, ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Bookmark, BookmarkCheck, CheckCircle2, Search, LayoutGrid, MonitorPlay, Cpu, Download, ExternalLink, Clock, Zap, Calendar, Radio, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface AnimeModalProps {
@@ -27,6 +27,12 @@ interface DownloadLink {
   url: string;
 }
 
+interface NextAiring {
+  airingAt: number;
+  timeUntilAiring: number;
+  episode: number;
+}
+
 const EPISODES_PER_PAGE = 30;
 
 const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch', onPlay, initialEpisodeId, isSaved, onToggleSave, setToast }) => {
@@ -42,6 +48,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
   const [serverCategory, setServerCategory] = useState<'sub' | 'dub'>('sub');
   const [isServerDropdownOpen, setIsServerDropdownOpen] = useState(false);
   const [mappedAnilistId, setMappedAnilistId] = useState<string | null>(null);
+  const [nextAiring, setNextAiring] = useState<NextAiring | null>(null);
   
   const serverDropdownRef = useRef<HTMLDivElement>(null);
   const [iframeUrl, setIframeUrl] = useState<string | null>(null);
@@ -56,6 +63,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
   useEffect(() => {
     if (anime.source === 'anilist') {
       setMappedAnilistId(anime.session);
+      fetchAiringSchedule(null, anime.session);
       return;
     }
 
@@ -69,14 +77,17 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              query: `query($search: String){ Media(search: $search, type: ANIME){ id } }`,
+              query: `query($search: String){ Media(search: $search, type: ANIME){ id nextAiringEpisode { airingAt timeUntilAiring episode } } }`,
               variables: { search: term }
             })
           });
           const data = await response.json();
-          const id = data?.data?.Media?.id;
-          if (id) {
-            setMappedAnilistId(id.toString());
+          const media = data?.data?.Media;
+          if (media?.id) {
+            setMappedAnilistId(media.id.toString());
+            if (media.nextAiringEpisode) {
+              setNextAiring(media.nextAiringEpisode);
+            }
             break;
           }
         } catch (e) {
@@ -86,6 +97,53 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
     };
     mapId();
   }, [anime.title, anime.session, anime.source]);
+
+  const fetchAiringSchedule = async (search: string | null, id?: string) => {
+    try {
+      const variables = id ? { id: parseInt(id) } : { search };
+      const query = id 
+        ? `query($id: Int){ Media(id: $id, type: ANIME){ nextAiringEpisode { airingAt timeUntilAiring episode } } }`
+        : `query($search: String){ Media(search: $search, type: ANIME){ nextAiringEpisode { airingAt timeUntilAiring episode } } }`;
+
+      const response = await fetch('https://graphql.anilist.co', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, variables })
+      });
+      const data = await response.json();
+      const airing = data?.data?.Media?.nextAiringEpisode;
+      if (airing) setNextAiring(airing);
+    } catch (e) {
+      console.warn("Airing schedule fetch failed", e);
+    }
+  };
+
+  const timeUntilAiringStr = useMemo(() => {
+    if (!nextAiring) return null;
+    const seconds = nextAiring.timeUntilAiring;
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+
+    let parts = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    
+    return parts.length > 0 ? parts.join(' ') : 'Soon';
+  }, [nextAiring]);
+
+  // Update timer every minute
+  useEffect(() => {
+    if (!nextAiring) return;
+    const interval = setInterval(() => {
+      setNextAiring(prev => {
+        if (!prev || prev.timeUntilAiring <= 0) return prev;
+        return { ...prev, timeUntilAiring: prev.timeUntilAiring - 60 };
+      });
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [nextAiring]);
 
   const watchServersByType = useMemo(() => {
     const sub = [...watchServers.filter(s => s.type === 'sub')];
@@ -156,19 +214,16 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
           }));
         }
       } else {
-        // Apex Anime API - Logic to handle long-running series like One Piece (fetch all pages)
         const firstRes = await fetch(`https://anime.apex-cloud.workers.dev/?method=series&session=${anime.session}&page=1`);
         const firstData = await firstRes.json();
         
         const firstPageEps = firstData.episodes || firstData.data || (Array.isArray(firstData) ? firstData : []);
         let aggregatedEps = [...firstPageEps];
 
-        // Apex metadata often includes total_pages or we can infer it
         const totalApiPages = firstData.total_pages || firstData.total_page || (firstData.total ? Math.ceil(firstData.total / firstPageEps.length) : 1);
         
         if (totalApiPages > 1) {
           const pagePromises = [];
-          // Safety cap at 50 pages to prevent infinite loops, though One Piece is usually covered in 30-40
           const maxPages = Math.min(totalApiPages, 50); 
           for (let p = 2; p <= maxPages; p++) {
             pagePromises.push(fetch(`https://anime.apex-cloud.workers.dev/?method=series&session=${anime.session}&page=${p}`).then(r => r.json()));
@@ -393,7 +448,9 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
                 <h2 className="text-[10px] font-black uppercase text-base-content truncate italic tracking-tighter max-w-[200px] text-center">{anime.title}</h2>
                 <span className="text-[7px] font-black text-base-content/40 uppercase tracking-widest truncate max-w-[150px]">{selectedEpisode.title || 'In Transmission'}</span>
               </div>
-              <div className="w-12" />
+              <div className="flex items-center gap-2">
+                <div className="w-12" />
+              </div>
             </div>
             {mode === 'download' ? (
               <div className="p-8 flex flex-col items-center justify-center space-y-8 min-h-[40vh]">
@@ -460,6 +517,34 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
                   ) : <div className="w-full h-full flex items-center justify-center bg-black"><Loader2 size={24} className="text-white animate-spin" /></div>}
                 </div>
                 <div className="p-4 bg-base-100 border-t border-base-content/10 flex flex-col items-center gap-4">
+                    {/* Live Transmission Countdown Integrated into Player Controls */}
+                    {nextAiring && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="w-full max-w-2xl px-2 mb-2"
+                      >
+                        <div className="flex items-center justify-between p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl">
+                          <div className="flex items-center gap-3">
+                             <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500">
+                                <Radio size={14} className="animate-pulse" />
+                             </div>
+                             <div>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-emerald-500/80 leading-none">Airing Schedule Sync</p>
+                                <p className="text-[11px] font-black uppercase tracking-tight text-base-content italic mt-0.5">Episode {nextAiring.episode} Transmission</p>
+                             </div>
+                          </div>
+                          <div className="flex flex-col items-end">
+                             <div className="flex items-center gap-1.5 text-emerald-500">
+                                <Clock size={12} />
+                                <span className="text-xs font-black tracking-widest font-mono">{timeUntilAiringStr}</span>
+                             </div>
+                             <span className="text-[7px] font-bold uppercase tracking-widest text-base-content/30">Live Downlink ETA</span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+
                     <div className="flex items-center justify-between w-full max-w-2xl px-2">
                         <button disabled={currentIndexInFlatList <= 0} onClick={() => handleNavigateEpisode('prev')} className="btn btn-xs h-8 px-4 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2"><ChevronLeft size={14} /><span className="text-[9px] font-black uppercase">Prev EP</span></button>
                         <div className="text-[10px] font-black uppercase tracking-widest text-base-content/40">EP {selectedEpisode.episode} / {episodes.length}</div>
@@ -495,7 +580,12 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
             </div>
             <div className="flex-1 flex flex-col text-base-content overflow-hidden">
               <div className="p-6 pb-4">
-                <div className="flex items-center gap-2 mb-2"><span className="badge badge-outline text-[7px] font-black uppercase px-2 text-base-content/60">{anime.type || 'TV'}</span><span className="text-[9px] font-black text-base-content/60 tracking-widest uppercase">{anime.status}</span></div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="badge badge-outline text-[7px] font-black uppercase px-2 text-base-content/60">{anime.type || 'TV'}</span>
+                    <span className="text-[9px] font-black text-base-content/60 tracking-widest uppercase">{anime.status}</span>
+                  </div>
+                </div>
                 <h2 className="text-xl md:text-3xl font-black text-base-content uppercase italic tracking-tighter mb-4">{anime.title}</h2>
                 <div className="flex border-b border-base-content/10 gap-6">
                   <button onClick={() => setActiveTab('info')} className={`pb-2 text-[9px] font-black uppercase tracking-[0.2em] border-b-2 transition-all ${activeTab === 'info' ? 'border-primary text-primary' : 'border-transparent text-base-content/40 hover:text-base-content'}`}>Details</button>
@@ -506,6 +596,30 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
                 {activeTab === 'info' ? (
                   <div className="space-y-6">
                     <p className="text-base-content/80 text-sm md:text-lg leading-relaxed font-medium italic">{anime.description || "Archival documentation unavailable for this transmission."}</p>
+                    
+                    {nextAiring && (
+                      <div className="p-4 rounded-3xl bg-base-content/5 border border-base-content/10 space-y-3">
+                         <div className="flex items-center gap-2 text-primary">
+                            <Zap size={16} className="fill-current" />
+                            <h3 className="text-xs font-black uppercase tracking-widest">Airing Grid Synchronized</h3>
+                         </div>
+                         <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                               <p className="text-[8px] font-black text-base-content/30 uppercase tracking-widest">Target Episode</p>
+                               <p className="text-sm font-black italic">Transmission {nextAiring.episode}</p>
+                            </div>
+                            <div className="space-y-1">
+                               <p className="text-[8px] font-black text-base-content/30 uppercase tracking-widest">Downlink ETA</p>
+                               <p className="text-sm font-black italic text-emerald-500">{timeUntilAiringStr}</p>
+                            </div>
+                            <div className="space-y-1 col-span-2">
+                               <p className="text-[8px] font-black text-base-content/30 uppercase tracking-widest">Protocol Date</p>
+                               <p className="text-[10px] font-bold uppercase tracking-widest">{new Date(nextAiring.airingAt * 1000).toLocaleString()}</p>
+                            </div>
+                         </div>
+                      </div>
+                    )}
+
                     <div className="flex flex-wrap gap-2">
                       <button onClick={() => { if (episodes[0]) handleAction(episodes[0]); }} className="btn btn-primary btn-sm rounded-full px-8 font-black uppercase text-[9px] tracking-widest hover:scale-105 transition-transform flex items-center gap-2 shadow-lg">
                         {mode === 'download' ? <Download size={14} /> : <Play size={14} />}
