@@ -44,7 +44,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
   const [episodeSearch, setEpisodeSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
 
-  // Background lookup to interconnect Anilist player with other sources
+  // Background lookup to interconnect Anilist player with other sources (Default, Archive, Schedule)
   useEffect(() => {
     if (anime.source === 'anilist') {
       setMappedAnilistId(anime.session);
@@ -52,45 +52,58 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
     }
 
     const mapId = async () => {
-      try {
-        const response = await fetch('https://graphql.anilist.co', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: `query($search: String){ Media(search: $search, type: ANIME){ id } }`,
-            variables: { search: anime.title }
-          })
-        });
-        const data = await response.json();
-        const id = data?.data?.Media?.id;
-        if (id) setMappedAnilistId(id.toString());
-      } catch (e) {
-        console.warn("Interconnection lookup failed", e);
+      const searchTerms = [anime.title];
+      // If title contains brackets or extra info, try a cleaned version too
+      if (anime.title.includes('(')) searchTerms.push(anime.title.split('(')[0].trim());
+      
+      for (const term of searchTerms) {
+        try {
+          const response = await fetch('https://graphql.anilist.co', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              query: `query($search: String){ Media(search: $search, type: ANIME){ id } }`,
+              variables: { search: term }
+            })
+          });
+          const data = await response.json();
+          const id = data?.data?.Media?.id;
+          if (id) {
+            setMappedAnilistId(id.toString());
+            break; // Found it!
+          }
+        } catch (e) {
+          console.warn(`Interconnection lookup failed for term: ${term}`, e);
+        }
       }
     };
     mapId();
   }, [anime.title, anime.session, anime.source]);
 
   const watchServersByType = useMemo(() => {
-    const sub = watchServers.filter(s => s.type === 'sub');
-    const dub = watchServers.filter(s => s.type === 'dub');
+    const sub = [...watchServers.filter(s => s.type === 'sub')];
+    const dub = [...watchServers.filter(s => s.type === 'dub')];
 
     // Inject hybrid Anilist node if ID is mapped and it's not already an Anilist source
     if (mappedAnilistId && anime.source !== 'anilist') {
-      sub.push({ 
+      const hybridServerSub: WatchServer = { 
         type: 'sub', 
-        data_id: 'hybrid-anilist', 
+        data_id: 'hybrid-anilist-sub', 
         server_id: 'hybrid', 
         serverName: 'VidNest (Anilist Core)', 
         isHybrid: true 
-      });
-      dub.push({ 
+      };
+      const hybridServerDub: WatchServer = { 
         type: 'dub', 
-        data_id: 'hybrid-anilist', 
+        data_id: 'hybrid-anilist-dub', 
         server_id: 'hybrid', 
         serverName: 'VidNest (Anilist Core)', 
         isHybrid: true 
-      });
+      };
+
+      // Add if not already present (prevents duplicates during re-renders)
+      if (!sub.some(s => s.data_id === 'hybrid-anilist-sub')) sub.push(hybridServerSub);
+      if (!dub.some(s => s.data_id === 'hybrid-anilist-dub')) dub.push(hybridServerDub);
     }
 
     return { sub, dub };
@@ -225,6 +238,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
     // Handle Hybrid or Anilist Source VidNest player
     if (isHybrid || anime.source === 'anilist') {
         const targetId = isHybrid ? mappedAnilistId : anime.session;
+        // For VidNest/Pahe, we use the episode number (relative index), not the data session ID
         const epNum = originalEp.episode;
         setIframeUrl(`https://vidnest.fun/animepahe/${targetId}/${epNum}/${type}`);
         setIsLinksLoading(false);
@@ -248,15 +262,20 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
     setIframeUrl(null); 
     setSelectedEpisode(ep);
     
-    if (anime.source === 'anilist') {
-        setWatchServers([{ type: 'sub', serverName: 'VidNest', data_id: 'vn', server_id: 'vn' }]);
+    // Default fallback when mapping is available or source is Anilist
+    if (anime.source === 'anilist' || mappedAnilistId) {
         const typeToUse = activeWatchType || 'sub';
         setActiveWatchType(typeToUse);
-        setActiveWatchServer(`${typeToUse}-VidNest`);
-        setIframeUrl(`https://vidnest.fun/animepahe/${anime.session}/${ep.session}/${typeToUse}`);
-        setIsLinksLoading(false);
-        if (onPlay) onPlay(ep);
-        return;
+        
+        // If it's a native anilist source, we only have VidNest
+        if (anime.source === 'anilist') {
+            setWatchServers([{ type: 'sub', serverName: 'VidNest', data_id: 'vn', server_id: 'vn' }]);
+            setActiveWatchServer(`${typeToUse}-VidNest`);
+            setIframeUrl(`https://vidnest.fun/animepahe/${anime.session}/${ep.session}/${typeToUse}`);
+            setIsLinksLoading(false);
+            if (onPlay) onPlay(ep);
+            return;
+        }
     }
 
     try {
@@ -274,9 +293,33 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
               setIframeUrl(`${data.results.streamingLink.iframe}${data.results.streamingLink.iframe.includes('?') ? '&' : '?'}_debug=true`);
               if (onPlay) onPlay(ep);
           } else setIsIframeLoading(false);
-        } else setIsIframeLoading(false);
-      } else setIsIframeLoading(false);
-    } catch (error) { setIsIframeLoading(false); } finally { setIsLinksLoading(false); }
+        } else {
+            // If no servers found for selected type, check if we can use hybrid instead
+            if (mappedAnilistId) {
+                setActiveWatchServer(`${typeToUse}-VidNest (Anilist Core)`);
+                setIframeUrl(`https://vidnest.fun/animepahe/${mappedAnilistId}/${ep.episode}/${typeToUse}`);
+                if (onPlay) onPlay(ep);
+            }
+            setIsIframeLoading(false);
+        }
+      } else {
+          // Final fallback to Hybrid if API fails
+          if (mappedAnilistId) {
+              setActiveWatchServer(`${typeToUse}-VidNest (Anilist Core)`);
+              setIframeUrl(`https://vidnest.fun/animepahe/${mappedAnilistId}/${ep.episode}/${typeToUse}`);
+              if (onPlay) onPlay(ep);
+          }
+          setIsIframeLoading(false);
+      }
+    } catch (error) { 
+        if (mappedAnilistId) {
+            const typeToUse = activeWatchType || 'sub';
+            setIframeUrl(`https://vidnest.fun/animepahe/${mappedAnilistId}/${ep.episode}/${typeToUse}`);
+        }
+        setIsIframeLoading(false); 
+    } finally { 
+        setIsLinksLoading(false); 
+    }
   };
 
   const currentIndexInFlatList = useMemo(() => selectedEpisode ? episodes.findIndex(e => e.session === selectedEpisode.session) : -1, [selectedEpisode, episodes]);
@@ -370,7 +413,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, onPlay, initial
                             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute bottom-full left-0 mb-2 w-full bg-base-100 border border-base-content/20 rounded-xl p-1.5 z-[100] shadow-xl">
                                 {watchServersByType[serverCategory]?.map(srv => (
                                   <button 
-                                    key={srv.serverName} 
+                                    key={srv.data_id} 
                                     onClick={() => fetchStreamData(selectedEpisode.session, srv.serverName, serverCategory, selectedEpisode, true, srv.isHybrid)} 
                                     className={`w-full text-left px-3 py-2 rounded-lg text-[9px] font-bold uppercase flex items-center justify-between gap-2 ${activeWatchServer === `${serverCategory}-${srv.serverName}` ? 'bg-primary text-primary-content' : 'text-base-content hover:bg-base-content/10'}`}
                                   >
