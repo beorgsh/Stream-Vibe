@@ -19,7 +19,6 @@ const App: React.FC = () => {
     return localStorage.getItem('sv_theme') || 'black';
   });
 
-  // Comprehensive PWA detection helper
   const detectPWA = () => {
     if (typeof window === 'undefined') return false;
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
@@ -53,6 +52,22 @@ const App: React.FC = () => {
   });
 
   const TMDB_KEY = "7519c82c82dd0265f5b5d599e59e972a";
+
+  // Effect to lock body scroll when any modal is open
+  useEffect(() => {
+    const isModalOpen = !!selectedAnime || !!selectedMedia || showAdBlockModal || showHistoryModal;
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.height = '100vh';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+    };
+  }, [selectedAnime, selectedMedia, showAdBlockModal, showHistoryModal]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -88,7 +103,6 @@ const App: React.FC = () => {
     checkRoute();
     window.addEventListener('popstate', checkRoute);
 
-    // Ensure PWA state is accurate on mount and set initial tab
     const pwaStatus = detectPWA();
     setIsPWA(pwaStatus);
     if (pwaStatus) {

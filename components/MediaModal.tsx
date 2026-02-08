@@ -207,7 +207,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 10 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className={`will-change-modal bg-base-100 border border-base-content/10 w-full max-w-5xl ${isPlaying ? 'h-auto' : 'max-h-[90vh] h-[90vh] md:h-auto'} rounded-[2.5rem] overflow-hidden relative flex flex-col shadow-2xl transition-all duration-300`}
+        className="will-change-modal bg-base-100 border border-base-content/10 w-full max-w-5xl h-fit max-h-[90vh] rounded-[2.5rem] overflow-hidden relative flex flex-col shadow-2xl transition-all duration-300"
       >
         <div className="absolute top-4 right-4 z-[60] flex gap-2">
             {!isPlaying && onToggleSave && (

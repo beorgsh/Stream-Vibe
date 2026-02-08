@@ -20,13 +20,12 @@
     <style>
       body {
         font-family: 'Inter', sans-serif;
-        overflow-x: hidden;
-        /* Hardware acceleration for the root container */
-        transform: translateZ(0);
-        backface-visibility: hidden;
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        /* Removed transform to fix modal positioning */
       }
       
-      /* Optimized transitions: only on specific properties and elements */
       .theme-transition {
         transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
                     color 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
@@ -40,7 +39,6 @@
         --sal: env(safe-area-inset-left);
       }
       
-      /* Globally remove scroll indicators but keep scrolling functional */
       * {
         -ms-overflow-style: none;
         scrollbar-width: none;
@@ -55,7 +53,7 @@
         100% { background-position: 0 24px; }
       }
       .animate-grid {
-        animation: grid-move 3s linear infinite; /* Slowed down for CPU efficiency */
+        animation: grid-move 3s linear infinite;
         background-image: 
           linear-gradient(to right, color-mix(in srgb, currentColor, transparent 94%) 1px, transparent 1px),
           linear-gradient(to bottom, color-mix(in srgb, currentColor, transparent 94%) 1px, transparent 1px);
@@ -63,7 +61,6 @@
         pointer-events: none;
       }
 
-      /* Reduce motion for users who prefer it */
       @media (prefers-reduced-motion: reduce) {
         * {
           animation-duration: 0.01ms !important;
@@ -73,7 +70,6 @@
         }
       }
 
-      /* Performance: hint the browser about upcoming transforms */
       .will-change-modal {
         will-change: transform, opacity;
       }
