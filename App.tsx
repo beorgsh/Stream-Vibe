@@ -11,6 +11,7 @@ import MediaModal from './components/MediaModal.tsx';
 import AdBlockModal from './components/AdBlockModal.tsx';
 import HistoryModal from './components/HistoryModal.tsx';
 import NotFoundPage from './components/NotFoundPage.tsx';
+import CategoryResultsModal from './components/CategoryResultsModal.tsx';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Bookmark, CheckCircle2 } from 'lucide-react';
 
@@ -32,6 +33,7 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AppTab>(isPWA ? AppTab.ANIME : AppTab.HOME);
   const [selectedAnime, setSelectedAnime] = useState<AnimeSeries | null>(null);
   const [selectedMedia, setSelectedMedia] = useState<TMDBMedia | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<{ id: string, label: string } | null>(null);
   const [mediaMode, setMediaMode] = useState<'watch' | 'download'>('watch');
   const [showAdBlockModal, setShowAdBlockModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -54,7 +56,7 @@ const App: React.FC = () => {
   const TMDB_KEY = "7519c82c82dd0265f5b5d599e59e972a";
 
   useEffect(() => {
-    const isModalOpen = !!selectedAnime || !!selectedMedia || showAdBlockModal || showHistoryModal;
+    const isModalOpen = !!selectedAnime || !!selectedMedia || !!selectedCategory || showAdBlockModal || showHistoryModal;
     if (isModalOpen) {
       document.body.style.overflow = 'hidden';
       document.body.style.height = '100vh';
@@ -66,7 +68,7 @@ const App: React.FC = () => {
       document.body.style.overflow = '';
       document.body.style.height = '';
     };
-  }, [selectedAnime, selectedMedia, showAdBlockModal, showHistoryModal]);
+  }, [selectedAnime, selectedMedia, selectedCategory, showAdBlockModal, showHistoryModal]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -183,6 +185,7 @@ const App: React.FC = () => {
   const handleCloseModals = () => {
     setSelectedAnime(null);
     setSelectedMedia(null);
+    setSelectedCategory(null);
     setResumeData(null);
   };
 
@@ -199,7 +202,7 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (activeTab) {
       case AppTab.HOME:
-        return isPWA ? <AnimeTab onSelectAnime={(anime) => { setResumeData(null); setSelectedAnime(anime); }} history={watchHistory.filter(h => h.type === 'anime')} onHistorySelect={handleSelectFromHistory} onHistoryRemove={removeFromHistory} onViewAllHistory={(filter) => { setHistoryFilter(filter || 'all'); setShowHistoryModal(true); }} /> : <HomeTab setActiveTab={setActiveTab} />;
+        return isPWA ? <AnimeTab onSelectAnime={(anime) => { setResumeData(null); setSelectedAnime(anime); }} history={watchHistory.filter(h => h.type === 'anime')} onHistorySelect={handleSelectFromHistory} onHistoryRemove={removeFromHistory} onViewAllHistory={(filter) => { setHistoryFilter(filter || 'all'); setShowHistoryModal(true); }} onSelectCategory={setSelectedCategory} /> : <HomeTab setActiveTab={setActiveTab} onSelectCategory={setSelectedCategory} />;
       case AppTab.ANIME:
         return (
           <AnimeTab 
@@ -211,6 +214,7 @@ const App: React.FC = () => {
               setHistoryFilter(filter || 'all');
               setShowHistoryModal(true);
             }}
+            onSelectCategory={setSelectedCategory}
           />
         );
       case AppTab.GLOBAL:
@@ -348,6 +352,20 @@ const App: React.FC = () => {
             onRemove={removeFromHistory}
             onClearAll={() => setWatchHistory([])}
             initialFilter={historyFilter}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {selectedCategory && (
+          <CategoryResultsModal 
+            key="category-modal"
+            category={selectedCategory} 
+            onClose={() => setSelectedCategory(null)}
+            onSelectAnime={(anime) => {
+              setResumeData(null);
+              setSelectedAnime(anime);
+            }}
           />
         )}
       </AnimatePresence>

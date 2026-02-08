@@ -5,12 +5,12 @@ import { AppTab } from '../types';
 
 interface HomeTabProps {
   setActiveTab: (tab: AppTab) => void;
+  onSelectCategory?: (category: { id: string, label: string }) => void;
 }
 
-const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
+const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab, onSelectCategory }) => {
   const [openFaqIndices, setOpenFaqIndices] = useState<number[]>([]);
   
-  // Cleaned up tech stack list without duplicates
   const techStack = [
     { name: "React", icon: "https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg" },
     { name: "TypeScript", icon: "https://upload.wikimedia.org/wikipedia/commons/4/4c/Typescript_logo_2020.svg" },
@@ -46,7 +46,6 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
           transition={{ duration: 0.6 }}
           className="relative inline-block"
         >
-          {/* Animated Background Graphics */}
           <motion.div 
              animate={{ 
                scale: [1, 1.2, 1],
@@ -248,7 +247,6 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab }) => {
 
       {/* Tech Stack Marquee */}
       <div className="w-full max-w-4xl py-12 border-y border-base-content/10 overflow-hidden relative">
-          {/* Gradients to fade edges */}
           <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-base-100 to-transparent z-10 pointer-events-none" />
           <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-base-100 to-transparent z-10 pointer-events-none" />
 

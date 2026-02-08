@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { AnimeSeries, WatchHistoryItem, HistoryFilter } from '../types';
-import { Search, Loader2, RefreshCw, Play, Star, Zap, Flame, Download, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Loader2, RefreshCw, Play, Star, Zap, Flame, Download, Calendar, ChevronLeft, ChevronRight, Heart, Users, CheckCircle, Clock, Film, LayoutGrid, Ghost, Sword, Music, Rocket, ChevronDown, Filter, Globe, PlusSquare, Mic } from 'lucide-react';
 import AnimeCard from './AnimeCard';
 import { SkeletonAnimeCard, SkeletonBanner } from './Skeleton';
 import ContinueWatching from './ContinueWatching';
@@ -13,6 +13,7 @@ interface AnimeTabProps {
   onHistorySelect: (item: WatchHistoryItem) => void;
   onHistoryRemove: (id: string | number) => void;
   onViewAllHistory: (filter?: HistoryFilter) => void;
+  onSelectCategory?: (category: { id: string, label: string, isGenre?: boolean }) => void;
 }
 
 const containerVariants = {
@@ -30,13 +31,15 @@ const itemVariants = {
   show: { opacity: 1, y: 0 }
 };
 
-const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySelect, onHistoryRemove, onViewAllHistory }) => {
+const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySelect, onHistoryRemove, onViewAllHistory, onSelectCategory }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'watch' | 'download' | 'schedule'>('watch');
   const [searchResults, setSearchResults] = useState<AnimeSeries[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
+  const [isGenreOpen, setIsGenreOpen] = useState(false);
   const controls = useAnimation();
+  const genreDropdownRef = useRef<HTMLDivElement>(null);
 
   const [watchHome, setWatchHome] = useState<{
     spotlights: AnimeSeries[];
@@ -52,6 +55,36 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
   const [spotlightIndex, setSpotlightIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const autoPlayTimerRef = useRef<number | null>(null);
+
+  const categories = [
+    { id: 'top-airing', label: 'Top Airing', icon: <Zap size={18} /> },
+    { id: 'most-popular', label: 'Most Popular', icon: <Users size={18} /> },
+    { id: 'most-favorite', label: 'Most Favorite', icon: <Heart size={18} /> },
+    { id: 'completed', label: 'Completed', icon: <CheckCircle size={18} /> },
+    { id: 'recently-updated', label: 'Recently Updated', icon: <Clock size={18} /> },
+    { id: 'recently-added', label: 'Recently Added', icon: <PlusSquare size={18} /> },
+    { id: 'top-upcoming', label: 'Top Upcoming', icon: <Calendar size={18} /> },
+    { id: 'subbed-anime', label: 'Subbed Anime', icon: <LayoutGrid size={18} /> },
+    { id: 'dubbed-anime', label: 'Dubbed Anime', icon: <Mic size={18} /> },
+    { id: 'movie', label: 'Movies', icon: <Film size={18} /> }
+  ];
+
+  const allGenres = [
+    { id: 'action', label: 'Action' }, { id: 'adventure', label: 'Adventure' }, { id: 'cars', label: 'Cars' },
+    { id: 'comedy', label: 'Comedy' }, { id: 'dementia', label: 'Dementia' }, { id: 'demons', label: 'Demons' },
+    { id: 'drama', label: 'Drama' }, { id: 'ecchi', label: 'Ecchi' }, { id: 'fantasy', label: 'Fantasy' },
+    { id: 'game', label: 'Game' }, { id: 'harem', label: 'Harem' }, { id: 'historical', label: 'Historical' },
+    { id: 'horror', label: 'Horror' }, { id: 'isekai', label: 'Isekai' }, { id: 'josei', label: 'Josei' },
+    { id: 'kids', label: 'Kids' }, { id: 'magic', label: 'Magic' }, { id: 'martial-arts', label: 'Martial Arts' },
+    { id: 'mecha', label: 'Mecha' }, { id: 'military', label: 'Military' }, { id: 'music', label: 'Music' },
+    { id: 'mystery', label: 'Mystery' }, { id: 'parody', label: 'Parody' }, { id: 'police', label: 'Police' },
+    { id: 'psychological', label: 'Psychological' }, { id: 'romance', label: 'Romance' }, { id: 'samurai', label: 'Samurai' },
+    { id: 'school', label: 'School' }, { id: 'sci-fi', label: 'Sci-Fi' }, { id: 'seinen', label: 'Seinen' },
+    { id: 'shoujo', label: 'Shoujo' }, { id: 'shoujo-ai', label: 'Shoujo Ai' }, { id: 'shounen', label: 'Shounen' },
+    { id: 'shounen-ai', label: 'Shounen Ai' }, { id: 'slice-of-life', label: 'Slice of Life' }, { id: 'space', label: 'Space' },
+    { id: 'sports', label: 'Sports' }, { id: 'super-power', label: 'Super Power' }, { id: 'supernatural', label: 'Supernatural' },
+    { id: 'thriller', label: 'Thriller' }, { id: 'vampire', label: 'Vampire' }
+  ];
 
   const activeSpotlights = useMemo(() => watchHome?.spotlights || [], [watchHome]);
 
@@ -105,6 +138,13 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
 
   useEffect(() => {
     fetchAnimeList();
+    const handleClickOutside = (e: MouseEvent) => {
+      if (genreDropdownRef.current && !genreDropdownRef.current.contains(e.target as Node)) {
+        setIsGenreOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [fetchAnimeList]);
 
   useEffect(() => {
@@ -310,7 +350,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
 
   return (
     <div className="space-y-6 md:space-y-10">
-      <section className="max-w-xl mx-auto w-full space-y-4 flex flex-col items-center">
+      <section className="max-w-xl mx-auto w-full space-y-4 flex flex-col items-center relative z-40">
         <div className="text-center space-y-1">
           <h1 className="text-2xl md:text-3xl font-black text-base-content uppercase tracking-tighter italic">
             {viewMode === 'download' ? 'Archive Hub' : viewMode === 'schedule' ? 'Live Grid' : 'Discovery Node'}
@@ -359,9 +399,49 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
               />
               <div className="absolute inset-0 rounded-full bg-base-content/5 -z-10 group-focus-within:bg-base-content/10 transition-colors" />
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/40 z-20" size={14} />
-              <button onClick={() => handleSearch(searchQuery)} className="absolute right-1 top-1/2 -translate-y-1/2 btn btn-primary btn-xs h-8 md:h-10 rounded-full px-4 font-black uppercase text-[8px] z-20" disabled={isSearching}>
-                {isSearching ? <Loader2 className="animate-spin" size={12} /> : "Query"}
-              </button>
+              
+              <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1 z-20">
+                <div className="relative" ref={genreDropdownRef}>
+                  <button 
+                    onClick={() => setIsGenreOpen(!isGenreOpen)}
+                    className={`btn btn-ghost btn-xs h-8 md:h-10 rounded-full px-3 transition-colors flex items-center gap-1 ${isGenreOpen ? 'text-primary bg-primary/10' : 'text-base-content/60 hover:text-primary'}`}
+                  >
+                    <Filter size={14} />
+                    <ChevronDown size={12} className={`transition-transform duration-300 ${isGenreOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  <AnimatePresence>
+                    {isGenreOpen && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        className="absolute right-0 mt-2 w-[300px] bg-base-100/95 backdrop-blur-xl border border-base-content/20 rounded-2xl shadow-2xl py-3 z-50 overflow-hidden"
+                      >
+                         <div className="max-h-[400px] overflow-y-auto custom-scrollbar px-3">
+                            <div className="px-1 py-1 mb-2 text-[8px] font-black uppercase tracking-[0.2em] text-base-content/30 border-b border-base-content/5">Master Genre Index</div>
+                            <div className="grid grid-cols-2 gap-1.5 pb-2">
+                                {allGenres.map(g => (
+                                <button 
+                                    key={g.id} 
+                                    onClick={() => { 
+                                      onSelectCategory?.({ id: g.id, label: g.label, isGenre: true }); 
+                                      setIsGenreOpen(false); 
+                                    }}
+                                    className="w-full text-left px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-tight hover:bg-primary hover:text-primary-content transition-all bg-base-content/5 truncate"
+                                >
+                                    {g.label}
+                                </button>
+                                ))}
+                            </div>
+                         </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+                <button onClick={() => handleSearch(searchQuery)} className="btn btn-primary btn-xs h-8 md:h-10 rounded-full px-4 font-black uppercase text-[8px]" disabled={isSearching}>
+                  {isSearching ? <Loader2 className="animate-spin" size={12} /> : "Query"}
+                </button>
+              </div>
             </motion.div>
           </div>
         )}
@@ -381,11 +461,11 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
               </div>
               <AnimatePresence mode="wait">
                 {isSearching ? (
-                  <motion.div key="loading-search" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                  <motion.div key="loading-search" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 md:gap-3">
                     {[...Array(12)].map((_, i) => <SkeletonAnimeCard key={i} />)}
                   </motion.div>
                 ) : (
-                  <motion.div key="results-search" variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                  <motion.div key="results-search" variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 md:gap-3">
                     {searchResults.map((anime, idx) => (
                       <motion.div variants={itemVariants} key={`${anime.session}-${idx}`}>
                         <AnimeCard anime={anime} onClick={() => onSelectAnime(anime)} />
@@ -409,9 +489,42 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                       </div>
                     </motion.div>
                   ) : (
-                    <motion.div key="content-watch" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
+                    <motion.div key="content-watch" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-10">
                       {renderSpotlight()}
+                      
+                      {/* Neural Categories Section */}
+                      <section className="w-full space-y-6">
+                        <div className="flex items-center gap-2 border-l-2 border-primary pl-4">
+                          <LayoutGrid size={18} className="text-primary" />
+                          <h2 className="text-lg font-black text-base-content uppercase tracking-tighter">Neural Categories</h2>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-5 gap-4">
+                          {categories.map((cat, i) => (
+                            <motion.button
+                              key={cat.id}
+                              initial={{ opacity: 0, y: 10 }}
+                              whileInView={{ opacity: 1, y: 0 }}
+                              viewport={{ once: true }}
+                              transition={{ delay: i * 0.05 }}
+                              onClick={() => onSelectCategory?.(cat)}
+                              className="flex items-center gap-4 p-4 rounded-2xl bg-base-content/5 border border-base-content/10 hover:border-primary/40 hover:bg-base-content/10 transition-all group text-left shadow-lg hover:shadow-primary/5"
+                            >
+                              <div className="w-12 h-12 rounded-xl bg-base-content/5 flex items-center justify-center text-base-content/40 group-hover:text-primary group-hover:bg-primary/10 transition-all duration-300">
+                                {cat.icon}
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-base-content group-hover:text-primary transition-colors">
+                                  {cat.label}
+                                </span>
+                                <span className="text-[8px] font-bold text-base-content/30 uppercase tracking-[0.2em]">Database Node</span>
+                              </div>
+                            </motion.button>
+                          ))}
+                        </div>
+                      </section>
+
                       <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('anime-watch')} title={`Watch History`} />
+                      
                       {watchHome && (
                         <>
                           {renderHorizontalSection("Trending", watchHome.trending, <Flame size={18} className="text-primary" />)}
@@ -431,11 +544,11 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                       <RefreshCw onClick={fetchAnimeList} className={`${isLoading ? 'animate-spin' : ''} text-base-content/40 cursor-pointer`} size={14} />
                     </div>
                     {isLoading ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 md:gap-3">
                         {[...Array(12)].map((_, i) => <SkeletonAnimeCard key={i} />)}
                       </div>
                     ) : (
-                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 md:gap-3">
                         {(watchHome?.trending || []).map((anime, idx) => (
                           <div key={`${anime.session}-${idx}`}><AnimeCard anime={anime} onClick={() => onSelectAnime(anime)} /></div>
                         ))}
