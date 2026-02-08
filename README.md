@@ -20,21 +20,49 @@ Toggle instantly between **Streaming Mode** (Watch) for low-latency playback and
 - **Global Media Core**: Powered by TMDB for cinematic metadata, trending cinema, and worldwide television archives.
 - **Advanced Pagination**: Custom Cluster Selector handling 1000+ episodes for long-running series (e.g., One Piece).
 
-### 🎨 Personalization & Experience
-- **14+ Neural Themes**: From 'Cyberpunk' and 'Matrix' to 'Luxury Gold' and 'Deep Sea'.
-- **PWA Ready**: Installable as a native app on iOS and Android with gesture navigation support.
-- **Local Vault**: Privacy-focused watch history and bookmark system stored exclusively on your device.
+---
+
+## 📡 API Integration Layer
+
+The engine synchronizes with multiple external database nodes to provide real-time accuracy.
+
+### 1. Anime Neural Network (Iota)
+**Base URL**: `https://anime-api-iota-six.vercel.app/api/`
+- `/` - Discovery Data (Trending, Popular, Top Airing)
+- `/search?keyword={query}` - Database Query
+- `/episodes/{id}` - Transmission Episode Mapping
+- `/stream?id={ep_id}&server={name}&type={sub/dub}` - Source Link Decryption
+
+### 2. Global Media Core (TMDB)
+**Base URL**: `https://api.themoviedb.org/3/`
+- `/trending/all/week` - Global Weekly Pulse
+- `/search/multi?query={q}` - Universal Multi-Sector Search
+- `/{tv/movie}/{id}` - Deep Meta-Data Retrieval
+- `/tv/{id}/season/{num}` - Episodic Unit Scanning
 
 ---
 
-## 🛠️ Tech Stack
+## 🛠️ Embedded Node Infrastructure (Players)
 
-- **Framework**: [React 18](https://reactjs.org/)
-- **Build Tool**: [Vite](https://vitejs.dev/)
-- **Styles**: [Tailwind CSS](https://tailwindcss.com/) + [DaisyUI](https://daisyui.com/)
-- **Animations**: [Framer Motion](https://www.framer.com/motion/)
-- **Icons**: [Lucide React](https://lucide.dev/)
-- **APIs**: TMDB (Global), Iota (Anime), Apex (Archival)
+StreamVibe utilizes a redundant multi-node protocol for media delivery.
+
+### Global Cinema & Television (TMDB Based)
+| Provider | URL Protocol |
+| :--- | :--- |
+| **VidNest** | `https://vidnest.fun/{type}/{id}` |
+| **VidUp** | `https://vidup.to/{type}/{id}?autoPlay=true` |
+| **VidFast** | `https://vidfast.pro/{type}/{id}?autoPlay=true` |
+| **VidSrc.to** | `https://vidsrc.to/embed/{type}/{id}` |
+| **RiveStream** | `https://rivestream.org/embed?type={type}&id={id}` |
+| **VidZee** | `https://player.vidzee.wtf/embed/{type}/{id}` |
+| **VidSrc.wtf** | `https://vidsrc.wtf/api/1/{type}/?id={id}` |
+
+### Japanese Animation Sector (Direct Archival)
+| Source | Protocol |
+| :--- | :--- |
+| **VidNest (Pahe)** | `https://vidnest.fun/animepahe/{session}/{ep_id}/{type}` |
+| **Iota Proxy** | `https://anime-api-iota-six.vercel.app/api/stream?id={id}` |
+| **Apex Cloud** | `https://anime.apex-cloud.workers.dev/?method=series&session={id}` |
 
 ---
 
@@ -51,13 +79,10 @@ Use the **Neural Navbar** to switch between dimensions:
 To access raw data files:
 1. Search for a title in the **Archive Core**.
 2. Select an entry to open the Archival Modal.
-3. Click **"Initialize Archive"** to generate direct high-speed downlink coordinates.
+3. Click **"Initialize Archive"** to generate direct high-speed downlink coordinates via the **Apex Protocol**.
 
 ### 3. Airing Grid (Schedule)
-Access the **Live Grid** in the Anime tab to see real-time transmissions. The system automatically fetches fallback posters from Anilist if the local node is offline.
-
-### 4. PWA Installation
-For the best experience, select **"Add to Home Screen"** in your mobile browser. This enables full-screen immersion and removes browser chrome.
+Access the **Live Grid** in the Anime tab to see real-time transmissions. The system automatically fetches fallback posters from **Anilist** if the local node is offline.
 
 ---
 
@@ -68,20 +93,13 @@ For the best experience, select **"Add to Home Screen"** in your mobile browser.
    git clone https://github.com/yourusername/streamvibe.git
    cd streamvibe
    ```
-
 2. **Install dependencies**:
    ```bash
    npm install
    ```
-
 3. **Run development server**:
    ```bash
    npm run dev
-   ```
-
-4. **Build for production**:
-   ```bash
-   npm run build
    ```
 
 ---
@@ -92,6 +110,6 @@ StreamVibe acts as a neural middleware. It does not host any media files locally
 ---
 
 ## 📄 License
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License.
 
 *StreamVibe Neural Engine v4.0 - Systems Nominal.*
