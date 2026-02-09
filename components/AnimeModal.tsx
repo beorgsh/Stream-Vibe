@@ -39,6 +39,7 @@ query ($search: String) {
     bannerImage
     coverImage {
       extraLarge
+      large
     }
     nextAiringEpisode {
       airingAt
@@ -78,6 +79,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
   const [airingData, setAiringData] = useState<AiringData | null>(null);
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [showAiringBar, setShowAiringBar] = useState(true);
+  const [fallbackImage, setFallbackImage] = useState<string | null>(null);
   
   const serverDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -110,6 +112,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
 
   useEffect(() => {
     fetchEpisodes();
+    fetchAnilistData(anime.title);
   }, [anime.session, anime.source]);
 
   // Live countdown effect
@@ -201,6 +204,9 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
           const media = data?.data?.Media;
           
           if (media) {
+            if (media.coverImage?.extraLarge || media.coverImage?.large) {
+              setFallbackImage(media.coverImage.extraLarge || media.coverImage.large);
+            }
             if (media.nextAiringEpisode) {
                 setAiringData(media.nextAiringEpisode);
                 setShowAiringBar(true); 
@@ -431,6 +437,8 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
     return { sub: subDownloadLinks, dub: dubDownloadLinks };
   }, [subDownloadLinks, dubDownloadLinks]);
 
+  const mainPoster = useMemo(() => fallbackImage || anime.image, [fallbackImage, anime.image]);
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[1000] flex items-center justify-center p-2 bg-black/70 backdrop-blur-md" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }} className="bg-base-100 border border-base-content/10 w-full max-w-5xl h-fit max-h-[90vh] rounded-[2rem] md:rounded-[2.5rem] overflow-hidden relative flex flex-col shadow-2xl">
@@ -625,9 +633,9 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
         ) : (
           <div className="flex flex-col md:flex-row h-full overflow-hidden bg-base-100 relative">
             <div className="w-full md:w-48 shrink-0 bg-base-200 relative border-r border-base-content/10">
-              <img src={anime.image} className="w-full h-full object-cover hidden md:block" alt="" />
+              <img src={mainPoster} className="w-full h-full object-cover hidden md:block" alt="" />
               <div className="md:hidden h-40 relative">
-                <img src={anime.image} className="w-full h-full object-cover" alt="" />
+                <img src={mainPoster} className="w-full h-full object-cover" alt="" />
                 <div className="absolute inset-0 bg-gradient-to-t from-base-100 to-transparent" />
               </div>
             </div>
@@ -669,7 +677,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
                               return (
                                 <div key={ep.session} onClick={() => handleAction(ep)} className="group flex items-center gap-4 p-3 rounded-2xl bg-base-content/5 border border-transparent hover:border-base-content/10 hover:bg-base-content/10 transition-all cursor-pointer">
                                   <div className="w-24 md:w-32 aspect-video rounded-xl bg-base-content/10 flex items-center justify-center overflow-hidden shrink-0 relative">
-                                     <img src={ep.snapshot || anime.image} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="" />
+                                     <img src={ep.snapshot || mainPoster} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="" />
                                      {isWatched && <div className="absolute top-1 right-1 bg-emerald-500 rounded-full p-0.5"><CheckCircle2 size={8} className="text-white" /></div>}
                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                                         {mode === 'download' ? <Download size={20} className="text-white" /> : <Play size={20} className="text-white" />}
