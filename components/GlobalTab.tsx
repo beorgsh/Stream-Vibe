@@ -264,7 +264,8 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
             </AnimatePresence>
           ) : (
             <div className="space-y-8 md:space-y-12">
-               <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onHistoryRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('global-download')} title="Archive Access" />
+               {/* Fix onHistoryRemove mapping to onRemove prop */}
+               <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('global-download')} title="Archive Access" />
                <section className="space-y-4">
                  <h2 className="text-sm md:text-lg font-black text-base-content uppercase tracking-tighter border-l-2 border-primary pl-3">Archive Registry</h2>
                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">

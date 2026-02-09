@@ -522,7 +522,8 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                           ))}
                         </div>
                       </section>
-                      <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onHistoryRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('anime-watch')} title={`Archive History`} />
+                      {/* Fix onHistoryRemove mapping to onRemove prop */}
+                      <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('anime-watch')} title={`Archive History`} />
                       {watchHome && (
                         <>
                           {renderHorizontalSection("Trending", watchHome.trending, <Flame size={18} className="text-primary" />)}
@@ -535,7 +536,8 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                 </AnimatePresence>
               ) : (
                 <div className="space-y-8 md:space-y-12">
-                   <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onHistoryRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('anime-download')} title="Recent Downloads" />
+                   {/* Fix onHistoryRemove mapping to onRemove prop */}
+                   <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('anime-download')} title="Recent Downloads" />
                   
                   {/* Finalized Text-Only Labeling Dashboard for Archive Hub */}
                   <section className="bg-base-content/5 border border-base-content/10 rounded-[2.5rem] p-10 md:p-16 text-center space-y-8 relative overflow-hidden">
