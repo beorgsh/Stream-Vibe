@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AnimeSeries, AnimeEpisode, WatchHistoryItem } from '../types';
 import { X, Play, Loader2, ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Bookmark, BookmarkCheck, CheckCircle2, MonitorPlay, Cpu, Download, SkipForward, Timer, Image as ImageIcon, CalendarClock } from 'lucide-react';
@@ -240,7 +241,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
     if (name.includes('streamtape') || id === '2' || name.includes('streamtape')) return 'streamtape';
     if (name.includes('hd-3')) return 'hd-3';
     
-    // Default to provided ID if it's already a slug, otherwise fallback
     return id.includes('hd-') ? id : 'hd-1';
   };
 
@@ -250,12 +250,10 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
     setActiveWatchType(category);
     setServerCategory(category);
     
-    // Initial fetch always refreshes the server list
     await fetchIotaData(epId, 'hd-1', category, true);
   };
 
   const fetchIotaData = async (epId: string, serverSlug: string, category: 'sub' | 'dub', refreshServersList = true) => {
-    // Show loaders when switching or initiating stream
     setIsLinksLoading(true);
     setIsIframeLoading(true);
     
@@ -350,20 +348,22 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
 
   const currentIndexInFlatList = useMemo(() => selectedEpisode ? episodes.findIndex(e => e.session === selectedEpisode.session) : -1, [selectedEpisode, episodes]);
   
-  const handleNavigateEpisode = (direction: 'prev' | 'next') => {
-    const nextIndex = direction === 'next' ? currentIndexInFlatList + 1 : currentIndexInFlatList - 1;
-    if (nextIndex >= 0 && nextIndex < episodes.length) handleAction(episodes[nextIndex]);
-  };
-
+  // Define paginatedEpisodes to resolve missing name error and handle pagination state
   const paginatedEpisodes = useMemo(() => {
     const start = currentPage * EPISODES_PER_PAGE;
     return episodes.slice(start, start + EPISODES_PER_PAGE);
   }, [episodes, currentPage]);
 
+  const totalPages = Math.ceil(episodes.length / EPISODES_PER_PAGE);
+
+  const handleNavigateEpisode = (direction: 'prev' | 'next') => {
+    const nextIndex = direction === 'next' ? currentIndexInFlatList + 1 : currentIndexInFlatList - 1;
+    if (nextIndex >= 0 && nextIndex < episodes.length) handleAction(episodes[nextIndex]);
+  };
+
   const handleServerChange = (server: WatchServer) => {
       setActiveWatchServer(server.server_id);
       if (selectedEpisode) {
-          // Pass the server_id directly as we now store resolved slugs in it
           fetchIotaData(selectedEpisode.session, server.server_id, server.type, false);
       }
       setIsServerDropdownOpen(false);
@@ -371,7 +371,9 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[1000] flex items-center justify-center p-2 bg-black/70 backdrop-blur-md" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }} className="bg-base-100 border border-base-content/10 w-full max-w-5xl h-fit max-h-[90vh] rounded-[2.5rem] overflow-hidden relative flex flex-col shadow-2xl">
+      <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }} className="bg-base-100 border border-base-content/10 w-full max-w-5xl h-fit max-h-[90vh] rounded-[2rem] md:rounded-[2.5rem] overflow-hidden relative flex flex-col shadow-2xl">
+        
+        {/* Absolute header buttons */}
         <div className="absolute top-4 right-4 z-[60] flex gap-2">
             {!selectedEpisode && onToggleSave && (
               <button onClick={onToggleSave} className={`btn btn-circle btn-xs md:btn-sm border border-base-content/20 ${isSaved ? 'bg-base-content text-base-100' : 'bg-base-100 text-base-content hover:bg-base-content/10'}`}>
@@ -382,8 +384,8 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
         </div>
 
         {selectedEpisode ? (
-          <div className="flex flex-col w-full bg-base-100" key={`player-container-${selectedEpisode.session}`}>
-            <div className="flex items-center justify-between p-3 border-b border-base-content/10 gap-3">
+          <div className="flex flex-col w-full h-full bg-base-100 overflow-hidden" key={`player-container-${selectedEpisode.session}`}>
+            <div className="flex items-center justify-between p-3 border-b border-base-content/10 gap-3 shrink-0">
               <button onClick={() => { setSelectedEpisode(null); setDownloadLinks([]); }} className="flex items-center gap-1.5 text-base-content/80 hover:text-base-content text-[9px] font-black uppercase tracking-widest transition-colors"><ArrowLeft size={12} /> Hub</button>
               <div className="flex flex-col items-center">
                 <h2 className="text-[10px] font-black uppercase text-base-content truncate italic tracking-tighter max-w-[200px] text-center">{anime.title}</h2>
@@ -392,144 +394,117 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
               <div className="w-12" />
             </div>
 
-            {mode === 'watch' ? (
-              <>
-                <div className="w-full aspect-video bg-black relative group/player overflow-hidden z-0">
-                  {iframeUrl ? (
-                    <div className="w-full h-full relative" key={`embed-view-${iframeUrl}`}>
-                      {isIframeLoading && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-10 gap-3">
-                           <Loader2 size={32} className="animate-spin text-primary" />
-                           <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Linking Relay...</span>
+            <div className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar">
+                {mode === 'watch' ? (
+                  <>
+                    <div className="w-full aspect-video bg-black relative shrink-0">
+                      {iframeUrl ? (
+                        <div className="w-full h-full relative" key={`embed-view-${iframeUrl}`}>
+                          {isIframeLoading && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-10 gap-3">
+                               <Loader2 size={32} className="animate-spin text-primary" />
+                               <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Linking Relay...</span>
+                            </div>
+                          )}
+                          <iframe 
+                            key={`iframe-src-${iframeUrl}`}
+                            src={iframeUrl} 
+                            allowFullScreen 
+                            referrerPolicy="no-referrer"
+                            className={`w-full h-full border-none transition-opacity duration-500 ${isIframeLoading ? 'opacity-0' : 'opacity-100'}`} 
+                            onLoad={() => setIsIframeLoading(false)} 
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-base-300 gap-4">
+                           {isLinksLoading ? (
+                              <>
+                                 <Loader2 size={32} className="animate-spin text-primary" />
+                                 <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Decrypting Protocol Signal...</p>
+                              </>
+                           ) : (
+                              <>
+                                 <MonitorPlay size={48} className="text-base-content/20" />
+                                 <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Sector Link Unavailable</p>
+                              </>
+                           )}
                         </div>
                       )}
-                      <iframe 
-                        key={`iframe-src-${iframeUrl}`}
-                        src={iframeUrl} 
-                        allowFullScreen 
-                        referrerPolicy="no-referrer"
-                        className={`w-full h-full border-none transition-opacity duration-500 ${isIframeLoading ? 'opacity-0' : 'opacity-100'}`} 
-                        onLoad={() => setIsIframeLoading(false)} 
-                      />
                     </div>
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center bg-base-300 gap-4">
-                       {isLinksLoading ? (
-                          <>
-                             <Loader2 size={32} className="animate-spin text-primary" />
-                             <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Decrypting Protocol Signal...</p>
-                          </>
-                       ) : (
-                          <>
-                             <MonitorPlay size={48} className="text-base-content/20" />
-                             <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Sector Link Unavailable</p>
-                          </>
-                       )}
-                    </div>
-                  )}
-                </div>
 
-                <div className="p-4 bg-base-100 border-t border-base-content/10 flex flex-col items-center gap-4 relative z-50">
-                    <AnimatePresence>
-                        {showAiringBar && airingData && timeRemaining > 0 && (
-                            <motion.div 
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.95 }}
-                                className="w-full max-w-2xl bg-emerald-500/5 rounded-2xl border border-emerald-500/30 p-3 flex items-center justify-center gap-3 shadow-[0_0_15px_-5px_rgba(16,185,129,0.4)] relative overflow-hidden"
-                            >
-                                <CalendarClock size={14} className="text-emerald-500" />
-                                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500/90 pr-6">
-                                    Upcoming episode {airingData.episode} aired in {formatTimeUntil(timeRemaining)}
-                                </span>
-                                <button 
-                                    onClick={() => setShowAiringBar(false)}
-                                    className="absolute right-3 p-1 hover:bg-emerald-500/10 rounded-full transition-colors"
-                                    title="Hide Info"
+                    <div className="p-4 md:p-6 bg-base-100 flex flex-col items-center gap-6 relative z-50">
+                        <AnimatePresence>
+                            {showAiringBar && airingData && timeRemaining > 0 && (
+                                <motion.div 
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                    className="w-full max-w-2xl bg-emerald-500/5 rounded-2xl border border-emerald-500/30 p-3 flex items-center justify-center gap-3 shadow-[0_0_15px_-5px_rgba(16,185,129,0.4)] relative overflow-hidden"
                                 >
-                                    <X size={12} className="text-emerald-500/60" />
-                                </button>
-                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-500/5 to-transparent -translate-x-full animate-[shimmer_3s_infinite]" />
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-
-                    {!showAiringBar && airingData && timeRemaining > 0 && (
-                      <button 
-                        onClick={() => setShowAiringBar(true)}
-                        className="text-[8px] font-black uppercase text-emerald-500/40 hover:text-emerald-500 transition-colors tracking-widest"
-                      >
-                        [ Restore Airing Protocol ]
-                      </button>
-                    )}
-
-                    <div className="flex items-center justify-between w-full max-w-2xl px-2">
-                        <button disabled={currentIndexInFlatList <= 0} onClick={() => handleNavigateEpisode('prev')} className="btn btn-xs h-8 px-4 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2"><ChevronLeft size={14} /><span className="text-[9px] font-black uppercase">Prev EP</span></button>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-base-content/40">EP {selectedEpisode.episode}</div>
-                        <button disabled={currentIndexInFlatList >= episodes.length - 1} onClick={() => handleNavigateEpisode('next')} className="btn btn-xs h-8 px-4 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2"><span className="text-[9px] font-black uppercase">Next EP</span><ChevronRight size={14} /></button>
-                    </div>
-                    
-                    <div className="flex flex-wrap items-center justify-center gap-3 w-full max-w-2xl relative z-40">
-                        <div className="flex p-0.5 bg-base-content/5 rounded-full border border-base-content/10">
-                            <button 
-                                onClick={() => fetchMediaData(selectedEpisode.session, 'sub')} 
-                                className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${serverCategory === 'sub' ? 'bg-primary text-primary-content shadow-md' : 'text-base-content/60'}`}
-                            >
-                                Sub
-                            </button>
-                            <button 
-                                onClick={() => fetchMediaData(selectedEpisode.session, 'dub')} 
-                                className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${serverCategory === 'dub' ? 'bg-primary text-primary-content shadow-md' : 'text-base-content/60'}`}
-                            >
-                                Dub
-                            </button>
-                        </div>
-
-                        <div className="relative" ref={serverDropdownRef}>
-                            <button onClick={() => setIsServerDropdownOpen(!isServerDropdownOpen)} className="flex items-center gap-2 px-4 py-2 bg-base-content/5 border border-base-content/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-base-content/10 transition-all">
-                               {watchServers.find(s => s.server_id === activeWatchServer && s.type === serverCategory)?.serverName || 'Select Node'} <ChevronDown size={12} />
-                            </button>
-                            <AnimatePresence>
-                              {isServerDropdownOpen && (
-                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-base-100 border border-base-content/10 rounded-2xl p-2 z-[100] shadow-2xl max-h-48 overflow-y-auto custom-scrollbar">
-                                    {watchServers.filter(s => s.type === serverCategory).map(srv => (
-                                      <button key={`${srv.type}-${srv.server_id}`} onClick={() => handleServerChange(srv)} className={`w-full text-left px-3 py-2 rounded-xl text-[9px] font-black uppercase flex items-center justify-between ${activeWatchServer === srv.server_id ? 'bg-primary text-primary-content' : 'text-base-content hover:bg-base-content/5'}`}>
-                                        <span className="truncate">{srv.serverName}</span>
-                                        {srv.api_origin === 'iota' && <Cpu size={10} />}
-                                      </button>
-                                    ))}
+                                    <CalendarClock size={14} className="text-emerald-500" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500/90 pr-6">
+                                        Upcoming episode {airingData.episode} aired in {formatTimeUntil(timeRemaining)}
+                                    </span>
+                                    <button onClick={() => setShowAiringBar(false)} className="absolute right-3 p-1 hover:bg-emerald-500/10 rounded-full transition-colors"><X size={12} className="text-emerald-500/60" /></button>
                                 </motion.div>
-                              )}
-                            </AnimatePresence>
+                            )}
+                        </AnimatePresence>
+
+                        <div className="flex items-center justify-between w-full max-w-2xl px-2">
+                            <button disabled={currentIndexInFlatList <= 0} onClick={() => handleNavigateEpisode('prev')} className="btn btn-xs h-8 px-4 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2"><ChevronLeft size={14} /><span className="text-[9px] font-black uppercase">Prev EP</span></button>
+                            <div className="text-[10px] font-black uppercase tracking-widest text-base-content/40">EP {selectedEpisode.episode}</div>
+                            <button disabled={currentIndexInFlatList >= episodes.length - 1} onClick={() => handleNavigateEpisode('next')} className="btn btn-xs h-8 px-4 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2"><span className="text-[9px] font-black uppercase">Next EP</span><ChevronRight size={14} /></button>
+                        </div>
+                        
+                        <div className="flex flex-wrap items-center justify-center gap-3 w-full max-w-2xl relative z-40 pb-6">
+                            <div className="flex p-0.5 bg-base-content/5 rounded-full border border-base-content/10">
+                                <button onClick={() => fetchMediaData(selectedEpisode.session, 'sub')} className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${serverCategory === 'sub' ? 'bg-primary text-primary-content shadow-md' : 'text-base-content/60'}`}>Sub</button>
+                                <button onClick={() => fetchMediaData(selectedEpisode.session, 'dub')} className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${serverCategory === 'dub' ? 'bg-primary text-primary-content shadow-md' : 'text-base-content/60'}`}>Dub</button>
+                            </div>
+
+                            <div className="relative" ref={serverDropdownRef}>
+                                <button onClick={() => setIsServerDropdownOpen(!isServerDropdownOpen)} className="flex items-center gap-2 px-4 py-2 bg-base-content/5 border border-base-content/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-base-content/10 transition-all">
+                                   {watchServers.find(s => s.server_id === activeWatchServer && s.type === serverCategory)?.serverName || 'Select Node'} <ChevronDown size={12} />
+                                </button>
+                                <AnimatePresence>
+                                  {isServerDropdownOpen && (
+                                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-base-100 border border-base-content/10 rounded-2xl p-2 z-[100] shadow-2xl max-h-48 overflow-y-auto custom-scrollbar">
+                                        {watchServers.filter(s => s.type === serverCategory).map(srv => (
+                                          <button key={`${srv.type}-${srv.server_id}`} onClick={() => handleServerChange(srv)} className={`w-full text-left px-3 py-2 rounded-xl text-[9px] font-black uppercase flex items-center justify-between ${activeWatchServer === srv.server_id ? 'bg-primary text-primary-content' : 'text-base-content hover:bg-base-content/5'}`}>
+                                            <span className="truncate">{srv.serverName}</span>
+                                            {srv.api_origin === 'iota' && <Cpu size={10} />}
+                                          </button>
+                                        ))}
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                            </div>
                         </div>
                     </div>
-                </div>
-              </>
-            ) : (
-              <div className="p-8 flex flex-col items-center justify-center space-y-8 min-h-[50vh]">
-                 <div className="flex flex-col items-center text-center space-y-2">
-                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-2 shadow-inner">
-                       <Download size={32} />
-                    </div>
-                    <h3 className="text-xl font-black uppercase italic tracking-tighter">Archival Relay Station</h3>
-                    <p className="text-[10px] font-bold text-base-content/40 uppercase tracking-[0.2em]">Episode {selectedEpisode.episode} Decryption Linkage</p>
-                 </div>
-                 
-                 <div className="w-full max-w-lg space-y-3 overflow-y-auto max-h-[300px] custom-scrollbar pr-2">
-                    {isFetchingDownloads ? (
-                        <div className="flex flex-col items-center py-20 gap-4">
-                           <Loader2 size={32} className="animate-spin text-primary" />
-                           <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40">Syncing Direct Coordinates...</span>
-                        </div>
-                    ) : downloadLinks.map((link, idx) => (
-                        <a key={idx} href={(link as any).url || (link as any).link} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-outline border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content rounded-2xl p-4 h-auto flex flex-col items-center gap-1 transition-all group w-full">
-                            <span className="text-[9px] font-black uppercase tracking-widest opacity-40 group-hover:opacity-100">Downlink Coordinate</span>
-                            <span className="text-sm font-black italic tracking-tighter truncate w-full px-4">{(link as any).quality || (link as any).name || 'Source Link'}</span>
-                        </a>
-                    ))}
-                 </div>
-              </div>
-            )}
+                  </>
+                ) : (
+                  <div className="p-8 flex flex-col items-center justify-center space-y-8 min-h-[50vh]">
+                     <div className="flex flex-col items-center text-center space-y-2">
+                        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-2 shadow-inner"><Download size={32} /></div>
+                        <h3 className="text-xl font-black uppercase italic tracking-tighter">Archival Relay Station</h3>
+                        <p className="text-[10px] font-bold text-base-content/40 uppercase tracking-[0.2em]">Episode {selectedEpisode.episode} Decryption Linkage</p>
+                     </div>
+                     <div className="w-full max-w-lg space-y-3 pb-10">
+                        {isFetchingDownloads ? (
+                            <div className="flex flex-col items-center py-20 gap-4">
+                               <Loader2 size={32} className="animate-spin text-primary" />
+                               <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40">Syncing Direct Coordinates...</span>
+                            </div>
+                        ) : downloadLinks.map((link, idx) => (
+                            <a key={idx} href={(link as any).url || (link as any).link} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-outline border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content rounded-2xl p-4 h-auto flex flex-col items-center gap-1 transition-all group w-full">
+                                <span className="text-[9px] font-black uppercase tracking-widest opacity-40 group-hover:opacity-100">Downlink Coordinate</span>
+                                <span className="text-sm font-black italic tracking-tighter truncate w-full px-4">{(link as any).quality || (link as any).name || 'Source Link'}</span>
+                            </a>
+                        ))}
+                     </div>
+                  </div>
+                )}
+            </div>
           </div>
         ) : (
           <div className="flex flex-col md:flex-row h-full overflow-hidden bg-base-100 relative">
@@ -570,23 +545,51 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
                            <Loader2 size={32} className="animate-spin text-primary" />
                            <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40">Mapping Sector Transmissions...</span>
                         </div>
-                    ) : paginatedEpisodes.map(ep => {
-                        const isWatched = watchedEpisodes.has(ep.session);
-                        return (
-                          <div key={ep.session} onClick={() => handleAction(ep)} className="group flex items-center gap-4 p-3 rounded-2xl bg-base-content/5 border border-transparent hover:border-base-content/10 hover:bg-base-content/10 transition-all cursor-pointer">
-                            <div className="w-24 md:w-32 aspect-video rounded-xl bg-base-content/10 flex items-center justify-center overflow-hidden shrink-0 relative">
-                               <img src={ep.snapshot || anime.image} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="" />
-                               {isWatched && <div className="absolute top-1 right-1 bg-emerald-500 rounded-full p-0.5"><CheckCircle2 size={8} className="text-white" /></div>}
-                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                  {mode === 'download' ? <Download size={20} className="text-white" /> : <Play size={20} className="text-white" />}
-                               </div>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-black text-[10px] md:text-xs uppercase truncate tracking-tight text-base-content group-hover:text-primary transition-colors">E{ep.episode}: {ep.title || `Transmission ${ep.episode}`}</h4>
-                            </div>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-1 gap-3">
+                          {paginatedEpisodes.map(ep => {
+                              const isWatched = watchedEpisodes.has(ep.session);
+                              return (
+                                <div key={ep.session} onClick={() => handleAction(ep)} className="group flex items-center gap-4 p-3 rounded-2xl bg-base-content/5 border border-transparent hover:border-base-content/10 hover:bg-base-content/10 transition-all cursor-pointer">
+                                  <div className="w-24 md:w-32 aspect-video rounded-xl bg-base-content/10 flex items-center justify-center overflow-hidden shrink-0 relative">
+                                     <img src={ep.snapshot || anime.image} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="" />
+                                     {isWatched && <div className="absolute top-1 right-1 bg-emerald-500 rounded-full p-0.5"><CheckCircle2 size={8} className="text-white" /></div>}
+                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                        {mode === 'download' ? <Download size={20} className="text-white" /> : <Play size={20} className="text-white" />}
+                                     </div>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="font-black text-[10px] md:text-xs uppercase truncate tracking-tight text-base-content group-hover:text-primary transition-colors">E{ep.episode}: {ep.title || `Transmission ${ep.episode}`}</h4>
+                                  </div>
+                                </div>
+                              );
+                          })}
+                        </div>
+                        {/* Pagination controls for the episode list */}
+                        {totalPages > 1 && (
+                          <div className="flex items-center justify-center gap-4 pt-6">
+                            <button 
+                              disabled={currentPage === 0}
+                              onClick={() => setCurrentPage(prev => prev - 1)}
+                              className="btn btn-xs btn-ghost border border-base-content/10 rounded-xl px-4 flex items-center gap-1 disabled:opacity-20"
+                            >
+                              <ChevronLeft size={12} />
+                              <span className="text-[9px] font-black uppercase tracking-widest">Back</span>
+                            </button>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-base-content/40">Page {currentPage + 1} / {totalPages}</span>
+                            <button 
+                              disabled={currentPage >= totalPages - 1}
+                              onClick={() => setCurrentPage(prev => prev + 1)}
+                              className="btn btn-xs btn-ghost border border-base-content/10 rounded-xl px-4 flex items-center gap-1 disabled:opacity-20"
+                            >
+                              <span className="text-[9px] font-black uppercase tracking-widest">Next</span>
+                              <ChevronRight size={12} />
+                            </button>
                           </div>
-                        );
-                    })}
+                        )}
+                      </>
+                    )}
                   </div>
                 )}
               </div>

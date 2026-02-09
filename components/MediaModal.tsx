@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { TMDBMedia, TMDBEpisode, WatchHistoryItem } from '../types';
-import { X, Play, Loader2, Star, ArrowLeft, ChevronDown, Bookmark, BookmarkCheck, CheckCircle2, Layers, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { X, Play, Loader2, Star, ArrowLeft, ChevronDown, Bookmark, BookmarkCheck, CheckCircle2, Layers, ChevronLeft, ChevronRight, Download, MonitorPlay } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface MediaModalProps {
@@ -75,7 +75,6 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
         const data = await res.json();
         setDetails(data);
         
-        // Auto-resume logic for Movies
         if (!isTv && initialResumeData) {
           handleAction();
         }
@@ -93,7 +92,6 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
         const epList = epData.episodes || [];
         setEpisodes(epList);
 
-        // Auto-resume logic for TV Shows
         if (initialResumeData?.episodeId && epList.length > 0) {
           const targetEp = epList.find((e: TMDBEpisode) => e.id.toString() === initialResumeData.episodeId?.toString());
           if (targetEp) {
@@ -207,7 +205,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 10 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="will-change-modal bg-base-100 border border-base-content/10 w-full max-w-5xl h-fit max-h-[90vh] rounded-[2.5rem] overflow-hidden relative flex flex-col shadow-2xl transition-all duration-300"
+        className="bg-base-100 border border-base-content/10 w-full max-w-5xl h-fit max-h-[90vh] rounded-[2rem] md:rounded-[2.5rem] overflow-hidden relative flex flex-col shadow-2xl transition-all duration-300"
       >
         <div className="absolute top-4 right-4 z-[60] flex gap-2">
             {!isPlaying && onToggleSave && (
@@ -219,55 +217,53 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
         </div>
 
         {isPlaying ? (
-            <div className="flex flex-col bg-base-100">
-                <div className="flex items-center justify-between p-3 border-b border-base-content/10 gap-3">
+            <div className="flex flex-col h-full bg-base-100 overflow-hidden">
+                <div className="flex items-center justify-between p-3 border-b border-base-content/10 gap-3 shrink-0">
                     <button onClick={() => setIsPlaying(false)} className="text-[9px] font-black uppercase tracking-widest text-base-content/80 hover:text-base-content flex items-center gap-1.5 transition-colors">
                       <ArrowLeft size={12}/> Hub
                     </button>
-                    
                     <div className="flex flex-col items-center">
                       <h2 className="text-[10px] font-black uppercase text-base-content truncate italic tracking-tighter max-w-[200px] text-center">{media.title || media.name}</h2>
                       <span className="text-[7px] font-black text-base-content/40 uppercase tracking-widest truncate max-w-[150px]">
                         {isTv ? (playingEpisode?.name || 'Loading...') : 'Feature Presentation'}
                       </span>
                     </div>
-
                     <div className="w-12" />
                 </div>
                 
-                <div className="aspect-video w-full bg-black relative">
-                    {isIframeLoading && <div className="absolute inset-0 flex items-center justify-center bg-black z-10"><Loader2 size={24} className="animate-spin text-white"/></div>}
-                    <iframe src={getStreamUrl()} className="w-full h-full border-none" allowFullScreen onLoad={() => setIsIframeLoading(false)}/>
-                </div>
+                <div className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar">
+                    <div className="aspect-video w-full bg-black relative shrink-0">
+                        {isIframeLoading && <div className="absolute inset-0 flex items-center justify-center bg-black z-10"><Loader2 size={24} className="animate-spin text-white"/></div>}
+                        <iframe src={getStreamUrl()} className="w-full h-full border-none" allowFullScreen onLoad={() => setIsIframeLoading(false)}/>
+                    </div>
 
-                <div className="p-4 flex flex-col items-center gap-4 bg-base-100 border-t border-base-content/10">
-                    {isTv && (
-                        <div className="flex items-center justify-between w-full max-w-2xl px-2">
-                            <button disabled={currentIndex <= 0} onClick={() => handleNavigateEpisode('prev')} className="btn btn-xs h-8 px-4 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2">
-                                <ChevronLeft size={14} />
-                                <span className="text-[9px] font-black uppercase">Prev EP</span>
+                    <div className="p-4 flex flex-col items-center gap-6 bg-base-100 pb-10">
+                        {isTv && (
+                            <div className="flex items-center justify-between w-full max-w-2xl px-2">
+                                <button disabled={currentIndex <= 0} onClick={() => handleNavigateEpisode('prev')} className="btn btn-xs h-8 px-4 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2">
+                                    <ChevronLeft size={14} />
+                                    <span className="text-[9px] font-black uppercase">Prev EP</span>
+                                </button>
+                                <div className="text-[10px] font-black uppercase tracking-widest text-base-content/40">EP {playingEpisode?.episode_number} / {episodes.length}</div>
+                                <button disabled={currentIndex >= episodes.length - 1} onClick={() => handleNavigateEpisode('next')} className="btn btn-xs h-8 px-4 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2">
+                                    <span className="text-[9px] font-black uppercase">Next EP</span>
+                                    <ChevronRight size={14} />
+                                </button>
+                            </div>
+                        )}
+
+                        <div className="relative" ref={serverDropdownRef}>
+                            <button onClick={() => setIsServerDropdownOpen(!isServerDropdownOpen)} className="bg-base-content/5 border border-base-content/10 rounded-xl px-4 py-2 text-[9px] font-black uppercase text-base-content flex items-center gap-2 transition-all hover:bg-base-content/10">
+                               Node: {SERVERS.find(s=>s.id===server)?.label} <ChevronDown size={12} className={isServerDropdownOpen ? 'rotate-180 transition-transform' : 'transition-transform'}/>
                             </button>
-                            
-                            <div className="text-[10px] font-black uppercase tracking-widest text-base-content/40">EP {playingEpisode?.episode_number} / {episodes.length}</div>
-                            
-                            <button disabled={currentIndex >= episodes.length - 1} onClick={() => handleNavigateEpisode('next')} className="btn btn-xs h-8 px-4 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2">
-                                <span className="text-[9px] font-black uppercase">Next EP</span>
-                                <ChevronRight size={14} />
-                            </button>
+                            <AnimatePresence>
+                              {isServerDropdownOpen && (
+                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute bottom-full left-0 mb-2 w-full min-w-[180px] bg-base-100 border border-base-content/20 rounded-xl p-1.5 z-50 shadow-2xl">
+                                   {SERVERS.map(s => <button key={s.id} onClick={() => {setServer(s.id); setIsServerDropdownOpen(false); setIsIframeLoading(true);}} className={`w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase transition-colors ${server===s.id?'bg-primary text-primary-content':'text-base-content hover:bg-base-content/10'}`}>{s.label}</button>)}
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
                         </div>
-                    )}
-
-                    <div className="relative" ref={serverDropdownRef}>
-                        <button onClick={() => setIsServerDropdownOpen(!isServerDropdownOpen)} className="bg-base-content/5 border border-base-content/10 rounded-xl px-4 py-2 text-[9px] font-black uppercase text-base-content flex items-center gap-2 transition-all hover:bg-base-content/10">
-                           Node: {SERVERS.find(s=>s.id===server)?.label} <ChevronDown size={12} className={isServerDropdownOpen ? 'rotate-180 transition-transform' : 'transition-transform'}/>
-                        </button>
-                        <AnimatePresence>
-                          {isServerDropdownOpen && (
-                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute bottom-full left-0 mb-2 w-full min-w-[180px] bg-base-100 border border-base-content/20 rounded-xl p-1.5 z-50 shadow-2xl">
-                               {SERVERS.map(s => <button key={s.id} onClick={() => {setServer(s.id); setIsServerDropdownOpen(false); setIsIframeLoading(true);}} className={`w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase transition-colors ${server===s.id?'bg-primary text-primary-content':'text-base-content hover:bg-base-content/10'}`}>{s.label}</button>)}
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
                     </div>
                 </div>
             </div>
@@ -306,7 +302,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                                 <div className="flex flex-wrap gap-3">
                                     {details?.genres?.map((g: any) => (<span key={g.id} className="px-4 py-1.5 bg-base-content/5 rounded-full text-[9px] font-black uppercase tracking-widest text-base-content/60 border border-base-content/5">{g.name}</span>))}
                                 </div>
-                                <div className="pt-4">
+                                <div className="pt-4 pb-10">
                                   {mode === 'watch' ? (
                                     <button onClick={()=>handleAction()} className="btn btn-primary rounded-full px-12 h-14 font-black uppercase text-[11px] tracking-widest hover:scale-105 transition-transform shadow-2xl shadow-primary/20">
                                        {lastHistoryItem ? `Continue Transmission` : 'Initiate Stream'}

@@ -48,7 +48,6 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isPWA, current
       { id: AppTab.SAVED, label: 'Saved', icon: Bookmark }
     ];
 
-    // Strictly exclude Home tab if in PWA mode
     return allButtons.filter(btn => {
       if (isPWA && btn.id === AppTab.HOME) return false;
       return true;
@@ -58,31 +57,39 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isPWA, current
   return (
     <>
       <nav className="sticky top-0 z-50 bg-base-100/90 backdrop-blur-xl border-b border-base-content/10 px-4 md:px-6 py-3 transition-all duration-300">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="max-w-7xl mx-auto md:grid md:grid-cols-3 flex items-center justify-between">
+          
+          {/* Branding - Left Column on Desktop */}
           <div 
-            className="flex items-center gap-3 cursor-pointer group" 
+            className="flex items-center gap-3 cursor-pointer group justify-start" 
             onClick={() => setActiveTab(isPWA ? AppTab.ANIME : AppTab.HOME)}
           >
-            <div className="w-8 h-8 md:w-10 md:h-10 bg-primary rounded-lg" style={{ maskImage: 'url(https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png)', maskSize: 'contain', WebkitMaskImage: 'url(https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png)', WebkitMaskSize: 'contain' }} />
-            <span className="text-lg md:text-xl font-black uppercase tracking-tighter italic">StreamVibe</span>
+            <div className="w-8 h-8 md:w-9 md:h-9 bg-primary rounded-lg" style={{ maskImage: 'url(https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png)', maskSize: 'contain', WebkitMaskImage: 'url(https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png)', WebkitMaskSize: 'contain' }} />
+            <span className="text-lg md:text-xl font-black uppercase tracking-tighter italic whitespace-nowrap">StreamVibe</span>
           </div>
 
-          <div className="hidden md:flex items-center gap-1 bg-base-content/5 rounded-full p-1">
-            {navButtons.map(({ id, label, icon: Icon }) => (
-              <button 
-                key={id}
-                onClick={() => setActiveTab(id)}
-                className={`px-6 py-2 rounded-full flex items-center gap-2 transition-all ${activeTab === id ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/60 hover:text-base-content hover:bg-base-content/10'}`}
-              >
-                <Icon size={14} />
-                <span className="text-[10px] font-black uppercase tracking-wider">{label}</span>
-              </button>
-            ))}
+          {/* Navigation - Center Column on Desktop */}
+          <div className="hidden md:flex items-center justify-center">
+            <div className="flex items-center gap-1 bg-base-content/5 rounded-full p-1 border border-base-content/5">
+              {navButtons.map(({ id, label, icon: Icon }) => (
+                <button 
+                  key={id}
+                  onClick={() => setActiveTab(id)}
+                  className={`px-5 py-2 rounded-full flex items-center gap-2 transition-all ${activeTab === id ? 'bg-primary text-primary-content shadow-md' : 'text-base-content/60 hover:text-base-content hover:bg-base-content/10'}`}
+                >
+                  <Icon size={13} />
+                  <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
-          <button onClick={() => setIsThemeModalOpen(true)} className="btn btn-ghost btn-circle btn-sm text-base-content/80">
-            <Palette size={20} />
-          </button>
+          {/* Controls - Right Column on Desktop */}
+          <div className="flex items-center justify-end gap-2">
+            <button onClick={() => setIsThemeModalOpen(true)} className="btn btn-ghost btn-circle btn-sm text-base-content/80 hover:bg-base-content/10">
+              <Palette size={20} />
+            </button>
+          </div>
         </div>
       </nav>
 
