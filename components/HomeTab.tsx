@@ -33,7 +33,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab, onSelectCategory }) => 
     { q: "Is StreamVibe free to use?", a: "Yes, StreamVibe is completely free. We do not require any subscriptions or credit cards." },
     { q: "Do I need to create an account?", a: "No account is required. Your watch history is stored locally on your device for privacy." },
     { q: "How do I install this on my phone?", a: "Use your browser's 'Add to Home Screen' feature to install StreamVibe as a Progressive Web App (PWA)." },
-    { q: "Why isn't the video loading?", a: "Try switching servers in the player options. Sometimes specific nodes may be under heavy load." }
+    { q: "Why isn't the video loading?", a: "Try switching servers in the player options. Sometimes specific sources may be under heavy load." }
   ];
 
   return (
@@ -93,14 +93,14 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab, onSelectCategory }) => 
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
             </span>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-base-content/80">Systems Online</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-base-content/80">App is Live</span>
           </div>
           <h1 className="text-4xl md:text-7xl font-black text-base-content tracking-tighter uppercase italic">
             Stream Vibe
           </h1>
           <p className="text-sm md:text-lg text-base-content/80 font-medium max-w-2xl mx-auto leading-relaxed">
-            The ultimate minimalist streaming hub. Access a massive neural database of Anime, Movies, and TV Shows. 
-            Switch seamlessly between high-speed streaming and direct downloads.
+            Your ultimate minimalist streaming hub. Access a massive library of Anime, Movies, and TV Shows. 
+            Watch instantly or download for later.
           </p>
         </motion.div>
 
@@ -122,7 +122,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab, onSelectCategory }) => 
             className="btn btn-outline border-base-content/30 text-base-content rounded-full px-8 h-12 text-xs font-black uppercase tracking-widest hover:bg-base-content hover:text-base-100 hover:border-base-content transition-all"
           >
             <Globe size={14} className="mr-2" />
-            Browse Global
+            Browse Movies & TV
           </button>
         </motion.div>
       </section>
@@ -135,10 +135,10 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab, onSelectCategory }) => 
         className="w-full max-w-5xl grid grid-cols-2 md:grid-cols-4 gap-4"
       >
         {[
-            { label: "Active Nodes", value: "12", icon: <Server size={14} /> },
+            { label: "Active Servers", value: "12", icon: <Server size={14} /> },
             { label: "Latency", value: "~24ms", icon: <Activity size={14} /> },
             { label: "Uptime", value: "99.9%", icon: <Zap size={14} /> },
-            { label: "Database", value: "4.2M+", icon: <Cpu size={14} /> },
+            { label: "Content", value: "4.2M+", icon: <Cpu size={14} /> },
         ].map((stat, i) => (
             <div key={i} className="bg-base-content/5 border border-base-content/10 rounded-xl p-4 flex flex-col items-center justify-center text-center group hover:bg-base-content/10 transition-colors">
                 <div className="text-base-content/40 mb-2 group-hover:text-primary transition-colors">{stat.icon}</div>
@@ -153,18 +153,18 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab, onSelectCategory }) => 
         {[
           {
             icon: <Zap size={24} className="text-primary" />,
-            title: "Dual Mode Engine",
-            desc: "Toggle instantly between streaming mode for immediate playback and download mode for offline archival."
+            title: "Watch or Download",
+            desc: "Toggle instantly between streaming mode for immediate playback and download mode for offline viewing."
           },
           {
             icon: <Globe size={24} className="text-primary" />,
-            title: "Global TMDB Network",
-            desc: "Powered by The Movie Database API to provide real-time metadata, trending lists, and high-res assets."
+            title: "Global Library",
+            desc: "Powered by TMDB to provide real-time info, trending lists, and high-quality images for all your favorite shows."
           },
           {
             icon: <Smartphone size={24} className="text-primary" />,
             title: "PWA Optimized",
-            desc: "Install as a native app on iOS and Android. Experience app-like performance with gesture navigation."
+            desc: "Install as a native app on iOS and Android. Experience fast performance with simple navigation."
           }
         ].map((feature, idx) => (
           <motion.div 
@@ -194,9 +194,9 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab, onSelectCategory }) => 
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-                { step: "01", title: "Select Content", text: "Choose from our vast library of Anime, Movies, or TV Shows via the global search." },
-                { step: "02", title: "Choose Mode", text: "Toggle between 'Watch' for instant streaming or 'Download' for highest quality files." },
-                { step: "03", title: "Engage", text: "Enjoy seamless playback in our custom player or save files directly to your device." }
+                { step: "01", title: "Pick a Title", text: "Search from our vast library of Anime, Movies, or TV Shows." },
+                { step: "02", title: "Select Mode", text: "Choose 'Watch' for instant streaming or 'Download' for offline files." },
+                { step: "03", title: "Enjoy", text: "Enjoy seamless playback in our custom player or save files for later." }
             ].map((item, i) => (
                 <div key={i} className="relative p-6 rounded-2xl bg-gradient-to-br from-base-content/10 to-transparent border border-base-content/10 group hover:border-primary/40 transition-all">
                     <div className="absolute -top-4 -left-4 text-4xl font-black text-base-content/10 group-hover:text-primary/20 transition-colors italic select-none">{item.step}</div>
@@ -211,7 +211,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab, onSelectCategory }) => 
       <section className="w-full max-w-3xl space-y-6">
         <div className="flex items-center gap-2 border-b border-base-content/20 pb-4 mb-6">
             <HelpCircle size={18} className="text-base-content" />
-            <h2 className="text-lg font-black text-base-content uppercase tracking-tighter">Frequently Asked Questions</h2>
+            <h2 className="text-lg font-black text-base-content uppercase tracking-tighter">Common Questions</h2>
         </div>
         <div className="space-y-3">
             {faqs.map((faq, i) => (
@@ -286,10 +286,10 @@ const HomeTab: React.FC<HomeTabProps> = ({ setActiveTab, onSelectCategory }) => 
           
           <div className="relative z-10 space-y-4">
              <h2 className="text-2xl md:text-3xl font-black text-base-content uppercase italic tracking-tighter">
-               Ready to Dive In?
+               Ready to Start?
              </h2>
              <p className="text-sm text-base-content/80 max-w-lg mx-auto">
-               Join thousands of users enjoying the next generation of content discovery and consumption.
+               Join thousands of users enjoying the next generation of content discovery.
              </p>
              <button 
                 onClick={() => setActiveTab(AppTab.ANIME)} 

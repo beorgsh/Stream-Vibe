@@ -131,7 +131,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
         });
       }
     } catch (error) {
-      console.error("Transmission sync interrupted:", error);
+      console.error("Data fetch error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -208,7 +208,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
         }
       }
     } catch (error) {
-      console.error("Registry scan failed:", error);
+      console.error("Search error:", error);
       setSearchResults([]);
     } finally {
       setIsSearching(false);
@@ -346,7 +346,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                       handleItemSelect(activeSpotlights[displaySpotlightIndex]);
                     }}
                   >
-                    Watch Node
+                    Watch Now
                   </button>
                 </div>
               </motion.div>
@@ -372,9 +372,9 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
       <section className="max-w-xl mx-auto w-full space-y-4 flex flex-col items-center relative z-40">
         <div className="text-center space-y-1">
           <h1 className="text-2xl md:text-3xl font-black text-base-content uppercase tracking-tighter italic">
-            {viewMode === 'download' ? 'Archive Core' : viewMode === 'schedule' ? 'Live Grid' : 'Discovery Node'}
+            {viewMode === 'download' ? 'Download Anime' : viewMode === 'schedule' ? 'Airing Today' : 'Explore Anime'}
           </h1>
-          <p className="text-[10px] uppercase font-bold text-base-content/60 tracking-[0.2em]">Synchronized Database</p>
+          <p className="text-[10px] uppercase font-bold text-base-content/60 tracking-[0.2em]">All your favorites in one place</p>
         </div>
 
         <div className="flex flex-col items-center gap-4 w-full">
@@ -408,7 +408,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
             <motion.div animate={controls} className="relative w-full group">
               <input 
                 type="text" 
-                placeholder={viewMode === 'download' ? "Query archival database..." : "Query discovery records..."}
+                placeholder={viewMode === 'download' ? "Search for downloads..." : "Search anime..."}
                 className="input input-sm h-10 md:h-12 w-full bg-base-content/5 border border-base-content/20 rounded-full pl-10 pr-24 text-xs font-medium focus:border-primary transition-all text-base-content placeholder:text-base-content/40 relative z-10"
                 value={searchQuery}
                 onChange={handleInputChange}
@@ -446,7 +446,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                           className="absolute right-0 mt-2 w-[300px] bg-base-100/95 backdrop-blur-xl border border-base-content/20 rounded-2xl shadow-2xl py-3 z-50 overflow-hidden"
                         >
                            <div className="max-h-[400px] overflow-y-auto custom-scrollbar px-3">
-                              <div className="px-1 py-1 mb-2 text-[8px] font-black uppercase tracking-[0.2em] text-base-content/30 border-b border-base-content/5">Genre Matrix</div>
+                              <div className="px-1 py-1 mb-2 text-[8px] font-black uppercase tracking-[0.2em] text-base-content/30 border-b border-base-content/5">Genres</div>
                               <div className="grid grid-cols-2 gap-1.5 pb-2">
                                   {allGenres.map(g => (
                                   <button 
@@ -468,7 +468,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                   </div>
                 )}
                 <button onClick={() => handleSearch(searchQuery)} className="btn btn-primary btn-xs h-8 md:h-10 rounded-full px-4 font-black uppercase text-[8px]" disabled={isSearching}>
-                  {isSearching ? <Loader2 className="animate-spin" size={12} /> : "Query"}
+                  {isSearching ? <Loader2 className="animate-spin" size={12} /> : "Search"}
                 </button>
               </div>
             </motion.div>
@@ -484,7 +484,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
             <section className="space-y-4">
               <div className="flex items-center justify-between border-b border-base-content/10 pb-1">
                 <h2 className="text-sm font-black text-base-content uppercase tracking-tighter italic flex items-center gap-2">
-                  {isSearching ? "Linking Node..." : searchResults.length > 0 ? `Query Results (${searchResults.length})` : "Sector Data Void"}
+                  {isSearching ? "Searching..." : searchResults.length > 0 ? `Results (${searchResults.length})` : "No results found"}
                 </h2>
                 <button onClick={clearSearch} className="text-[8px] uppercase font-black text-base-content/50 hover:text-base-content">Reset</button>
               </div>
@@ -509,8 +509,8 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                   >
                       <ImageOff size={64} className="opacity-20" />
                       <div className="text-center">
-                          <p className="text-sm font-black uppercase tracking-tighter">Void Sector</p>
-                          <p className="text-[10px] font-bold uppercase tracking-[0.3em]">No results found for "{searchQuery}"</p>
+                          <p className="text-sm font-black uppercase tracking-tighter">No results</p>
+                          <p className="text-[10px] font-bold uppercase tracking-[0.3em]">Could not find anything for "{searchQuery}"</p>
                       </div>
                   </motion.div>
                 )}
@@ -535,7 +535,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                       <section className="w-full space-y-6">
                         <div className="flex items-center gap-2 border-l-2 border-primary pl-4">
                           <LayoutGrid size={18} className="text-primary" />
-                          <h2 className="text-lg font-black text-base-content uppercase tracking-tighter">Neural Indices</h2>
+                          <h2 className="text-lg font-black text-base-content uppercase tracking-tighter">Browse Categories</h2>
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-5 gap-4">
                           {categories.map((cat, i) => (
@@ -555,18 +555,18 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                                 <span className="text-[10px] font-black uppercase tracking-widest text-base-content group-hover:text-primary transition-colors">
                                   {cat.label}
                                 </span>
-                                <span className="text-[8px] font-bold text-base-content/30 uppercase tracking-[0.2em]">Node Link</span>
+                                <span className="text-[8px] font-bold text-base-content/30 uppercase tracking-[0.2em]">Anime</span>
                               </div>
                             </motion.button>
                           ))}
                         </div>
                       </section>
-                      <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('anime-watch')} title={`Archive History`} />
+                      <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('anime-watch')} title={`Watch History`} />
                       {watchHome && (
                         <>
                           {renderHorizontalSection("Trending", watchHome.trending, <Flame size={18} className="text-primary" />)}
                           {renderHorizontalSection("Top Airing", watchHome.topAiring, <Star size={18} className="text-primary" />)}
-                          {renderHorizontalSection("New Transmissions", watchHome.latestEpisode, <Zap size={18} className="text-primary" />)}
+                          {renderHorizontalSection("Recent Episodes", watchHome.latestEpisode, <Zap size={18} className="text-primary" />)}
                         </>
                       )}
                     </motion.div>
@@ -583,43 +583,43 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                     <div className="relative z-10 flex flex-col items-center space-y-6">
                       <div className="flex items-center gap-3 px-4 py-2 bg-primary/10 rounded-full border border-primary/20 text-primary">
                          <Database size={16} className="animate-pulse" />
-                         <span className="text-[10px] font-black uppercase tracking-[0.4em]">Archival Mode Active</span>
+                         <span className="text-[10px] font-black uppercase tracking-[0.4em]">Download Mode</span>
                       </div>
                       
                       <div className="space-y-3">
-                        <h2 className="text-2xl md:text-5xl font-black text-base-content uppercase tracking-tighter italic leading-none">Global Archive Node</h2>
+                        <h2 className="text-2xl md:text-5xl font-black text-base-content uppercase tracking-tighter italic leading-none">Global Downloads</h2>
                         <p className="text-[11px] font-bold text-base-content/40 uppercase tracking-[0.2em] max-w-lg mx-auto leading-relaxed">
-                          Secure archival downlink established. Use the registry query above to locate specific data sectors. High-speed multi-page synchronization enabled for long-running series.
+                          Securely download your favorite anime for offline viewing. High-speed multi-part downloads enabled for long-running series.
                         </p>
                       </div>
 
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-2xl pt-6 border-t border-base-content/5">
                         <div className="flex flex-col items-center gap-1">
                            <span className="text-[14px] font-black text-base-content tracking-tighter italic">V4.2.0</span>
-                           <span className="text-[8px] font-black uppercase text-base-content/30 tracking-widest">Protocol</span>
+                           <span className="text-[8px] font-black uppercase text-base-content/30 tracking-widest">Version</span>
                         </div>
                         <div className="flex flex-col items-center gap-1">
                            <span className="text-[14px] font-black text-emerald-500 tracking-tighter italic">STABLE</span>
                            <span className="text-[8px] font-black uppercase text-base-content/30 tracking-widest">Status</span>
                         </div>
                         <div className="flex flex-col items-center gap-1">
-                           <span className="text-[14px] font-black text-primary tracking-tighter italic">APEX-C</span>
-                           <span className="text-[8px] font-black uppercase text-base-content/30 tracking-widest">Relay</span>
+                           <span className="text-[14px] font-black text-primary tracking-tighter italic">APEX</span>
+                           <span className="text-[8px] font-black uppercase text-base-content/30 tracking-widest">Server</span>
                         </div>
                         <div className="flex flex-col items-center gap-1">
                            <span className="text-[14px] font-black text-amber-500 tracking-tighter italic">SECURE</span>
-                           <span className="text-[8px] font-black uppercase text-base-content/30 tracking-widest">Encryp</span>
+                           <span className="text-[8px] font-black uppercase text-base-content/30 tracking-widest">SSL</span>
                         </div>
                       </div>
 
                       <div className="pt-4 flex items-center gap-6">
                          <div className="flex items-center gap-2 opacity-30">
                             <ShieldCheck size={14} />
-                            <span className="text-[9px] font-black uppercase">Verified Linkage</span>
+                            <span className="text-[9px] font-black uppercase">Verified</span>
                          </div>
                          <div className="flex items-center gap-2 opacity-30">
                             <Server size={14} />
-                            <span className="text-[9px] font-black uppercase">Cloud Cluster A</span>
+                            <span className="text-[9px] font-black uppercase">Cloud A</span>
                          </div>
                       </div>
                     </div>

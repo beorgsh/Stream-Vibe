@@ -19,14 +19,14 @@ interface MediaModalProps {
 }
 
 const SERVERS = [
-  { id: 'rivestream', label: 'RiveStream (Primary)' },
-  { id: 'rive2', label: 'Rive Aggregator' },
-  { id: 'vidnest', label: 'VidNest' },
-  { id: 'vidup', label: 'VidUp' },
-  { id: 'vidfast', label: 'VidFast' },
+  { id: 'rivestream', label: 'Primary' },
+  { id: 'rive2', label: 'Aggregator' },
+  { id: 'vidnest', label: 'Mirror 1' },
+  { id: 'vidup', label: 'Mirror 2' },
+  { id: 'vidfast', label: 'Mirror 3' },
   { id: 'vidsrcto', label: 'VidSrc.to' },
-  { id: 'vidzee', label: 'VidZee' },
-  { id: 'vidsrc', label: 'VidSrc (WTF)' },
+  { id: 'vidzee', label: 'Mirror 4' },
+  { id: 'vidsrc', label: 'Legacy' },
 ];
 
 const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 'watch', onPlay, initialResumeData, isSaved, onToggleSave }) => {
@@ -213,19 +213,19 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                 {isSaved ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
               </button>
             )}
-            <button onClick={onClose} className="btn btn-circle btn-xs md:btn-sm bg-base-100 border border-base-content/20 text-base-content hover:bg-base-content/10 shadow-lg"><X size={14} /></button>
+            <button onClose={onClose} className="btn btn-circle btn-xs md:btn-sm bg-base-100 border border-base-content/20 text-base-content hover:bg-base-content/10 shadow-lg"><X size={14} /></button>
         </div>
 
         {isPlaying ? (
             <div className="flex flex-col h-full bg-base-100 overflow-hidden">
                 <div className="flex items-center justify-between p-3 border-b border-base-content/10 gap-3 shrink-0">
                     <button onClick={() => setIsPlaying(false)} className="text-[9px] font-black uppercase tracking-widest text-base-content/80 hover:text-base-content flex items-center gap-1.5 transition-colors">
-                      <ArrowLeft size={12}/> Hub
+                      <ArrowLeft size={12}/> Back
                     </button>
                     <div className="flex flex-col items-center">
                       <h2 className="text-[10px] font-black uppercase text-base-content truncate italic tracking-tighter max-w-[200px] text-center">{media.title || media.name}</h2>
                       <span className="text-[7px] font-black text-base-content/40 uppercase tracking-widest truncate max-w-[150px]">
-                        {isTv ? (playingEpisode?.name || 'Loading...') : 'Feature Presentation'}
+                        {isTv ? (playingEpisode?.name || 'Loading...') : 'Playing'}
                       </span>
                     </div>
                     <div className="w-12" />
@@ -242,11 +242,11 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                             <div className="flex items-center justify-between w-full max-w-2xl px-2">
                                 <button disabled={currentIndex <= 0} onClick={() => handleNavigateEpisode('prev')} className="btn btn-xs h-8 px-4 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2">
                                     <ChevronLeft size={14} />
-                                    <span className="text-[9px] font-black uppercase">Prev EP</span>
+                                    <span className="text-[9px] font-black uppercase">Prev</span>
                                 </button>
                                 <div className="text-[10px] font-black uppercase tracking-widest text-base-content/40">EP {playingEpisode?.episode_number} / {episodes.length}</div>
                                 <button disabled={currentIndex >= episodes.length - 1} onClick={() => handleNavigateEpisode('next')} className="btn btn-xs h-8 px-4 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2">
-                                    <span className="text-[9px] font-black uppercase">Next EP</span>
+                                    <span className="text-[9px] font-black uppercase">Next</span>
                                     <ChevronRight size={14} />
                                 </button>
                             </div>
@@ -254,7 +254,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
 
                         <div className="relative" ref={serverDropdownRef}>
                             <button onClick={() => setIsServerDropdownOpen(!isServerDropdownOpen)} className="bg-base-content/5 border border-base-content/10 rounded-xl px-4 py-2 text-[9px] font-black uppercase text-base-content flex items-center gap-2 transition-all hover:bg-base-content/10">
-                               Node: {SERVERS.find(s=>s.id===server)?.label} <ChevronDown size={12} className={isServerDropdownOpen ? 'rotate-180 transition-transform' : 'transition-transform'}/>
+                               Server: {SERVERS.find(s=>s.id===server)?.label} <ChevronDown size={12} className={isServerDropdownOpen ? 'rotate-180 transition-transform' : 'transition-transform'}/>
                             </button>
                             <AnimatePresence>
                               {isServerDropdownOpen && (
@@ -298,19 +298,19 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                     <div className="flex-1 overflow-y-auto custom-scrollbar">
                         {activeTab==='info' ? (
                             <div className="p-8 space-y-8 max-w-3xl">
-                                <p className="text-base-content/80 text-sm md:text-lg leading-relaxed font-medium italic">{media.overview || "System documentation update in progress."}</p>
+                                <p className="text-base-content/80 text-sm md:text-lg leading-relaxed font-medium italic">{media.overview || "No description available."}</p>
                                 <div className="flex flex-wrap gap-3">
                                     {details?.genres?.map((g: any) => (<span key={g.id} className="px-4 py-1.5 bg-base-content/5 rounded-full text-[9px] font-black uppercase tracking-widest text-base-content/60 border border-base-content/5">{g.name}</span>))}
                                 </div>
                                 <div className="pt-4 pb-10">
                                   {mode === 'watch' ? (
                                     <button onClick={()=>handleAction()} className="btn btn-primary rounded-full px-12 h-14 font-black uppercase text-[11px] tracking-widest hover:scale-105 transition-transform shadow-2xl shadow-primary/20">
-                                       {lastHistoryItem ? `Continue Transmission` : 'Initiate Stream'}
+                                       {lastHistoryItem ? `Resume Watching` : 'Watch Now'}
                                     </button>
                                   ) : !isTv ? (
                                     <button onClick={()=>handleAction()} className="btn btn-primary rounded-full px-12 h-14 font-black uppercase text-[11px] tracking-widest hover:scale-105 transition-transform shadow-2xl shadow-primary/20 flex items-center gap-2">
                                        <Download size={16} />
-                                       Initialize Archive
+                                       Download Now
                                     </button>
                                   ) : null}
                                 </div>
@@ -331,7 +331,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
                                                   ))}
                                               </select>
                                           </div>
-                                          <span className="text-[8px] font-black text-base-content/30 uppercase tracking-[0.2em]">Select Unit</span>
+                                          <span className="text-[8px] font-black text-base-content/30 uppercase tracking-[0.2em]">Season</span>
                                       </div>
                                   ) : (
                                       <div className="flex items-center gap-2 text-[9px] font-black text-base-content/40 uppercase tracking-widest">

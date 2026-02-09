@@ -161,8 +161,8 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
     <div className="space-y-6 md:space-y-10 pb-10">
       <section className="flex flex-col items-center space-y-4">
         <div className="text-center space-y-1">
-          <h1 className="text-2xl md:text-3xl font-black text-base-content uppercase tracking-tighter italic">{viewMode === 'download' ? 'Archive Core' : 'Global Discovery'}</h1>
-          <p className="text-[10px] uppercase font-bold text-base-content/60 tracking-[0.2em]">Synchronized Database</p>
+          <h1 className="text-2xl md:text-3xl font-black text-base-content uppercase tracking-tighter italic">{viewMode === 'download' ? 'Download Center' : 'Movies & TV'}</h1>
+          <p className="text-[10px] uppercase font-bold text-base-content/60 tracking-[0.2em]">Explore global hits and classics</p>
         </div>
 
         <div className="flex p-1 bg-base-content/5 rounded-full border border-base-content/10">
@@ -186,7 +186,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
           <motion.div animate={controls} className="relative w-full group">
             <input 
               type="text" 
-              placeholder={viewMode === 'download' ? "Search for archival downloads..." : "Search film & TV archive..."} 
+              placeholder={viewMode === 'download' ? "Search for movies or shows..." : "Search movies & TV..."} 
               className="input input-sm h-10 md:h-12 w-full bg-base-content/5 border border-base-content/20 rounded-full pl-10 pr-24 text-xs font-medium focus:border-primary transition-all text-base-content relative z-10" 
               value={searchQuery} 
               onChange={handleInputChange} 
@@ -217,7 +217,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
         <section className="space-y-4">
           <div className="flex items-center justify-between border-b border-base-content/10 pb-1">
             <h2 className="text-sm font-black text-base-content uppercase tracking-tighter italic">
-              {isSearching ? "Decrypting Results..." : searchResults.length > 0 ? `Search Results (${searchResults.length})` : "Null Signal Detected"}
+              {isSearching ? "Searching..." : searchResults.length > 0 ? `Search Results (${searchResults.length})` : "No results found"}
             </h2>
             <button onClick={clearSearch} className="text-[8px] uppercase font-black text-base-content/50 hover:text-base-content">Clear</button>
           </div>
@@ -244,8 +244,8 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                 >
                     <ImageOff size={64} className="opacity-20" />
                     <div className="text-center">
-                        <p className="text-sm font-black uppercase tracking-tighter">Void Sector</p>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.3em]">No results found for "{searchQuery}"</p>
+                        <p className="text-sm font-black uppercase tracking-tighter">Empty</p>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.3em]">No results for "{searchQuery}"</p>
                     </div>
                 </motion.div>
               )}
@@ -296,21 +296,21 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                     </section>
                   )}
 
-                  <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('global-watch')} title="Recently Played" />
+                  <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('global-watch')} title="Recently Watched" />
 
-                  {renderSection("Global Trending", trending, <Flame size={18} className="text-primary" />)}
+                  {renderSection("Trending", trending, <Flame size={18} className="text-primary" />)}
                   {renderSection("Popular Movies", popMovies, <Film size={18} className="text-primary" />)}
-                  {renderSection("Top Rated Cinema", topMovies, <Trophy size={18} className="text-primary" />)}
+                  {renderSection("Top Rated Movies", topMovies, <Trophy size={18} className="text-primary" />)}
                   {renderSection("Most Popular Shows", popTV, <Tv size={18} className="text-primary" />)}
-                  {renderSection("Top Rated Television", topTV, <BarChart3 size={18} className="text-primary" />)}
+                  {renderSection("Top Rated Shows", topTV, <BarChart3 size={18} className="text-primary" />)}
                 </motion.div>
               )}
             </AnimatePresence>
           ) : (
             <div className="space-y-8 md:space-y-12">
-               <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('global-download')} title="Archive Access" />
+               <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('global-download')} title="Recent Downloads" />
                <section className="space-y-4">
-                 <h2 className="text-sm md:text-lg font-black text-base-content uppercase tracking-tighter border-l-2 border-primary pl-3">Archive Registry</h2>
+                 <h2 className="text-sm md:text-lg font-black text-base-content uppercase tracking-tighter border-l-2 border-primary pl-3">Top Downloads</h2>
                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
                    {trending.map((media) => (<MediaCard key={media.id} media={media} onClick={() => onSelectMedia(media, viewMode)} />))}
                  </div>

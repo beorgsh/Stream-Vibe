@@ -19,19 +19,19 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isPWA, current
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   
   const themes = [
-    { id: 'black', name: 'Dark Core', icon: Moon, color: '#ffffff' },
+    { id: 'black', name: 'Dark', icon: Moon, color: '#ffffff' },
     { id: 'luxury', name: 'Royal Gold', icon: Crown, color: '#e5c07b' },
-    { id: 'forest', name: 'Matrix', icon: TreePine, color: '#1eb854' },
+    { id: 'forest', name: 'Deep Forest', icon: TreePine, color: '#1eb854' },
     { id: 'valentine', name: 'Sweetheart', icon: Heart, color: '#e96d7b' },
     { id: 'pastel', name: 'Soft Dream', icon: Cloud, color: '#d1c1d7' },
     { id: 'retro', name: 'Old School', icon: Gamepad2, color: '#ef9995' },
     { id: 'cyberpunk', name: 'Neon City', icon: Zap, color: '#ff7598' },
     { id: 'coffee', name: 'Warm Brew', icon: Coffee, color: '#db924b' },
     { id: 'midnight', name: 'Deep Sea', icon: Sparkles, color: '#1d4ed8' },
-    { id: 'dracula', name: 'Nightshade', icon: Ghost, color: '#bd93f9' },
+    { id: 'dracula', name: 'Vampire', icon: Ghost, color: '#bd93f9' },
     { id: 'emerald', name: 'Jade', icon: Gem, color: '#66cc8a' },
-    { id: 'corporate', name: 'Office', icon: Briefcase, color: '#4b6bfb' },
-    { id: 'synthwave', name: 'Retro Neon', icon: Sun, color: '#e779c1' },
+    { id: 'corporate', name: 'Modern', icon: Briefcase, color: '#4b6bfb' },
+    { id: 'synthwave', name: 'Cyber Wave', icon: Sun, color: '#e779c1' },
     { id: 'aqua', name: 'Ocean', icon: Droplets, color: '#09ecf3' }
   ];
 
@@ -110,7 +110,7 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, isPWA, current
           <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md" onClick={(e) => e.target === e.currentTarget && setIsThemeModalOpen(false)}>
             <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="bg-base-100 border border-base-content/20 w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
               <div className="p-6 border-b border-base-content/10 flex items-center justify-between">
-                <h2 className="text-lg font-black uppercase tracking-tighter">Neural Themes</h2>
+                <h2 className="text-lg font-black uppercase tracking-tighter">Themes</h2>
                 <button onClick={() => setIsThemeModalOpen(false)} className="btn btn-circle btn-sm btn-ghost"><X size={20} /></button>
               </div>
               <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 sm:grid-cols-3 gap-3 custom-scrollbar">
