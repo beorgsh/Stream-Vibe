@@ -34,28 +34,46 @@ const EPISODES_PER_PAGE = 30;
 
 const NeuralPlayer: React.FC<{ url: string; poster?: string; subtitle?: any[]; onReady?: () => void }> = ({ url, poster, subtitle, onReady }) => {
   const artRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<Artplayer | null>(null);
 
   useEffect(() => {
     if (!artRef.current || !url) return;
 
-    // Use a flag to prevent operations after unmount
-    let isMounted = true;
+    if (playerRef.current) {
+      playerRef.current.destroy(false);
+    }
 
     const art = new Artplayer({
       container: artRef.current,
       url: url,
       poster: poster || "",
-      autoplay: false, // Handle autoplay manually to catch play() interruptions
+      autoplay: true,
+      volume: 1,
+      isLive: false,
+      muted: false,
       pip: true,
       autoSize: true,
-      fullscreen: true,
-      fullscreenWeb: true,
+      autoMini: true,
+      screenshot: true,
+      setting: true,
+      loop: false,
+      flip: true,
       playbackRate: true,
       aspectRatio: true,
-      setting: true,
-      hotkey: true,
+      fullscreen: true,
+      fullscreenWeb: true,
+      subtitleOffset: true,
+      miniProgressBar: true,
+      mutex: true,
+      backdrop: true,
+      playsInline: true,
+      autoPlayback: true,
+      airplay: true,
       theme: '#1eb854',
       type: 'm3u8',
+      moreVideoAttr: {
+        crossOrigin: 'anonymous',
+      },
       subtitle: subtitle ? {
         url: subtitle.find(s => s.default)?.url || subtitle[0]?.url || "",
         type: 'vtt',
@@ -79,9 +97,6 @@ const NeuralPlayer: React.FC<{ url: string; poster?: string; subtitle?: any[]; o
           },
         },
       ],
-      icons: {
-        loading: '<img src="https://img.icons8.com/ios-filled/512/ffffff/play-button-circled--v1.png" style="width: 50px; height: 50px; animation: pulse 2s infinite;">',
-      },
       customType: {
         m3u8: (video: HTMLMediaElement, url: string, artInstance: any) => {
           if (Hls.isSupported()) {
@@ -90,48 +105,55 @@ const NeuralPlayer: React.FC<{ url: string; poster?: string; subtitle?: any[]; o
             hls.loadSource(url);
             hls.attachMedia(video);
             artInstance.hls = hls;
+            
+            hls.on(Hls.Events.ERROR, (event, data) => {
+               if (data.fatal) {
+                   switch (data.type) {
+                       case Hls.ErrorTypes.NETWORK_ERROR:
+                           hls.startLoad();
+                           break;
+                       case Hls.ErrorTypes.MEDIA_ERROR:
+                           hls.recoverMediaError();
+                           break;
+                       default:
+                           artInstance.notice.show = `Error: ${data.details}`;
+                           hls.destroy();
+                           break;
+                   }
+               }
+            });
+
             artInstance.on('destroy', () => hls.destroy());
           } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
             video.src = url;
+          } else {
+             artInstance.notice.show = 'Unsupported playback format: m3u8';
           }
         },
       },
     });
 
+    playerRef.current = art;
+
     art.on('ready', () => {
-      if (!isMounted) return;
-      
-      // Manually trigger play and catch the AbortError (interruption)
-      const playPromise = art.video.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(error => {
-          // AbortError is expected when component is unmounted or source is changed
-          if (error.name !== 'AbortError') {
-            console.error('Playback failed:', error);
-          }
-        });
-      }
-      
       if (onReady) onReady();
+      // Ensure playback starts
+      art.play().catch((e) => {
+         console.warn("Autoplay prevented:", e);
+         art.muted = true;
+         art.play().catch(console.error);
+      });
     });
 
     return () => {
-      isMounted = false;
-      if (art) {
-        // Stop the video and clear source before destroying to prevent interruption errors
-        if (art.video) {
-          art.video.pause();
-          art.video.removeAttribute('src');
-          art.video.load();
-        }
-        if (art.destroy) {
-          art.destroy();
-        }
+      if (playerRef.current) {
+        playerRef.current.destroy(false);
+        playerRef.current = null;
       }
     };
-  }, [url, poster, subtitle, onReady]);
+  }, [url]);
 
-  return <div ref={artRef} className="w-full h-full absolute inset-0" />;
+  return <div ref={artRef} className="w-full h-full absolute inset-0 bg-black" />;
 };
 
 const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch', onPlay, initialEpisodeId, isSaved, onToggleSave, setToast }) => {
@@ -241,12 +263,12 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
   const extractM3u8 = (streamingLink: any) => {
     if (!streamingLink) return null;
     
-    // Sample structure support: streamingLink.link.file
+    // Check nested link object format (e.g. from user sample)
     if (streamingLink.link?.file) {
       return streamingLink.link.file;
     }
     
-    // Fallback: sources array
+    // Check sources array format
     if (Array.isArray(streamingLink.sources)) {
         const match = streamingLink.sources.find((s: any) => 
           s.isM3U8 === true || 
@@ -257,7 +279,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
         return match?.url || match?.file || streamingLink.sources[0]?.url || streamingLink.sources[0]?.file;
     }
 
-    // Direct link
+    // Direct string link
     if (typeof streamingLink.link === 'string') return streamingLink.link;
     
     return null;
