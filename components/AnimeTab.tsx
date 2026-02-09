@@ -209,11 +209,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
-    controls.start({
-       scale: [1, 1.04, 1],
-       y: [0, -2, 0],
-       transition: { duration: 0.1, ease: "easeOut" }
-    });
+    // Removed pulsing animation (controls.start) to stop the search bar from reacting to every letter
   };
 
   const handlePrev = () => {
@@ -370,21 +366,21 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                 className={`btn btn-sm border-none rounded-full px-5 flex items-center gap-2 transition-all ${viewMode === 'watch' ? 'btn-primary text-primary-content shadow-lg' : 'btn-ghost text-base-content/60 hover:text-base-content'}`}
                >
                  <Play size={14} className={viewMode === 'watch' ? 'fill-current' : ''} />
-                 <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Stream</span>
+                 <span className="text-[10px] font-black uppercase tracking-widest">Watch</span>
                </button>
                <button 
                 onClick={() => setViewMode('download')} 
                 className={`btn btn-sm border-none rounded-full px-5 flex items-center gap-2 transition-all ${viewMode === 'download' ? 'btn-primary text-primary-content shadow-lg' : 'btn-ghost text-base-content/60 hover:text-base-content'}`}
                >
                  <Download size={14} />
-                 <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Archive</span>
+                 <span className="text-[10px] font-black uppercase tracking-widest">Download</span>
                </button>
                <button 
                 onClick={() => setViewMode('schedule')} 
                 className={`btn btn-sm border-none rounded-full px-5 flex items-center gap-2 transition-all ${viewMode === 'schedule' ? 'btn-primary text-primary-content shadow-lg' : 'btn-ghost text-base-content/60 hover:text-base-content'}`}
                >
                  <Calendar size={14} />
-                 <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Grid</span>
+                 <span className="text-[10px] font-black uppercase tracking-widest">Schedule</span>
                </button>
             </div>
         </div>

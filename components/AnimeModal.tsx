@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AnimeSeries, AnimeEpisode, WatchHistoryItem } from '../types';
-import { X, Play, Loader2, ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Bookmark, BookmarkCheck, CheckCircle2, Search, LayoutGrid, MonitorPlay, Cpu, Download, ExternalLink, Clock, Zap, Calendar, Radio, Activity, ImageOff } from 'lucide-react';
+import { X, Play, Loader2, ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Bookmark, BookmarkCheck, CheckCircle2, Search, LayoutGrid, MonitorPlay, Cpu, Download, ExternalLink, Clock, Zap, Calendar, Radio, Activity, ImageOff, Filter } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface AnimeModalProps {
@@ -58,7 +58,10 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
   const [iframeUrl, setIframeUrl] = useState<string | null>(null);
   const [watchedEpisodes, setWatchedEpisodes] = useState<Set<string>>(new Set());
   const [lastHistoryItem, setLastHistoryItem] = useState<WatchHistoryItem | null>(null);
-  const [episodeSearch, setEpisodeSearch] = useState('');
+  
+  // Episode Search States
+  const [episodeSearchInput, setEpisodeSearchInput] = useState('');
+  const [activeEpisodeSearch, setActiveEpisodeSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
 
   const [downloadLinks, setDownloadLinks] = useState<DownloadLink[]>([]);
@@ -71,7 +74,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
 
     downloadLinks.forEach((link, idx) => {
       const name = link.quality.toUpperCase();
-      // Heuristic: Check if name contains DUB, otherwise follow user rule (first 3 sub if > 3 links)
       const isExplicitDub = name.includes('DUB');
       const isExplicitSub = name.includes('SUB');
 
@@ -80,7 +82,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
       } else if (isExplicitSub) {
         sub.push(link);
       } else {
-        // Fallback user heuristic: first 3 are sub if list is long
         if (downloadLinks.length > 3) {
           if (idx < 3) sub.push(link);
           else dub.push(link);
@@ -97,7 +98,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
     if (anime.source === 'anilist') {
       setMappedAnilistId(anime.session);
       fetchAiringSchedule(null, anime.session);
-      // For anilist source, the anime.image is often the correct poster
       setMappedAnilistPoster(anime.image);
       return;
     }
@@ -169,7 +169,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
     return parts.length > 0 ? parts.join(' ') : 'Soon';
   }, [nextAiring]);
 
-  // Update timer every minute
   useEffect(() => {
     if (!nextAiring) return;
     const interval = setInterval(() => {
@@ -423,11 +422,16 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
     }
   };
 
+  const handleEpisodeSearch = () => {
+    setActiveEpisodeSearch(episodeSearchInput);
+    setCurrentPage(0);
+  };
+
   const filteredEpisodes = useMemo(() => {
-    if (!episodeSearch.trim()) return episodes;
-    const query = episodeSearch.toLowerCase();
+    if (!activeEpisodeSearch.trim()) return episodes;
+    const query = activeEpisodeSearch.toLowerCase();
     return episodes.filter(ep => ep.episode.includes(query) || (ep.title && ep.title.toLowerCase().includes(query)));
-  }, [episodes, episodeSearch]);
+  }, [episodes, activeEpisodeSearch]);
 
   const totalPages = useMemo(() => Math.ceil(filteredEpisodes.length / EPISODES_PER_PAGE), [filteredEpisodes]);
   
@@ -511,7 +515,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
                      </div>
                    ) : (
                      <div className="space-y-6">
-                        {/* SUB SECTION */}
                         {categorizedLinks.sub.length > 0 && (
                           <div className="space-y-3">
                             <div className="flex items-center gap-2 border-l-2 border-primary pl-3">
@@ -531,7 +534,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
                           </div>
                         )}
 
-                        {/* DUB SECTION */}
                         {categorizedLinks.dub.length > 0 && (
                           <div className="space-y-3">
                             <div className="flex items-center gap-2 border-l-2 border-emerald-500 pl-3">
@@ -582,7 +584,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
                   ) : <div className="w-full h-full flex items-center justify-center bg-black"><Loader2 size={24} className="text-white animate-spin" /></div>}
                 </div>
                 <div className="p-4 bg-base-100 border-t border-base-content/10 flex flex-col items-center gap-4">
-                    {/* Live Transmission Countdown Integrated into Player Controls */}
                     {nextAiring && (
                       <motion.div 
                         initial={{ opacity: 0, y: 10 }}
@@ -708,9 +709,22 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
                 ) : (
                   <div className="space-y-6 pb-8">
                     <div className="sticky top-0 z-20 bg-base-100/80 backdrop-blur-md py-4 border-b border-base-content/5 flex flex-col md:flex-row gap-4">
-                        <div className="relative flex-1">
-                            <input type="text" placeholder="Jump to transmission (e.g. 104)" className="input input-sm h-10 w-full bg-base-content/5 border-base-content/10 rounded-xl pl-10 pr-4 text-[10px] font-black uppercase tracking-widest text-base-content focus:outline-none transition-all placeholder:opacity-40" value={episodeSearch} onChange={(e) => { setEpisodeSearch(e.target.value); setCurrentPage(0); }} />
+                        <div className="relative flex-1 group">
+                            <input 
+                              type="text" 
+                              placeholder="Jump to transmission (e.g. 104)" 
+                              className="input input-sm h-10 w-full bg-base-content/5 border-base-content/10 rounded-xl pl-10 pr-20 text-[10px] font-black uppercase tracking-widest text-base-content focus:outline-none transition-all placeholder:opacity-40" 
+                              value={episodeSearchInput} 
+                              onChange={(e) => setEpisodeSearchInput(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') handleEpisodeSearch(); }} 
+                            />
                             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/40" size={14} />
+                            <button 
+                              onClick={handleEpisodeSearch}
+                              className="absolute right-1 top-1/2 -translate-y-1/2 btn btn-primary btn-xs h-8 rounded-lg px-3 font-black uppercase text-[8px] tracking-widest"
+                            >
+                              Filter
+                            </button>
                         </div>
                         {totalPages > 1 && (
                           <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-2 px-1 max-w-full">
@@ -726,6 +740,12 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
                           </div>
                         )}
                     </div>
+                    {activeEpisodeSearch && (
+                      <div className="flex items-center justify-between px-2 py-1">
+                        <span className="text-[9px] font-black uppercase text-base-content/40 tracking-widest">Showing sector results for: {activeEpisodeSearch}</span>
+                        <button onClick={() => { setEpisodeSearchInput(''); setActiveEpisodeSearch(''); }} className="text-[8px] font-black uppercase text-primary hover:underline">Clear Filter</button>
+                      </div>
+                    )}
                     <div className="space-y-4">
                       {isLoading ? (
                         <div className="flex flex-col items-center justify-center py-20 gap-3 opacity-40">
@@ -735,7 +755,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
                       ) : paginatedEpisodes.length > 0 ? paginatedEpisodes.map(ep => {
                         const isWatched = watchedEpisodes.has(ep.session);
                         const isHighlighted = lastHistoryItem?.episodeId === ep.session;
-                        // Use episode snapshot if valid, otherwise fallback to series image
                         const thumbImage = ep.snapshot || ep.poster || mappedAnilistPoster || anime.image || FALLBACK_IMAGE;
                         return (
                           <div key={ep.session} onClick={() => handleAction(ep)} className={`group flex items-center gap-4 p-3 rounded-2xl bg-base-content/5 border-2 transition-all cursor-pointer ${isHighlighted ? 'border-primary bg-primary/5' : 'border-transparent hover:border-base-content/10 hover:bg-base-content/10'}`}>

@@ -119,11 +119,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
-    controls.start({
-       scale: [1, 1.04, 1],
-       y: [0, -2, 0],
-       transition: { duration: 0.1, ease: "easeOut" }
-    });
+    // Removed pulsing animation (controls.start) to stop the search bar from reacting to every letter
   };
 
   const renderSection = (title: string, items: TMDBMedia[], icon: React.ReactNode) => {
@@ -154,8 +150,14 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
         </div>
 
         <div className="flex p-0.5 bg-base-content/10 rounded-full border border-base-content/20">
-           <button onClick={() => setViewMode('watch')} className={`px-6 py-2 rounded-full transition-all ${viewMode === 'watch' ? 'btn-primary text-primary-content shadow-lg' : 'text-base-content/60 hover:text-base-content'}`}><Play size={14} className={viewMode === 'watch' ? 'fill-current' : ''} /></button>
-           <button onClick={() => setViewMode('download')} className={`px-6 py-2 rounded-full transition-all ${viewMode === 'download' ? 'btn-primary text-primary-content shadow-lg' : 'text-base-content/60 hover:text-base-content'}`}><Download size={14} /></button>
+           <button onClick={() => setViewMode('watch')} className={`px-6 py-2 rounded-full transition-all flex items-center gap-2 ${viewMode === 'watch' ? 'btn-primary text-primary-content shadow-lg' : 'text-base-content/60 hover:text-base-content'}`}>
+             <Play size={14} className={viewMode === 'watch' ? 'fill-current' : ''} />
+             <span className="text-[10px] font-black uppercase tracking-widest">Watch</span>
+           </button>
+           <button onClick={() => setViewMode('download')} className={`px-6 py-2 rounded-full transition-all flex items-center gap-2 ${viewMode === 'download' ? 'btn-primary text-primary-content shadow-lg' : 'text-base-content/60 hover:text-base-content'}`}>
+             <Download size={14} />
+             <span className="text-[10px] font-black uppercase tracking-widest">Download</span>
+           </button>
         </div>
 
         <div className="relative w-full max-w-xl px-2">
@@ -262,7 +264,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
             </AnimatePresence>
           ) : (
             <div className="space-y-8 md:space-y-12">
-               <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('global-download')} title="Archive Access" />
+               <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onHistoryRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('global-download')} title="Archive Access" />
                <section className="space-y-4">
                  <h2 className="text-sm md:text-lg font-black text-base-content uppercase tracking-tighter border-l-2 border-primary pl-3">Archive Registry</h2>
                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
