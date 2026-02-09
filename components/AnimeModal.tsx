@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AnimeSeries, AnimeEpisode, WatchHistoryItem } from '../types';
-import { X, Play, Loader2, ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Bookmark, BookmarkCheck, CheckCircle2, MonitorPlay, Cpu, Download, SkipForward, Timer, Image as ImageIcon, CalendarClock, Volume2, Languages } from 'lucide-react';
+import { X, Play, Loader2, ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Bookmark, BookmarkCheck, CheckCircle2, MonitorPlay, Cpu, Download, SkipForward, Timer, Image as ImageIcon, CalendarClock, Volume2, Languages, ImageOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface AnimeModalProps {
@@ -152,7 +152,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
                 snapshot: anime.image,
                 poster: anime.image,
                 title: `Episode ${idx + 1}`,
-                overview: "Download available."
+                overview: "Access archival files."
               };
             }
             return {
@@ -161,7 +161,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
               snapshot: item.snapshot || item.poster || anime.image,
               poster: item.poster || anime.image,
               title: item.title || `Episode ${item.episode || idx + 1}`,
-              overview: item.overview || item.description || "Download available."
+              overview: item.overview || item.description || "Access archival files."
             };
           });
         }
@@ -251,12 +251,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
             url: l.url || l.link
           }));
 
-          /**
-           * Categorization Logic based on Apex response patterns:
-           * Typically, if a series has both SUB and DUB, it returns a larger array.
-           * If total is 3, they are all SUB (360, 720, 1080).
-           * If total is > 3 (e.g. 6), the first 3 are SUB, the rest are DUB.
-           */
           if (normalized.length > 3) {
             setSubDownloadLinks(normalized.slice(0, 3));
             setDubDownloadLinks(normalized.slice(3));
@@ -438,6 +432,15 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
   }, [subDownloadLinks, dubDownloadLinks]);
 
   const mainPoster = useMemo(() => fallbackImage || anime.image, [fallbackImage, anime.image]);
+
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const target = e.currentTarget;
+    if (fallbackImage && target.src !== fallbackImage) {
+      target.src = fallbackImage;
+    } else {
+      target.src = "https://placehold.co/400x600/111/white?text=No+Preview";
+    }
+  };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[1000] flex items-center justify-center p-2 bg-black/70 backdrop-blur-md" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -633,9 +636,19 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
         ) : (
           <div className="flex flex-col md:flex-row h-full overflow-hidden bg-base-100 relative">
             <div className="w-full md:w-48 shrink-0 bg-base-200 relative border-r border-base-content/10">
-              <img src={mainPoster} className="w-full h-full object-cover hidden md:block" alt="" />
+              <img 
+                src={mainPoster} 
+                className="w-full h-full object-cover hidden md:block" 
+                alt={anime.title} 
+                onError={handleImageError}
+              />
               <div className="md:hidden h-40 relative">
-                <img src={mainPoster} className="w-full h-full object-cover" alt="" />
+                <img 
+                  src={mainPoster} 
+                  className="w-full h-full object-cover" 
+                  alt={anime.title} 
+                  onError={handleImageError}
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-base-100 to-transparent" />
               </div>
             </div>
@@ -677,7 +690,12 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
                               return (
                                 <div key={ep.session} onClick={() => handleAction(ep)} className="group flex items-center gap-4 p-3 rounded-2xl bg-base-content/5 border border-transparent hover:border-base-content/10 hover:bg-base-content/10 transition-all cursor-pointer">
                                   <div className="w-24 md:w-32 aspect-video rounded-xl bg-base-content/10 flex items-center justify-center overflow-hidden shrink-0 relative">
-                                     <img src={ep.snapshot || mainPoster} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="" />
+                                     <img 
+                                      src={ep.snapshot || mainPoster} 
+                                      className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" 
+                                      alt={ep.title || `Episode ${ep.episode}`} 
+                                      onError={handleImageError}
+                                     />
                                      {isWatched && <div className="absolute top-1 right-1 bg-emerald-500 rounded-full p-0.5"><CheckCircle2 size={8} className="text-white" /></div>}
                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                                         {mode === 'download' ? <Download size={20} className="text-white" /> : <Play size={20} className="text-white" />}
