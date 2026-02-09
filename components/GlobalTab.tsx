@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { TMDBMedia, WatchHistoryItem, HistoryFilter } from '../types';
-import { Search, Download, Play, Star, ChevronLeft, ChevronRight, Flame, Trophy, Film, Tv, BarChart3, Loader2 } from 'lucide-react';
+import { Search, Download, Play, Star, ChevronLeft, ChevronRight, Flame, Trophy, Film, Tv, BarChart3, Loader2, X } from 'lucide-react';
 import MediaCard from './MediaCard';
 import { SkeletonMediaCard, SkeletonBanner } from './Skeleton';
 import ContinueWatching from './ContinueWatching';
@@ -25,6 +25,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
   const [searchResults, setSearchResults] = useState<TMDBMedia[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const controls = useAnimation();
 
   const [spotlightIndex, setSpotlightIndex] = useState(0);
@@ -103,7 +104,8 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
     if (!query.trim()) return;
     
     setIsSearching(true);
-    setSearchResults([]); // Clear previous results immediately
+    setHasSearched(true);
+    setSearchResults([]); 
     
     try {
       const response = await fetch(`${BASE_URL}/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}`);
@@ -117,9 +119,19 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
     }
   };
 
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setHasSearched(false);
+    setIsSearching(false);
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-    // Removed pulsing animation (controls.start) to stop the search bar from reacting to every letter
+    const value = e.target.value;
+    setSearchQuery(value);
+    if (value.trim() === '') {
+      clearSearch();
+    }
   };
 
   const renderSection = (title: string, items: TMDBMedia[], icon: React.ReactNode) => {
@@ -174,6 +186,16 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
             />
             <div className="absolute inset-0 rounded-full bg-base-content/5 -z-10 group-focus-within:bg-base-content/10 transition-colors" />
             <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-base-content/40 z-20" size={14} />
+            
+            {searchQuery && (
+              <button 
+                onClick={clearSearch}
+                className="absolute right-20 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content z-20 p-1"
+              >
+                <X size={14} />
+              </button>
+            )}
+
             <button onClick={() => handleSearch(searchQuery)} className="absolute right-3 top-1/2 -translate-y-1/2 btn btn-primary btn-xs h-8 md:h-10 rounded-full px-4 font-black uppercase text-[8px] z-20" disabled={isSearching}>
               {isSearching ? <Loader2 size={12} className="animate-spin" /> : "Search"}
             </button>
@@ -181,19 +203,19 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
         </div>
       </section>
 
-      {(isSearching || searchResults.length > 0) ? (
+      {(isSearching || hasSearched) ? (
         <section className="space-y-4">
           <div className="flex items-center justify-between border-b border-base-content/10 pb-1">
             <h2 className="text-sm font-black text-base-content uppercase tracking-tighter italic">
-              {isSearching ? "Decrypting Results..." : `Search Results (${searchResults.length})`}
+              {isSearching ? "Decrypting Results..." : searchResults.length > 0 ? `Search Results (${searchResults.length})` : "No Signals Found"}
             </h2>
-            <button onClick={() => setSearchResults([])} className="text-[8px] uppercase font-black text-base-content/50">Clear</button>
+            <button onClick={clearSearch} className="text-[8px] uppercase font-black text-base-content/50 hover:text-base-content">Clear</button>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3 min-h-[200px]">
             <AnimatePresence mode="popLayout">
               {isSearching ? (
                 [...Array(6)].map((_, i) => <SkeletonMediaCard key={i} />)
-              ) : (
+              ) : searchResults.length > 0 ? (
                 searchResults.map((media) => (
                   <motion.div
                     key={media.id}
@@ -204,6 +226,18 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                     <MediaCard media={media} onClick={() => onSelectMedia(media, viewMode)} />
                   </motion.div>
                 ))
+              ) : (
+                <motion.div 
+                  initial={{ opacity: 0 }} 
+                  animate={{ opacity: 1 }} 
+                  className="col-span-full flex flex-col items-center justify-center py-12 text-base-content/40 space-y-3"
+                >
+                    <Search size={48} />
+                    <div className="text-center">
+                        <p className="text-sm font-black uppercase tracking-tighter">Void Sector</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest">No results matching "{searchQuery}"</p>
+                    </div>
+                </motion.div>
               )}
             </AnimatePresence>
           </div>

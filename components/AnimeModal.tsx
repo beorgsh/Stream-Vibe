@@ -43,6 +43,11 @@ const NeuralPlayer: React.FC<{ url: string; poster?: string; subtitle?: any[]; o
       playerRef.current.destroy(false);
     }
 
+    // Safety timeout to ensure loading state clears even if player stalls
+    const safetyTimer = setTimeout(() => {
+        if (onReady) onReady();
+    }, 5000);
+
     const art = new Artplayer({
       container: artRef.current,
       url: url,
@@ -122,12 +127,25 @@ const NeuralPlayer: React.FC<{ url: string; poster?: string; subtitle?: any[]; o
                    }
                }
             });
+            
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                // Ensure loading clears when manifest is parsed
+                if (onReady) onReady();
+                clearTimeout(safetyTimer);
+            });
 
             artInstance.on('destroy', () => hls.destroy());
           } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
             video.src = url;
+            // For Safari native HLS
+            video.addEventListener('loadedmetadata', () => {
+                if (onReady) onReady();
+                clearTimeout(safetyTimer);
+            });
           } else {
              artInstance.notice.show = 'Unsupported playback format: m3u8';
+             if (onReady) onReady();
+             clearTimeout(safetyTimer);
           }
         },
       },
@@ -137,6 +155,8 @@ const NeuralPlayer: React.FC<{ url: string; poster?: string; subtitle?: any[]; o
 
     art.on('ready', () => {
       if (onReady) onReady();
+      clearTimeout(safetyTimer);
+      
       // Ensure playback starts
       art.play().catch((e) => {
          console.warn("Autoplay prevented:", e);
@@ -146,6 +166,7 @@ const NeuralPlayer: React.FC<{ url: string; poster?: string; subtitle?: any[]; o
     });
 
     return () => {
+      clearTimeout(safetyTimer);
       if (playerRef.current) {
         playerRef.current.destroy(false);
         playerRef.current = null;
@@ -168,7 +189,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
   const [activeWatchType, setActiveWatchType] = useState<'sub' | 'dub'>('sub');
   const [serverCategory, setServerCategory] = useState<'sub' | 'dub'>('sub');
   const [isServerDropdownOpen, setIsServerDropdownOpen] = useState(false);
-  const [isSettingsHovered, setIsSettingsHovered] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
   const [playerMode, setPlayerMode] = useState<'embed' | 'default'>(() => {
     return (localStorage.getItem('sv_anime_player_preference') as 'embed' | 'default') || 'embed';
@@ -183,10 +204,27 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
   const [currentPage, setCurrentPage] = useState(0);
   const [downloadLinks, setDownloadLinks] = useState<DownloadLink[]>([]);
   const [isFetchingDownloads, setIsFetchingDownloads] = useState(false);
+  
+  const settingsRef = useRef<HTMLDivElement>(null);
+  const serverDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     localStorage.setItem('sv_anime_player_preference', playerMode);
   }, [playerMode]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+        if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+            setIsSettingsOpen(false);
+        }
+        if (serverDropdownRef.current && !serverDropdownRef.current.contains(event.target as Node)) {
+            setIsServerDropdownOpen(false);
+        }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     const savedHistory = localStorage.getItem('sv_watch_history_v2');
@@ -328,7 +366,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
         setSubtitleTracks(subs);
       }
     } catch (error) { console.error(error); } finally { 
-      setIsIframeLoading(false);
+      // isIframeLoading will be handled by the player onReady
       setIsLinksLoading(false); 
     }
   };
@@ -362,7 +400,6 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
         }
       }
     } catch (error) { console.error(error); } finally { 
-        setIsIframeLoading(false);
         setIsLinksLoading(false); 
     }
   };
@@ -406,7 +443,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
 
             {mode === 'watch' ? (
               <>
-                <div className="w-full aspect-video bg-black relative group/player overflow-hidden">
+                <div className="w-full aspect-video bg-black relative group/player overflow-hidden z-0">
                   {playerMode === 'default' && m3u8Url ? (
                     <NeuralPlayer 
                       key={`neural-${m3u8Url}`}
@@ -448,27 +485,32 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
                   )}
                 </div>
 
-                <div className="p-4 bg-base-100 border-t border-base-content/10 flex flex-col items-center gap-4 relative">
+                <div className="p-4 bg-base-100 border-t border-base-content/10 flex flex-col items-center gap-4 relative z-50">
+                    {/* Navigation Controls */}
                     <div className="flex items-center justify-between w-full max-w-2xl">
                         <button disabled={currentIndexInFlatList <= 0} onClick={() => handleNavigateEpisode('prev')} className="btn btn-xs h-8 px-4 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2"><ChevronLeft size={14} /><span className="text-[9px] font-black uppercase">Prev EP</span></button>
                         <div className="text-[10px] font-black uppercase tracking-widest text-base-content/40">EP {selectedEpisode.episode}</div>
                         <button disabled={currentIndexInFlatList >= episodes.length - 1} onClick={() => handleNavigateEpisode('next')} className="btn btn-xs h-8 px-4 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2"><span className="text-[9px] font-black uppercase">Next EP</span><ChevronRight size={14} /></button>
                     </div>
                     
-                    <div className="flex items-center gap-4 w-full max-w-2xl justify-center relative">
+                    {/* Main Controls Row */}
+                    <div className="flex flex-wrap items-center justify-center gap-3 w-full max-w-2xl relative z-40">
+                        {/* Audio Toggle */}
                         <div className="flex p-0.5 bg-base-content/5 rounded-full border border-base-content/10">
                             <button onClick={() => setServerCategory('sub')} className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${serverCategory === 'sub' ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/60'}`}>Sub</button>
                             <button onClick={() => setServerCategory('dub')} className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${serverCategory === 'dub' ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/60'}`}>Dub</button>
                         </div>
-                        <div className="relative">
+
+                        {/* Server Selection */}
+                        <div className="relative" ref={serverDropdownRef}>
                             <button onClick={() => setIsServerDropdownOpen(!isServerDropdownOpen)} className="flex items-center gap-2 px-4 py-2 bg-base-content/5 border border-base-content/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-base-content/10 transition-all">
                                {activeWatchServer?.split('-')[1] || 'Select Node'} <ChevronDown size={12} />
                             </button>
                             <AnimatePresence>
                               {isServerDropdownOpen && (
-                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute bottom-full left-0 mb-2 w-48 bg-base-100 border border-base-content/10 rounded-2xl p-2 z-[100] shadow-2xl">
+                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-base-100 border border-base-content/10 rounded-2xl p-2 z-[100] shadow-2xl max-h-48 overflow-y-auto custom-scrollbar">
                                     {watchServers.filter(s => s.type === serverCategory).map(srv => (
-                                      <button key={srv.data_id} onClick={() => fetchStreamData(selectedEpisode.session, srv.serverName, serverCategory, selectedEpisode, true)} className={`w-full text-left px-3 py-2 rounded-xl text-[9px] font-black uppercase flex items-center justify-between ${activeWatchServer === `${serverCategory}-${srv.serverName}` ? 'bg-primary text-primary-content' : 'text-base-content hover:bg-base-content/5'}`}>
+                                      <button key={srv.data_id} onClick={() => { fetchStreamData(selectedEpisode.session, srv.serverName, serverCategory, selectedEpisode, true); setIsServerDropdownOpen(false); }} className={`w-full text-left px-3 py-2 rounded-xl text-[9px] font-black uppercase flex items-center justify-between ${activeWatchServer === `${serverCategory}-${srv.serverName}` ? 'bg-primary text-primary-content' : 'text-base-content hover:bg-base-content/5'}`}>
                                         <span className="truncate">{srv.serverName}</span>
                                         {srv.isHybrid && <Cpu size={10} />}
                                       </button>
@@ -478,44 +520,43 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
                             </AnimatePresence>
                         </div>
 
-                        {/* Settings Menu - Re-positioned below player on the right side */}
-                        <div 
-                          className="absolute right-0 flex items-center"
-                          onMouseEnter={() => setIsSettingsHovered(true)}
-                          onMouseLeave={() => setIsSettingsHovered(false)}
-                        >
-                          <motion.div 
-                            className={`flex flex-col-reverse items-end gap-2 p-1.5 rounded-2xl border backdrop-blur-xl transition-all duration-300 shadow-xl ${isSettingsHovered ? 'bg-base-100/95 border-primary/40 w-48' : 'bg-base-content/5 border-base-content/10 w-9 h-9 items-center justify-center'}`}
+                        {/* Player Settings */}
+                        <div className="relative" ref={settingsRef}>
+                          <button 
+                             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                             className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${isSettingsOpen ? 'bg-base-content/10 border-primary/50 text-primary' : 'bg-base-content/5 border-base-content/10 text-base-content/70 hover:bg-base-content/10'}`}
                           >
-                            <Settings size={18} className={`text-base-content transition-transform duration-500 ${isSettingsHovered ? 'rotate-90 text-primary' : 'opacity-60'}`} />
-                            
-                            <AnimatePresence>
-                              {isSettingsHovered && (
-                                <motion.div 
-                                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                  className="w-full space-y-1.5 mb-2"
-                                >
-                                  <div className="text-[7px] font-black uppercase tracking-widest text-base-content/30 px-2 pb-1 border-b border-base-content/5">Relay Protocol</div>
-                                  <button 
-                                    onClick={() => { setPlayerMode('embed'); setIsSettingsHovered(false); }}
-                                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all ${playerMode === 'embed' ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/70 hover:bg-base-content/10'}`}
-                                  >
-                                    <span className="text-[9px] font-black uppercase tracking-tighter">Embed Relay</span>
-                                    <Globe size={12} />
-                                  </button>
-                                  <button 
-                                    onClick={() => { setPlayerMode('default'); setIsSettingsHovered(false); }}
-                                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all ${playerMode === 'default' ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/70 hover:bg-base-content/10'}`}
-                                  >
-                                    <span className="text-[9px] font-black uppercase tracking-tighter">Neural Player</span>
-                                    <Monitor size={12} />
-                                  </button>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-                          </motion.div>
+                             <Settings size={14} className={isSettingsOpen ? 'animate-spin-slow' : ''} />
+                          </button>
+                          
+                          <AnimatePresence>
+                            {isSettingsOpen && (
+                              <motion.div 
+                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                className="absolute bottom-full right-0 mb-2 w-48 bg-base-100 border border-base-content/10 rounded-2xl p-2 shadow-2xl z-[100]"
+                              >
+                                <div className="text-[7px] font-black uppercase tracking-widest text-base-content/30 px-2 pb-1 border-b border-base-content/5 mb-1">Relay Protocol</div>
+                                <div className="space-y-1">
+                                    <button 
+                                      onClick={() => { setPlayerMode('embed'); setIsSettingsOpen(false); }}
+                                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all ${playerMode === 'embed' ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/70 hover:bg-base-content/10'}`}
+                                    >
+                                      <span className="text-[9px] font-black uppercase tracking-tighter">Embed Relay</span>
+                                      <Globe size={12} />
+                                    </button>
+                                    <button 
+                                      onClick={() => { setPlayerMode('default'); setIsSettingsOpen(false); }}
+                                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all ${playerMode === 'default' ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/70 hover:bg-base-content/10'}`}
+                                    >
+                                      <span className="text-[9px] font-black uppercase tracking-tighter">Neural Player</span>
+                                      <Monitor size={12} />
+                                    </button>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </div>
                     </div>
                 </div>
