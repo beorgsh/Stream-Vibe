@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="black">
+<html lang="en" data-theme="forest">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
@@ -23,7 +23,6 @@
         margin: 0;
         padding: 0;
         min-height: 100vh;
-        /* Removed transform to fix modal positioning */
       }
       
       .theme-transition {
@@ -39,6 +38,7 @@
         --sal: env(safe-area-inset-left);
       }
       
+      /* Global scrollbar hiding for clean UI, but allowing it in specific containers */
       * {
         -ms-overflow-style: none;
         scrollbar-width: none;
@@ -46,6 +46,28 @@
       
       *::-webkit-scrollbar {
         display: none;
+      }
+
+      /* Custom scrollbar for content-heavy modals */
+      .custom-scrollbar {
+        scrollbar-width: thin !important;
+        scrollbar-color: rgba(30, 184, 84, 0.3) transparent !important;
+        -ms-overflow-style: auto !important;
+        overflow-y: auto !important;
+      }
+
+      .custom-scrollbar::-webkit-scrollbar {
+        display: block !important;
+        width: 4px !important;
+      }
+
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent !important;
+      }
+
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(30, 184, 84, 0.3) !important;
+        border-radius: 10px !important;
       }
 
       @keyframes grid-move {

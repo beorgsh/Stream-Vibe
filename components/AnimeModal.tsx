@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AnimeSeries, AnimeEpisode, WatchHistoryItem } from '../types';
-import { X, Play, Loader2, ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Bookmark, BookmarkCheck, CheckCircle2, Search, LayoutGrid, MonitorPlay, Cpu, Download, ExternalLink, Clock, Zap, Calendar, Radio, Activity } from 'lucide-react';
+import { X, Play, Loader2, ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Bookmark, BookmarkCheck, CheckCircle2, Search, LayoutGrid, MonitorPlay, Cpu, Download, ExternalLink, Clock, Zap, Calendar, Radio, Activity, ImageOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface AnimeModalProps {
@@ -25,6 +25,7 @@ interface WatchServer {
 interface DownloadLink {
   quality: string;
   url: string;
+  isDub?: boolean;
 }
 
 interface NextAiring {
@@ -34,6 +35,8 @@ interface NextAiring {
 }
 
 const EPISODES_PER_PAGE = 30;
+
+const FALLBACK_IMAGE = "https://placehold.co/400x600/111/white?text=No+Preview";
 
 const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch', onPlay, initialEpisodeId, isSaved, onToggleSave, setToast }) => {
   const [episodes, setEpisodes] = useState<AnimeEpisode[]>([]);
@@ -48,6 +51,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
   const [serverCategory, setServerCategory] = useState<'sub' | 'dub'>('sub');
   const [isServerDropdownOpen, setIsServerDropdownOpen] = useState(false);
   const [mappedAnilistId, setMappedAnilistId] = useState<string | null>(null);
+  const [mappedAnilistPoster, setMappedAnilistPoster] = useState<string | null>(null);
   const [nextAiring, setNextAiring] = useState<NextAiring | null>(null);
   
   const serverDropdownRef = useRef<HTMLDivElement>(null);
@@ -60,10 +64,41 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
   const [downloadLinks, setDownloadLinks] = useState<DownloadLink[]>([]);
   const [isFetchingDownloads, setIsFetchingDownloads] = useState(false);
 
+  // Split links into sub and dub
+  const categorizedLinks = useMemo(() => {
+    const sub: DownloadLink[] = [];
+    const dub: DownloadLink[] = [];
+
+    downloadLinks.forEach((link, idx) => {
+      const name = link.quality.toUpperCase();
+      // Heuristic: Check if name contains DUB, otherwise follow user rule (first 3 sub if > 3 links)
+      const isExplicitDub = name.includes('DUB');
+      const isExplicitSub = name.includes('SUB');
+
+      if (isExplicitDub) {
+        dub.push(link);
+      } else if (isExplicitSub) {
+        sub.push(link);
+      } else {
+        // Fallback user heuristic: first 3 are sub if list is long
+        if (downloadLinks.length > 3) {
+          if (idx < 3) sub.push(link);
+          else dub.push(link);
+        } else {
+          sub.push(link);
+        }
+      }
+    });
+
+    return { sub, dub };
+  }, [downloadLinks]);
+
   useEffect(() => {
     if (anime.source === 'anilist') {
       setMappedAnilistId(anime.session);
       fetchAiringSchedule(null, anime.session);
+      // For anilist source, the anime.image is often the correct poster
+      setMappedAnilistPoster(anime.image);
       return;
     }
 
@@ -77,7 +112,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              query: `query($search: String){ Media(search: $search, type: ANIME){ id nextAiringEpisode { airingAt timeUntilAiring episode } } }`,
+              query: `query($search: String){ Media(search: $search, type: ANIME){ id coverImage { extraLarge large } nextAiringEpisode { airingAt timeUntilAiring episode } } }`,
               variables: { search: term }
             })
           });
@@ -85,6 +120,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
           const media = data?.data?.Media;
           if (media?.id) {
             setMappedAnilistId(media.id.toString());
+            setMappedAnilistPoster(media.coverImage?.extraLarge || media.coverImage?.large || null);
             if (media.nextAiringEpisode) {
               setNextAiring(media.nextAiringEpisode);
             }
@@ -453,55 +489,84 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
               </div>
             </div>
             {mode === 'download' ? (
-              <div className="p-8 flex flex-col items-center justify-center space-y-8 min-h-[40vh]">
+              <div className="p-4 md:p-8 flex flex-col items-center justify-center space-y-4 md:space-y-8 min-h-[50vh]">
                  <div className="flex flex-col items-center text-center space-y-2">
-                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-2 shadow-inner">
-                       <Download size={32} />
+                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-2 shadow-inner">
+                       <Download size={24} />
                     </div>
-                    <h3 className="text-xl font-black uppercase italic tracking-tighter">Apex Archive Node</h3>
+                    <h3 className="text-lg md:text-xl font-black uppercase italic tracking-tighter">Apex Archive Node</h3>
                     <p className="text-[9px] font-bold text-base-content/40 uppercase tracking-[0.2em]">Select Direct Coordinate for E{selectedEpisode.episode}</p>
                  </div>
-                 {isFetchingDownloads ? (
-                   <div className="flex flex-col items-center gap-4 py-10">
-                      <div className="relative">
-                        <div className="w-12 h-12 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <Cpu size={14} className="text-primary animate-pulse" />
+                 
+                 <div className="w-full max-w-lg overflow-y-auto max-h-[350px] pr-2 custom-scrollbar">
+                   {isFetchingDownloads ? (
+                     <div className="flex flex-col items-center gap-4 py-20">
+                        <div className="relative">
+                          <div className="w-12 h-12 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                          <div className="absolute inset-0 flex items-center justify-center">
+                              <Cpu size={14} className="text-primary animate-pulse" />
+                          </div>
                         </div>
-                      </div>
-                      <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40">Decrypting Direct Links...</span>
-                   </div>
-                 ) : (
-                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
-                      {downloadLinks.length > 0 ? downloadLinks.map((link, idx) => (
-                        <a 
-                          key={idx} 
-                          href={link.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="btn btn-primary btn-outline border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content hover:border-primary rounded-2xl p-4 h-auto flex flex-col items-center gap-1 transition-all group shadow-sm hover:shadow-md"
-                        >
-                           <span className="text-[10px] font-black uppercase tracking-widest opacity-40 group-hover:opacity-100">Quality Variant</span>
-                           <span className="text-lg font-black italic tracking-tighter line-clamp-1 px-4">{link.quality}</span>
-                           <div className="flex items-center gap-1 mt-1">
-                              <ExternalLink size={10} className="opacity-40 group-hover:opacity-100" />
-                              <span className="text-[8px] font-black opacity-20 group-hover:opacity-40 uppercase tracking-widest">Apex Link</span>
-                           </div>
-                        </a>
-                      )) : (
-                        <div className="col-span-full flex flex-col items-center justify-center py-10 opacity-30 gap-3">
-                           <MonitorPlay size={40} className="animate-pulse" />
-                           <p className="text-[10px] font-black uppercase tracking-widest text-center">No Direct Links Detected for this transmission</p>
-                        </div>
-                      )}
-                   </div>
-                 )}
-                 <div className="flex items-center justify-between w-full max-w-lg pt-8 border-t border-base-content/5">
-                    <button disabled={currentIndexInFlatList <= 0} onClick={() => handleNavigateEpisode('prev')} className="btn btn-xs h-10 px-6 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2 font-black uppercase text-[9px] shadow-sm">
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40">Decrypting Direct Links...</span>
+                     </div>
+                   ) : (
+                     <div className="space-y-6">
+                        {/* SUB SECTION */}
+                        {categorizedLinks.sub.length > 0 && (
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 border-l-2 border-primary pl-3">
+                               <span className="text-[10px] font-black uppercase tracking-widest text-primary">SUB Protocol</span>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                               {categorizedLinks.sub.map((link, idx) => (
+                                 <a 
+                                  key={idx} href={link.url} target="_blank" rel="noopener noreferrer"
+                                  className="btn btn-primary btn-outline border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content hover:border-primary rounded-2xl p-4 h-auto flex flex-col items-center gap-1 transition-all group shadow-sm hover:shadow-md"
+                                 >
+                                    <span className="text-[9px] font-black uppercase tracking-widest opacity-40 group-hover:opacity-100">SUB Coordinate</span>
+                                    <span className="text-sm font-black italic tracking-tighter line-clamp-1 px-4">{link.quality}</span>
+                                 </a>
+                               ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* DUB SECTION */}
+                        {categorizedLinks.dub.length > 0 && (
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 border-l-2 border-emerald-500 pl-3">
+                               <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">DUB Protocol</span>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                               {categorizedLinks.dub.map((link, idx) => (
+                                 <a 
+                                  key={idx} href={link.url} target="_blank" rel="noopener noreferrer"
+                                  className="btn btn-emerald-500 btn-outline border-base-content/10 text-base-content hover:bg-emerald-500 hover:text-white hover:border-emerald-500 rounded-2xl p-4 h-auto flex flex-col items-center gap-1 transition-all group shadow-sm hover:shadow-md"
+                                 >
+                                    <span className="text-[9px] font-black uppercase tracking-widest opacity-40 group-hover:opacity-100">DUB Coordinate</span>
+                                    <span className="text-sm font-black italic tracking-tighter line-clamp-1 px-4">{link.quality}</span>
+                                 </a>
+                               ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {downloadLinks.length === 0 && !isFetchingDownloads && (
+                          <div className="flex flex-col items-center justify-center py-10 opacity-30 gap-3">
+                             <MonitorPlay size={40} className="animate-pulse" />
+                             <p className="text-[10px] font-black uppercase tracking-widest text-center">No Direct Links Detected for this transmission</p>
+                          </div>
+                        )}
+                     </div>
+                   )}
+                 </div>
+
+                 <div className="flex items-center justify-between w-full max-w-lg pt-4 border-t border-base-content/5">
+                    <button disabled={currentIndexInFlatList <= 0} onClick={() => handleNavigateEpisode('prev')} className="btn btn-xs h-10 px-4 md:px-6 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2 font-black uppercase text-[9px] shadow-sm">
                       <ChevronLeft size={14} /> Prev
                     </button>
                     <span className="text-[9px] font-black uppercase text-base-content/30 italic">EP {selectedEpisode.episode} Archive</span>
-                    <button disabled={currentIndexInFlatList >= episodes.length - 1} onClick={() => handleNavigateEpisode('next')} className="btn btn-xs h-10 px-6 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2 font-black uppercase text-[9px] shadow-sm">
+                    <button disabled={currentIndexInFlatList >= episodes.length - 1} onClick={() => handleNavigateEpisode('next')} className="btn btn-xs h-10 px-4 md:px-6 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2 font-black uppercase text-[9px] shadow-sm">
                       Next <ChevronRight size={14} />
                     </button>
                  </div>
@@ -559,7 +624,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
                             <button onClick={() => setIsServerDropdownOpen(!isServerDropdownOpen)} className="w-full flex items-center justify-between px-3 py-2 bg-base-content/5 border border-base-content/10 rounded-xl text-base-content transition-all hover:bg-base-content/10"><span className="text-[9px] font-black uppercase tracking-widest truncate">{activeWatchServer || 'Select Server'}</span><ChevronDown size={12} className={isServerDropdownOpen ? 'rotate-180 transition-transform' : 'transition-transform'} /></button>
                             <AnimatePresence>
                               {isServerDropdownOpen && (
-                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute bottom-full left-0 mb-2 w-full bg-base-100 border border-base-content/20 rounded-xl p-1.5 z-[100] shadow-xl">
+                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute bottom-full left-0 mb-2 w-full min-w-[180px] bg-base-100 border border-base-content/20 rounded-xl p-1.5 z-[100] shadow-xl">
                                     {watchServersByType[serverCategory]?.map(srv => (
                                       <button key={srv.data_id} onClick={() => fetchStreamData(selectedEpisode.session, srv.serverName, serverCategory, selectedEpisode, true, srv.isHybrid)} className={`w-full text-left px-3 py-2 rounded-lg text-[9px] font-bold uppercase flex items-center justify-between gap-2 ${activeWatchServer === `${serverCategory}-${srv.serverName}` ? 'bg-primary text-primary-content' : 'text-base-content hover:bg-base-content/10'}`}><span className="truncate">{srv.serverName}</span>{srv.isHybrid && <Cpu size={10} className="shrink-0" />}</button>
                                     ))}
@@ -574,9 +639,22 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
           </div>
         ) : (
           <div className="flex flex-col md:flex-row h-full overflow-hidden bg-base-100 relative">
-            <div className="w-full md:w-48 shrink-0 bg-base-200 relative border-r border-base-content/10">
-              <img src={anime.image} className="w-full h-full object-cover hidden md:block" />
-              <div className="md:hidden h-40 relative"><img src={anime.image} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-base-100 to-transparent" /></div>
+            <div className="w-full md:w-48 shrink-0 bg-base-200 relative border-r border-base-content/10 overflow-hidden">
+              <img 
+                src={mappedAnilistPoster || anime.image || FALLBACK_IMAGE} 
+                className="w-full h-full object-cover hidden md:block" 
+                alt=""
+                onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }}
+              />
+              <div className="md:hidden h-40 relative">
+                <img 
+                  src={mappedAnilistPoster || anime.image || FALLBACK_IMAGE} 
+                  className="w-full h-full object-cover" 
+                  alt=""
+                  onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-base-100 to-transparent" />
+              </div>
             </div>
             <div className="flex-1 flex flex-col text-base-content overflow-hidden">
               <div className="p-6 pb-4">
@@ -620,8 +698,8 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
                       </div>
                     )}
 
-                    <div className="flex flex-wrap gap-2">
-                      <button onClick={() => { if (episodes[0]) handleAction(episodes[0]); }} className="btn btn-primary btn-sm rounded-full px-8 font-black uppercase text-[9px] tracking-widest hover:scale-105 transition-transform flex items-center gap-2 shadow-lg">
+                    <div className="flex flex-wrap gap-2 pb-6">
+                      <button onClick={() => { if (episodes[0]) handleAction(episodes[0]); }} className="btn btn-primary btn-sm h-12 rounded-full px-8 font-black uppercase text-[9px] tracking-widest hover:scale-105 transition-transform flex items-center gap-2 shadow-lg">
                         {mode === 'download' ? <Download size={14} /> : <Play size={14} />}
                         {lastHistoryItem ? (mode === 'download' ? `Archive E${lastHistoryItem.episodeNumber}` : `Resume E${lastHistoryItem.episodeNumber}`) : (mode === 'download' ? 'Init Archive' : 'Init Stream')}
                       </button>
@@ -658,7 +736,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
                         const isWatched = watchedEpisodes.has(ep.session);
                         const isHighlighted = lastHistoryItem?.episodeId === ep.session;
                         // Use episode snapshot if valid, otherwise fallback to series image
-                        const thumbImage = ep.snapshot || ep.poster || anime.image;
+                        const thumbImage = ep.snapshot || ep.poster || mappedAnilistPoster || anime.image || FALLBACK_IMAGE;
                         return (
                           <div key={ep.session} onClick={() => handleAction(ep)} className={`group flex items-center gap-4 p-3 rounded-2xl bg-base-content/5 border-2 transition-all cursor-pointer ${isHighlighted ? 'border-primary bg-primary/5' : 'border-transparent hover:border-base-content/10 hover:bg-base-content/10'}`}>
                             <div className="w-20 md:w-32 aspect-video rounded-xl bg-base-content/10 flex items-center justify-center overflow-hidden shrink-0 relative shadow-md">
@@ -666,7 +744,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
                                  src={thumbImage} 
                                  className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" 
                                  alt="" 
-                                 onError={(e) => { (e.target as HTMLImageElement).src = anime.image; }}
+                                 onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }}
                                />
                                {isWatched && <div className="absolute top-1 right-1 bg-emerald-500 rounded-full p-0.5 shadow-xl"><CheckCircle2 size={8} className="text-white" /></div>}
                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">{mode === 'download' ? <Download size={20} className="text-white" /> : <MonitorPlay size={20} className="text-white" />}</div>

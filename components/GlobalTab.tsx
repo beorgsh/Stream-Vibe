@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { TMDBMedia, WatchHistoryItem, HistoryFilter } from '../types';
-import { Search, Download, Play, Star, ChevronLeft, ChevronRight, Flame, Trophy, Film, Tv, BarChart3 } from 'lucide-react';
+import { Search, Download, Play, Star, ChevronLeft, ChevronRight, Flame, Trophy, Film, Tv, BarChart3, Loader2 } from 'lucide-react';
 import MediaCard from './MediaCard';
 import { SkeletonMediaCard, SkeletonBanner } from './Skeleton';
 import ContinueWatching from './ContinueWatching';
@@ -103,11 +103,13 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
     if (!query.trim()) return;
     
     setIsSearching(true);
+    setSearchResults([]); // Clear previous results immediately
     
     try {
       const response = await fetch(`${BASE_URL}/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}`);
       const data = await response.json();
-      setSearchResults(data.results.filter((item: any) => item.media_type !== 'person'));
+      const results = (data.results || []).filter((item: any) => item.media_type !== 'person' && (item.poster_path || item.backdrop_path));
+      setSearchResults(results);
     } catch (error) {
       console.error("Search Error:", error);
     } finally {
@@ -147,7 +149,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
     <div className="space-y-6 md:space-y-10 pb-10">
       <section className="flex flex-col items-center space-y-4">
         <div className="text-center space-y-1">
-          <h1 className="text-2xl md:text-3xl font-black text-base-content uppercase tracking-tighter italic">Global Discovery</h1>
+          <h1 className="text-2xl md:text-3xl font-black text-base-content uppercase tracking-tighter italic">{viewMode === 'download' ? 'Archive Core' : 'Global Discovery'}</h1>
           <p className="text-[10px] uppercase font-bold text-base-content/60 tracking-[0.2em]">Synchronized Database</p>
         </div>
 
@@ -160,7 +162,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
           <motion.div animate={controls} className="relative w-full group">
             <input 
               type="text" 
-              placeholder="Search film & TV archive..." 
+              placeholder={viewMode === 'download' ? "Search for archival downloads..." : "Search film & TV archive..."} 
               className="input input-sm h-10 md:h-12 w-full bg-base-content/5 border border-base-content/20 rounded-full pl-10 pr-24 text-xs font-medium focus:border-primary transition-all text-base-content relative z-10" 
               value={searchQuery} 
               onChange={handleInputChange} 
@@ -170,12 +172,41 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
             />
             <div className="absolute inset-0 rounded-full bg-base-content/5 -z-10 group-focus-within:bg-base-content/10 transition-colors" />
             <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-base-content/40 z-20" size={14} />
-            <button onClick={() => handleSearch(searchQuery)} className="absolute right-3 top-1/2 -translate-y-1/2 btn btn-primary btn-xs h-8 md:h-10 rounded-full px-4 font-black uppercase text-[8px] z-20" disabled={isSearching}>Search</button>
+            <button onClick={() => handleSearch(searchQuery)} className="absolute right-3 top-1/2 -translate-y-1/2 btn btn-primary btn-xs h-8 md:h-10 rounded-full px-4 font-black uppercase text-[8px] z-20" disabled={isSearching}>
+              {isSearching ? <Loader2 size={12} className="animate-spin" /> : "Search"}
+            </button>
           </motion.div>
         </div>
       </section>
 
-      {!searchResults.length && !isSearching && (
+      {(isSearching || searchResults.length > 0) ? (
+        <section className="space-y-4">
+          <div className="flex items-center justify-between border-b border-base-content/10 pb-1">
+            <h2 className="text-sm font-black text-base-content uppercase tracking-tighter italic">
+              {isSearching ? "Decrypting Results..." : `Search Results (${searchResults.length})`}
+            </h2>
+            <button onClick={() => setSearchResults([])} className="text-[8px] uppercase font-black text-base-content/50">Clear</button>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+            <AnimatePresence mode="popLayout">
+              {isSearching ? (
+                [...Array(6)].map((_, i) => <SkeletonMediaCard key={i} />)
+              ) : (
+                searchResults.map((media) => (
+                  <motion.div
+                    key={media.id}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                  >
+                    <MediaCard media={media} onClick={() => onSelectMedia(media, viewMode)} />
+                  </motion.div>
+                ))
+              )}
+            </AnimatePresence>
+          </div>
+        </section>
+      ) : (
         <div className="space-y-10">
           {viewMode === 'watch' ? (
             <AnimatePresence mode="wait">
@@ -233,7 +264,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
             <div className="space-y-8 md:space-y-12">
                <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('global-download')} title="Archive Access" />
                <section className="space-y-4">
-                 <h2 className="text-sm md:text-lg font-black text-base-content uppercase tracking-tighter border-l-2 border-primary pl-3">Cloud Storage Search</h2>
+                 <h2 className="text-sm md:text-lg font-black text-base-content uppercase tracking-tighter border-l-2 border-primary pl-3">Archive Registry</h2>
                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
                    {trending.map((media) => (<MediaCard key={media.id} media={media} onClick={() => onSelectMedia(media, viewMode)} />))}
                  </div>
@@ -241,18 +272,6 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
             </div>
           )}
         </div>
-      )}
-
-      {(isSearching || searchResults.length > 0) && (
-        <section className="space-y-4">
-          <div className="flex items-center justify-between border-b border-base-content/10 pb-1">
-            <h2 className="text-sm font-black text-base-content uppercase tracking-tighter italic">Search Results ({searchResults.length})</h2>
-            <button onClick={() => setSearchResults([])} className="text-[8px] uppercase font-black text-base-content/50">Clear</button>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
-            {searchResults.map((media) => (<MediaCard key={media.id} media={media} onClick={() => onSelectMedia(media, viewMode)} />))}
-          </div>
-        </section>
       )}
     </div>
   );

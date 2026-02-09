@@ -17,7 +17,7 @@ import { Bookmark, CheckCircle2 } from 'lucide-react';
 
 const App: React.FC = () => {
   const [theme, setTheme] = useState<string>(() => {
-    return localStorage.getItem('sv_theme') || 'black';
+    return localStorage.getItem('sv_theme') || 'forest';
   });
 
   const detectPWA = () => {

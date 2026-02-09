@@ -168,13 +168,13 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
     if (!query.trim()) return;
     
     setIsSearching(true);
-    setSearchResults([]);
+    setSearchResults([]); // Important: Clear previous results
     
     try {
       if (viewMode === 'download') {
         const response = await fetch(`https://anime.apex-cloud.workers.dev/?method=search&query=${encodeURIComponent(query)}`);
         const data = await response.json();
-        const results = data.data || [];
+        const results = data.data || (Array.isArray(data) ? data : []);
         setSearchResults(results.map((item: any) => ({
           title: item.title,
           image: item.poster || item.snapshot || item.image || "",
@@ -394,7 +394,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
             <motion.div animate={controls} className="relative w-full group">
               <input 
                 type="text" 
-                placeholder="Query database records..."
+                placeholder={viewMode === 'download' ? "Query archival database..." : "Query discovery records..."}
                 className="input input-sm h-10 md:h-12 w-full bg-base-content/5 border border-base-content/20 rounded-full pl-10 pr-24 text-xs font-medium focus:border-primary transition-all text-base-content placeholder:text-base-content/40 relative z-10"
                 value={searchQuery}
                 onChange={handleInputChange}
@@ -461,7 +461,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
             <section className="space-y-4">
               <div className="flex items-center justify-between border-b border-base-content/10 pb-1">
                 <h2 className="text-sm font-black text-base-content uppercase tracking-tighter italic flex items-center gap-2">
-                  Query Results <span className="text-base-content not-italic">({searchResults.length})</span>
+                  {isSearching ? "Linking Node..." : "Query Results"} <span className="text-base-content not-italic">({searchResults.length})</span>
                 </h2>
                 <button onClick={() => setSearchResults([])} className="text-[8px] uppercase font-black text-base-content/50">Reset</button>
               </div>
@@ -526,7 +526,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                           ))}
                         </div>
                       </section>
-                      <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('anime-watch')} title={`Archive History`} />
+                      <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onHistoryRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('anime-watch')} title={`Archive History`} />
                       {watchHome && (
                         <>
                           {renderHorizontalSection("Trending", watchHome.trending, <Flame size={18} className="text-primary" />)}
@@ -539,7 +539,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                 </AnimatePresence>
               ) : (
                 <div className="space-y-8 md:space-y-12">
-                   <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('anime-download')} title="Recent Downloads" />
+                   <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onHistoryRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('anime-download')} title="Recent Downloads" />
                   
                   {/* Finalized Text-Only Labeling Dashboard for Archive Hub */}
                   <section className="bg-base-content/5 border border-base-content/10 rounded-[2.5rem] p-10 md:p-16 text-center space-y-8 relative overflow-hidden">
