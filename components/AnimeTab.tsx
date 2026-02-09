@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { AnimeSeries, WatchHistoryItem, HistoryFilter } from '../types';
-import { Search, Loader2, Play, Star, Zap, Flame, Download, Calendar, ChevronLeft, ChevronRight, Heart, Users, CheckCircle, Clock, Film, LayoutGrid, PlusSquare, Mic, ShieldCheck, Database, Server, Terminal } from 'lucide-react';
+import { Search, Loader2, Play, Star, Zap, Flame, Download, Calendar, ChevronLeft, ChevronRight, Heart, Users, CheckCircle, Clock, Film, LayoutGrid, PlusSquare, Mic, ShieldCheck, Database, Server, Terminal, X, ImageOff } from 'lucide-react';
 import AnimeCard from './AnimeCard';
 import { SkeletonAnimeCard, SkeletonBanner } from './Skeleton';
 import ContinueWatching from './ContinueWatching';
@@ -37,6 +37,7 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
   const [searchResults, setSearchResults] = useState<AnimeSeries[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const [isGenreOpen, setIsGenreOpen] = useState(false);
   const controls = useAnimation();
   const genreDropdownRef = useRef<HTMLDivElement>(null);
@@ -165,10 +166,14 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
   const handleSearch = async (e: React.FormEvent | string) => {
     if (typeof e !== 'string') e.preventDefault();
     const query = typeof e === 'string' ? e : searchQuery;
-    if (!query.trim()) return;
+    if (!query.trim()) {
+      clearSearch();
+      return;
+    }
     
     setIsSearching(true);
-    setSearchResults([]); // Important: Clear previous results
+    setHasSearched(true);
+    setSearchResults([]); 
     
     try {
       if (viewMode === 'download') {
@@ -198,18 +203,31 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
             score: item.tvInfo?.rating || "N/A",
             source: 'watch'
           })));
+        } else {
+          setSearchResults([]);
         }
       }
     } catch (error) {
       console.error("Registry scan failed:", error);
+      setSearchResults([]);
     } finally {
       setIsSearching(false);
     }
   };
 
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setHasSearched(false);
+    setIsSearching(false);
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-    // Removed pulsing animation (controls.start) to stop the search bar from reacting to every letter
+    const value = e.target.value;
+    setSearchQuery(value);
+    if (value.trim() === '') {
+      clearSearch();
+    }
   };
 
   const handlePrev = () => {
@@ -402,6 +420,15 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/40 z-20" size={14} />
               
               <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1 z-20">
+                {searchQuery && (
+                  <button 
+                    onClick={clearSearch}
+                    className="btn btn-ghost btn-xs h-8 md:h-10 rounded-full px-2 text-base-content/40 hover:text-base-content transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+                
                 {viewMode !== 'download' && (
                   <div className="relative" ref={genreDropdownRef}>
                     <button 
@@ -453,20 +480,20 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
         <ScheduleSection onSelectAnime={handleItemSelect} />
       ) : (
         <>
-          {(isSearching || searchResults.length > 0) && (
+          {(isSearching || hasSearched) && (
             <section className="space-y-4">
               <div className="flex items-center justify-between border-b border-base-content/10 pb-1">
                 <h2 className="text-sm font-black text-base-content uppercase tracking-tighter italic flex items-center gap-2">
-                  {isSearching ? "Linking Node..." : "Query Results"} <span className="text-base-content not-italic">({searchResults.length})</span>
+                  {isSearching ? "Linking Node..." : searchResults.length > 0 ? `Query Results (${searchResults.length})` : "Sector Data Void"}
                 </h2>
-                <button onClick={() => setSearchResults([])} className="text-[8px] uppercase font-black text-base-content/50">Reset</button>
+                <button onClick={clearSearch} className="text-[8px] uppercase font-black text-base-content/50 hover:text-base-content">Reset</button>
               </div>
               <AnimatePresence mode="wait">
                 {isSearching ? (
                   <motion.div key="loading-search" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 md:gap-3">
                     {[...Array(12)].map((_, i) => <SkeletonAnimeCard key={i} />)}
                   </motion.div>
-                ) : (
+                ) : searchResults.length > 0 ? (
                   <motion.div key="results-search" variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 md:gap-3">
                     {searchResults.map((anime, idx) => (
                       <motion.div variants={itemVariants} key={`${anime.session}-${idx}`}>
@@ -474,12 +501,24 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                       </motion.div>
                     ))}
                   </motion.div>
+                ) : (
+                  <motion.div 
+                    initial={{ opacity: 0 }} 
+                    animate={{ opacity: 1 }} 
+                    className="col-span-full flex flex-col items-center justify-center py-24 text-base-content/30 space-y-4"
+                  >
+                      <ImageOff size={64} className="opacity-20" />
+                      <div className="text-center">
+                          <p className="text-sm font-black uppercase tracking-tighter">Void Sector</p>
+                          <p className="text-[10px] font-bold uppercase tracking-[0.3em]">No results found for "{searchQuery}"</p>
+                      </div>
+                  </motion.div>
                 )}
               </AnimatePresence>
             </section>
           )}
 
-          {!searchResults.length && !isSearching && (
+          {!hasSearched && !isSearching && (
             <div className="space-y-8 md:space-y-12">
               {viewMode === 'watch' ? (
                 <AnimatePresence mode="wait">
@@ -522,7 +561,6 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                           ))}
                         </div>
                       </section>
-                      {/* Fix onHistoryRemove mapping to onRemove prop */}
                       <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('anime-watch')} title={`Archive History`} />
                       {watchHome && (
                         <>
@@ -536,10 +574,8 @@ const AnimeTab: React.FC<AnimeTabProps> = ({ onSelectAnime, history, onHistorySe
                 </AnimatePresence>
               ) : (
                 <div className="space-y-8 md:space-y-12">
-                   {/* Fix onHistoryRemove mapping to onRemove prop */}
                    <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('anime-download')} title="Recent Downloads" />
                   
-                  {/* Finalized Text-Only Labeling Dashboard for Archive Hub */}
                   <section className="bg-base-content/5 border border-base-content/10 rounded-[2.5rem] p-10 md:p-16 text-center space-y-8 relative overflow-hidden">
                     <div className="absolute top-0 left-0 p-6 opacity-5">
                        <Terminal size={120} />

@@ -19,12 +19,12 @@ interface MediaModalProps {
 }
 
 const SERVERS = [
+  { id: 'rivestream', label: 'RiveStream (Primary)' },
+  { id: 'rive2', label: 'Rive Aggregator' },
   { id: 'vidnest', label: 'VidNest' },
   { id: 'vidup', label: 'VidUp' },
   { id: 'vidfast', label: 'VidFast' },
   { id: 'vidsrcto', label: 'VidSrc.to' },
-  { id: 'rivestream', label: 'RiveStream' },
-  { id: 'rive2', label: 'Rive Aggregator' },
   { id: 'vidzee', label: 'VidZee' },
   { id: 'vidsrc', label: 'VidSrc (WTF)' },
 ];
@@ -38,7 +38,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
   const [isServerDropdownOpen, setIsServerDropdownOpen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playingEpisode, setPlayingEpisode] = useState<TMDBEpisode | null>(null);
-  const [server, setServer] = useState('vidnest');
+  const [server, setServer] = useState('rivestream');
   const [selectedSeason, setSelectedSeason] = useState<number>(initialResumeData?.seasonNumber || 1);
   const [watchedEpisodes, setWatchedEpisodes] = useState<Set<string>>(new Set());
   
@@ -147,6 +147,14 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
     const color = "ff2e63";
 
     switch(server) {
+        case 'rivestream':
+             return isTv 
+                ? `https://rivestream.org/embed?type=tv&id=${id}&season=${playingEpisode?.season_number}&episode=${playingEpisode?.episode_number}`
+                : `https://rivestream.org/embed?type=movie&id=${id}`;
+        case 'rive2':
+             return isTv 
+                ? `https://rivestream.org/embed/agg?type=tv&id=${id}&season=${playingEpisode?.season_number}&episode=${playingEpisode?.episode_number}`
+                : `https://rivestream.org/embed/agg?type=movie&id=${id}`;
         case 'vidnest':
             return isTv
                 ? `https://vidnest.fun/tv/${id}/${playingEpisode?.season_number}/${playingEpisode?.episode_number}`
@@ -163,14 +171,6 @@ const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, apiKey, mode = 
             return isTv
                 ? `https://vidsrc.to/embed/tv/${id}/${playingEpisode?.season_number}/${playingEpisode?.episode_number}`
                 : `https://vidsrc.to/embed/movie/${id}`;
-        case 'rivestream':
-             return isTv 
-                ? `https://rivestream.org/embed?type=tv&id=${id}&season=${playingEpisode?.season_number}&episode=${playingEpisode?.episode_number}`
-                : `https://rivestream.org/embed?type=movie&id=${id}`;
-        case 'rive2':
-             return isTv 
-                ? `https://rivestream.org/embed/agg?type=tv&id=${id}&season=${playingEpisode?.season_number}&episode=${playingEpisode?.episode_number}`
-                : `https://rivestream.org/embed/agg?type=movie&id=${id}`;
         case 'vidzee':
             return isTv
                 ? `https://player.vidzee.wtf/embed/tv/${id}/${playingEpisode?.season_number}/${playingEpisode?.episode_number}`

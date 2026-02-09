@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AnimeSeries, AnimeEpisode, WatchHistoryItem } from '../types';
-import { X, Play, Loader2, ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Bookmark, BookmarkCheck, CheckCircle2, Search, LayoutGrid, MonitorPlay, Cpu, Download, Settings, Globe, Monitor, Zap } from 'lucide-react';
+import { X, Play, Loader2, ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Bookmark, BookmarkCheck, CheckCircle2, MonitorPlay, Cpu, Download, SkipForward, Timer, Image as ImageIcon, CalendarClock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Artplayer from 'artplayer';
-import Hls from 'hls.js';
 
 interface AnimeModalProps {
   anime: AnimeSeries;
@@ -18,164 +16,38 @@ interface AnimeModalProps {
 
 interface WatchServer {
   type: 'sub' | 'dub';
-  data_id: string;
-  server_id: string;
-  serverName: string;
-  isHybrid?: boolean;
+  server_id: string; // This will store the resolved slug (hd-1, hd-2, etc)
+  serverName: string; 
+  api_origin: 'aniwatch' | 'iota';
 }
 
 interface DownloadLink {
-  quality: string;
+  type: string;
   url: string;
-  isDub?: boolean;
+}
+
+interface AiringData {
+  airingAt: number;
+  episode: number;
 }
 
 const EPISODES_PER_PAGE = 30;
 
-const NeuralPlayer: React.FC<{ url: string; poster?: string; subtitle?: any[]; onReady?: () => void }> = ({ url, poster, subtitle, onReady }) => {
-  const artRef = useRef<HTMLDivElement>(null);
-  const playerRef = useRef<Artplayer | null>(null);
-
-  useEffect(() => {
-    if (!artRef.current || !url) return;
-
-    if (playerRef.current) {
-      playerRef.current.destroy(false);
+const ANILIST_MEDIA_QUERY = `
+query ($search: String) {
+  Media (search: $search, type: ANIME) {
+    bannerImage
+    coverImage {
+      extraLarge
     }
-
-    // Safety timeout to ensure loading state clears even if player stalls
-    const safetyTimer = setTimeout(() => {
-        if (onReady) onReady();
-    }, 5000);
-
-    const art = new Artplayer({
-      container: artRef.current,
-      url: url,
-      poster: poster || "",
-      autoplay: true,
-      volume: 1,
-      isLive: false,
-      muted: false,
-      pip: true,
-      autoSize: true,
-      autoMini: true,
-      screenshot: true,
-      setting: true,
-      loop: false,
-      flip: true,
-      playbackRate: true,
-      aspectRatio: true,
-      fullscreen: true,
-      fullscreenWeb: true,
-      subtitleOffset: true,
-      miniProgressBar: true,
-      mutex: true,
-      backdrop: true,
-      playsInline: true,
-      autoPlayback: true,
-      airplay: true,
-      theme: '#1eb854',
-      type: 'm3u8',
-      moreVideoAttr: {
-        crossOrigin: 'anonymous',
-      },
-      subtitle: subtitle ? {
-        url: subtitle.find(s => s.default)?.url || subtitle[0]?.url || "",
-        type: 'vtt',
-        style: {
-          color: '#fff',
-          fontSize: '20px',
-        },
-      } : undefined,
-      settings: [
-        {
-          html: 'Subtitles',
-          icon: '<img width="22" heigth="22" src="https://artplayer.org/assets/img/subtitle.svg">',
-          selector: subtitle ? subtitle.map(s => ({
-            html: s.html,
-            url: s.url,
-            default: s.default,
-          })) : [],
-          onSelect: function (item) {
-            art.subtitle.url = item.url;
-            return item.html;
-          },
-        },
-      ],
-      customType: {
-        m3u8: (video: HTMLMediaElement, url: string, artInstance: any) => {
-          if (Hls.isSupported()) {
-            if (artInstance.hls) artInstance.hls.destroy();
-            const hls = new Hls();
-            hls.loadSource(url);
-            hls.attachMedia(video);
-            artInstance.hls = hls;
-            
-            hls.on(Hls.Events.ERROR, (event, data) => {
-               if (data.fatal) {
-                   switch (data.type) {
-                       case Hls.ErrorTypes.NETWORK_ERROR:
-                           hls.startLoad();
-                           break;
-                       case Hls.ErrorTypes.MEDIA_ERROR:
-                           hls.recoverMediaError();
-                           break;
-                       default:
-                           artInstance.notice.show = `Error: ${data.details}`;
-                           hls.destroy();
-                           break;
-                   }
-               }
-            });
-            
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                // Ensure loading clears when manifest is parsed
-                if (onReady) onReady();
-                clearTimeout(safetyTimer);
-            });
-
-            artInstance.on('destroy', () => hls.destroy());
-          } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = url;
-            // For Safari native HLS
-            video.addEventListener('loadedmetadata', () => {
-                if (onReady) onReady();
-                clearTimeout(safetyTimer);
-            });
-          } else {
-             artInstance.notice.show = 'Unsupported playback format: m3u8';
-             if (onReady) onReady();
-             clearTimeout(safetyTimer);
-          }
-        },
-      },
-    });
-
-    playerRef.current = art;
-
-    art.on('ready', () => {
-      if (onReady) onReady();
-      clearTimeout(safetyTimer);
-      
-      // Ensure playback starts
-      art.play().catch((e) => {
-         console.warn("Autoplay prevented:", e);
-         art.muted = true;
-         art.play().catch(console.error);
-      });
-    });
-
-    return () => {
-      clearTimeout(safetyTimer);
-      if (playerRef.current) {
-        playerRef.current.destroy(false);
-        playerRef.current = null;
-      }
-    };
-  }, [url]);
-
-  return <div ref={artRef} className="w-full h-full absolute inset-0 bg-black" />;
-};
+    nextAiringEpisode {
+      airingAt
+      episode
+    }
+    status
+  }
+}
+`;
 
 const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch', onPlay, initialEpisodeId, isSaved, onToggleSave, setToast }) => {
   const [episodes, setEpisodes] = useState<AnimeEpisode[]>([]);
@@ -184,44 +56,31 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
   const [selectedEpisode, setSelectedEpisode] = useState<AnimeEpisode | null>(null);
   const [isLinksLoading, setIsLinksLoading] = useState(false);
   const [isIframeLoading, setIsIframeLoading] = useState(false);
+  
   const [watchServers, setWatchServers] = useState<WatchServer[]>([]);
-  const [activeWatchServer, setActiveWatchServer] = useState<string | null>(null);
+  const [activeWatchServer, setActiveWatchServer] = useState<string | null>(null); 
   const [activeWatchType, setActiveWatchType] = useState<'sub' | 'dub'>('sub');
   const [serverCategory, setServerCategory] = useState<'sub' | 'dub'>('sub');
-  const [isServerDropdownOpen, setIsServerDropdownOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
-  const [playerMode, setPlayerMode] = useState<'embed' | 'default'>(() => {
-    return (localStorage.getItem('sv_anime_player_preference') as 'embed' | 'default') || 'embed';
-  });
-
+  const [isServerDropdownOpen, setIsServerDropdownOpen] = useState(false);
   const [iframeUrl, setIframeUrl] = useState<string | null>(null);
-  const [m3u8Url, setM3u8Url] = useState<string | null>(null);
-  const [subtitleTracks, setSubtitleTracks] = useState<any[]>([]);
   const [watchedEpisodes, setWatchedEpisodes] = useState<Set<string>>(new Set());
   const [lastHistoryItem, setLastHistoryItem] = useState<WatchHistoryItem | null>(null);
-  
   const [currentPage, setCurrentPage] = useState(0);
-  const [downloadLinks, setDownloadLinks] = useState<DownloadLink[]>([]);
+  const [downloadLinks, setDownloadLinks] = useState<any[]>([]);
   const [isFetchingDownloads, setIsFetchingDownloads] = useState(false);
   
-  const settingsRef = useRef<HTMLDivElement>(null);
+  // AniList states
+  const [airingData, setAiringData] = useState<AiringData | null>(null);
+  const [timeRemaining, setTimeRemaining] = useState<number>(0);
+  const [showAiringBar, setShowAiringBar] = useState(true);
+  
   const serverDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    localStorage.setItem('sv_anime_player_preference', playerMode);
-  }, [playerMode]);
-
-  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-        if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
-            setIsSettingsOpen(false);
-        }
-        if (serverDropdownRef.current && !serverDropdownRef.current.contains(event.target as Node)) {
-            setIsServerDropdownOpen(false);
-        }
+        if (serverDropdownRef.current && !serverDropdownRef.current.contains(event.target as Node)) setIsServerDropdownOpen(false);
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
@@ -230,10 +89,10 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
     const savedHistory = localStorage.getItem('sv_watch_history_v2');
     if (savedHistory) {
       try {
-        const parsedHistory: WatchHistoryItem[] = JSON.parse(savedHistory);
-        const match = parsedHistory.find(h => h.id.toString() === anime.session.toString() && h.type === 'anime');
+        const parsedHistory = JSON.parse(savedHistory);
+        const match = parsedHistory.find((h: any) => h.id.toString() === anime.session.toString() && h.type === 'anime');
         if (match) setLastHistoryItem(match);
-      } catch (e) { console.error(e); }
+      } catch (e) {}
     }
     const registry = localStorage.getItem('sv_watched_registry');
     if (registry) {
@@ -241,13 +100,28 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
         const parsed = JSON.parse(registry);
         const seriesWatched = parsed[anime.session] || [];
         setWatchedEpisodes(new Set(seriesWatched));
-      } catch (e) { console.error(e); }
+      } catch (e) {}
     }
   }, [anime.session]);
 
   useEffect(() => {
     fetchEpisodes();
   }, [anime.session]);
+
+  // Live countdown effect
+  useEffect(() => {
+    if (!airingData) return;
+
+    const updateTimer = () => {
+      const now = Math.floor(Date.now() / 1000);
+      const diff = airingData.airingAt - now;
+      setTimeRemaining(diff > 0 ? diff : 0);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [airingData]);
 
   const fetchEpisodes = async () => {
     if (!anime.session) return;
@@ -276,6 +150,45 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
     } finally { setIsLoading(false); }
   };
 
+  const fetchAnilistData = async (title: string) => {
+      try {
+          const response = await fetch('https://graphql.anilist.co', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  query: ANILIST_MEDIA_QUERY,
+                  variables: { search: title }
+              })
+          });
+          const data = await response.json();
+          const media = data?.data?.Media;
+          
+          if (media) {
+            if (media.nextAiringEpisode) {
+                setAiringData(media.nextAiringEpisode);
+                setShowAiringBar(true); // Reset visibility when new data arrives
+            } else {
+                setAiringData(null);
+            }
+          }
+      } catch (e) {
+          setAiringData(null);
+      }
+  };
+
+  const formatTimeUntil = (seconds: number) => {
+    const days = Math.floor(seconds / (3600 * 24));
+    const hours = Math.floor((seconds % (3600 * 24)) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    
+    let parts = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0 || parts.length === 0) parts.push(`${minutes}m`);
+    
+    return parts.join(' ');
+  };
+
   const handleAction = async (ep: AnimeEpisode) => {
     if (mode === 'download') {
       setSelectedEpisode(ep);
@@ -286,121 +199,152 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
         const data = await response.json();
         const rawLinks = Array.isArray(data) ? data : (data.data || data.results || []);
         if (Array.isArray(rawLinks) && rawLinks.length > 0) {
-          setDownloadLinks(rawLinks.map((l: any) => ({
-            quality: l.name || l.quality || l.title || 'Source Link',
-            url: l.link || l.url || l.file
-          })));
+          setDownloadLinks(rawLinks);
         }
-      } catch (e) { console.error(e); } finally { setIsFetchingDownloads(false); }
+      } catch (e) {} finally { setIsFetchingDownloads(false); }
       if (onPlay) onPlay(ep);
       return;
     }
-    fetchEpisodeLinks(ep);
-  };
-
-  const extractM3u8 = (streamingLink: any) => {
-    if (!streamingLink) return null;
     
-    // Check nested link object format (e.g. from user sample)
-    if (streamingLink.link?.file) {
-      return streamingLink.link.file;
-    }
-    
-    // Check sources array format
-    if (Array.isArray(streamingLink.sources)) {
-        const match = streamingLink.sources.find((s: any) => 
-          s.isM3U8 === true || 
-          s.type === 'hls' || 
-          (s.url && s.url.toLowerCase().includes('.m3u8')) ||
-          (s.file && s.file.toLowerCase().includes('.m3u8'))
-        );
-        return match?.url || match?.file || streamingLink.sources[0]?.url || streamingLink.sources[0]?.file;
-    }
-
-    // Direct string link
-    if (typeof streamingLink.link === 'string') return streamingLink.link;
-    
-    return null;
-  };
-
-  const extractSubtitles = (streamingLink: any) => {
-    if (!streamingLink?.tracks || !Array.isArray(streamingLink.tracks)) return [];
-    return streamingLink.tracks.map((t: any) => ({
-        html: t.label || t.lang || 'Unknown',
-        url: t.file || t.url || '',
-        kind: t.kind || 'captions',
-        default: !!t.default
-    }));
-  };
-
-  const fetchStreamData = async (epId: string, serverName: string, type: 'sub' | 'dub', originalEp: AnimeEpisode, isManual: boolean = false) => {
+    setSelectedEpisode(ep);
+    setIframeUrl(null);
     setIsLinksLoading(true);
     setIsIframeLoading(true);
-    setIframeUrl(null);
-    setM3u8Url(null);
-    setSubtitleTracks([]);
-    setActiveWatchServer(`${type}-${serverName}`);
-    setActiveWatchType(type);
-    setServerCategory(type);
-    setIsServerDropdownOpen(false);
     
-    if (isManual && onPlay) onPlay(originalEp);
-    
-    try {
-      const response = await fetch(`https://anime-api-iota-six.vercel.app/api/stream?id=${encodeURIComponent(epId)}&server=${serverName.toLowerCase()}&type=${type}`);
-      const data = await response.json();
-      if (data.success && data.results) {
-        setWatchServers(data.results.servers || []);
-        
-        const streamingLink = data.results.streamingLink;
-        if (streamingLink?.iframe) {
-            const rawIframe = streamingLink.iframe;
-            const separator = rawIframe.includes('?') ? '&' : '?';
-            setIframeUrl(`${rawIframe}${separator}_debug=true`);
-        }
-        
-        const m3u8 = extractM3u8(streamingLink);
-        if (m3u8) setM3u8Url(m3u8);
+    fetchAnilistData(anime.title);
+    fetchMediaData(ep.session, serverCategory); 
+    if (onPlay) onPlay(ep);
+  };
 
-        const subs = extractSubtitles(streamingLink);
-        setSubtitleTracks(subs);
+  const fetchSafe = async (url: string, retries = 2): Promise<any> => {
+    try {
+      const res = await fetch(url, { credentials: 'omit' });
+      if (!res.ok) throw new Error(`Status ${res.status}`);
+      return await res.json();
+    } catch (e: any) {
+      if (retries > 0) {
+        await new Promise(r => setTimeout(r, 1000));
+        return fetchSafe(url, retries - 1);
       }
-    } catch (error) { console.error(error); } finally { 
-      // isIframeLoading will be handled by the player onReady
-      setIsLinksLoading(false); 
+      throw e;
     }
   };
 
-  const fetchEpisodeLinks = async (ep: AnimeEpisode) => {
+  const mapToIotaSlug = (serverName: string, serverId: string): string => {
+    const name = serverName?.toLowerCase() || "";
+    const id = serverId?.toString() || "";
+    
+    if (name.includes('vidstreaming') || id === '4' || name.includes('hd-1')) return 'hd-1';
+    if (name.includes('megacloud') || id === '1' || name.includes('hd-2')) return 'hd-2';
+    if (name.includes('streamsb') || id === '3' || name.includes('sb')) return 'sb';
+    if (name.includes('streamtape') || id === '2' || name.includes('streamtape')) return 'streamtape';
+    if (name.includes('hd-3')) return 'hd-3';
+    
+    // Default to provided ID if it's already a slug, otherwise fallback
+    return id.includes('hd-') ? id : 'hd-1';
+  };
+
+  const fetchMediaData = async (epId: string, category: 'sub' | 'dub') => {
     setIsLinksLoading(true);
-    setIsIframeLoading(true); 
-    setIframeUrl(null); 
-    setM3u8Url(null);
-    setSubtitleTracks([]);
-    setSelectedEpisode(ep);
+    setIsIframeLoading(true);
+    setActiveWatchType(category);
+    setServerCategory(category);
+    
+    // Initial fetch always refreshes the server list
+    await fetchIotaData(epId, 'hd-1', category, true);
+  };
+
+  const fetchIotaData = async (epId: string, serverSlug: string, category: 'sub' | 'dub', refreshServersList = true) => {
+    // Show loaders when switching or initiating stream
+    setIsLinksLoading(true);
+    setIsIframeLoading(true);
+    
     try {
-      const typeToUse = activeWatchType || 'sub';
-      const response = await fetch(`https://anime-api-iota-six.vercel.app/api/stream?id=${encodeURIComponent(ep.session)}&server=hd-1&type=${typeToUse}`);
-      const data = await response.json();
-      if (data.success && data.results) {
-        setWatchServers(data.results.servers || []);
+        const url = `https://anime-api-iota-six.vercel.app/api/stream?id=${encodeURIComponent(epId)}&server=${serverSlug}&type=${category}`;
+        const data = await fetchSafe(url);
         
-        const streamingLink = data.results.streamingLink;
-        const m3u8 = extractM3u8(streamingLink);
-        if (m3u8) setM3u8Url(m3u8);
+        if (data.success && data.results) {
+            const { streamingLink, servers } = data.results;
 
-        const subs = extractSubtitles(streamingLink);
-        setSubtitleTracks(subs);
+            if (refreshServersList && servers && Array.isArray(servers) && servers.length > 0) {
+                const mapped: WatchServer[] = servers.map((s: any) => ({
+                    type: s.type,
+                    server_id: mapToIotaSlug(s.serverName, s.server_id?.toString()),
+                    serverName: s.serverName,
+                    api_origin: 'iota'
+                }));
+                setWatchServers(mapped);
+                
+                const current = mapped.find(s => s.server_id === serverSlug && s.type === category) 
+                             || mapped.find(s => s.type === category) 
+                             || mapped[0];
+                
+                if (current) {
+                    setActiveWatchServer(current.server_id);
+                    if (current.type !== category) {
+                        setServerCategory(current.type);
+                        setActiveWatchType(current.type);
+                    }
+                }
+            } else if (!refreshServersList) {
+                setActiveWatchServer(serverSlug);
+            }
 
-        if (streamingLink?.iframe) {
-            const rawIframe = streamingLink.iframe;
-            const separator = rawIframe.includes('?') ? '&' : '?';
-            setIframeUrl(`${rawIframe}${separator}_debug=true`);
-            if (onPlay) onPlay(ep);
+            if (streamingLink?.iframe) {
+                let link = streamingLink.iframe;
+                if (!link.includes('&_debug=true')) link += '&_debug=true';
+                setIframeUrl(link);
+            }
         }
-      }
-    } catch (error) { console.error(error); } finally { 
-        setIsLinksLoading(false); 
+    } catch (e: any) {
+        if (refreshServersList) {
+            await fetchAniwatchData(epId, category);
+        } else {
+            if (setToast) setToast({ message: "Server relay disrupted.", type: 'error' });
+        }
+    } finally {
+        setIsLinksLoading(false);
+        setIsIframeLoading(false);
+    }
+  };
+
+  const fetchAniwatchData = async (epId: string, category: 'sub' | 'dub') => {
+    setIsLinksLoading(true);
+    setIsIframeLoading(true);
+    try {
+        const serversUrl = `https://aniwatch-api-one-rose.vercel.app/api/v2/hianime/episode/servers?animeEpisodeId=${encodeURIComponent(epId)}`;
+        const serversData = await fetchSafe(serversUrl);
+        
+        let available: WatchServer[] = [];
+        if (serversData.status === 200 && serversData.data) {
+             const sub = (serversData.data.sub || []).map((s: any) => ({
+                 type: 'sub' as const,
+                 server_id: s.serverId.toString(),
+                 serverName: s.serverName,
+                 api_origin: 'aniwatch' as const
+             }));
+             const dub = (serversData.data.dub || []).map((s: any) => ({
+                 type: 'dub' as const,
+                 server_id: s.serverId.toString(),
+                 serverName: s.serverName,
+                 api_origin: 'aniwatch' as const
+             }));
+             available = [...sub, ...dub];
+        }
+        setWatchServers(available);
+
+        const preferred = available.find(s => s.type === category) || available[0];
+        if (preferred) {
+            setActiveWatchServer(preferred.server_id);
+            setServerCategory(preferred.type);
+            setActiveWatchType(preferred.type);
+            setIframeUrl(`https://aniwatch-api-one-rose.vercel.app/api/v2/hianime/episode/sources?animeEpisodeId=${encodeURIComponent(epId)}&server=${preferred.server_id}&category=${preferred.type}`);
+        }
+    } catch (e: any) {
+        if (setToast) setToast({ message: "Network interference detected. Node offline.", type: 'error' });
+    } finally {
+        setIsLinksLoading(false);
+        setIsIframeLoading(false);
     }
   };
 
@@ -408,15 +352,22 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
   
   const handleNavigateEpisode = (direction: 'prev' | 'next') => {
     const nextIndex = direction === 'next' ? currentIndexInFlatList + 1 : currentIndexInFlatList - 1;
-    if (nextIndex >= 0 && nextIndex < episodes.length) {
-        handleAction(episodes[nextIndex]);
-    }
+    if (nextIndex >= 0 && nextIndex < episodes.length) handleAction(episodes[nextIndex]);
   };
 
   const paginatedEpisodes = useMemo(() => {
     const start = currentPage * EPISODES_PER_PAGE;
     return episodes.slice(start, start + EPISODES_PER_PAGE);
   }, [episodes, currentPage]);
+
+  const handleServerChange = (server: WatchServer) => {
+      setActiveWatchServer(server.server_id);
+      if (selectedEpisode) {
+          // Pass the server_id directly as we now store resolved slugs in it
+          fetchIotaData(selectedEpisode.session, server.server_id, server.type, false);
+      }
+      setIsServerDropdownOpen(false);
+  };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[1000] flex items-center justify-center p-2 bg-black/70 backdrop-blur-md" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -431,7 +382,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
         </div>
 
         {selectedEpisode ? (
-          <div className="flex flex-col w-full bg-base-100">
+          <div className="flex flex-col w-full bg-base-100" key={`player-container-${selectedEpisode.session}`}>
             <div className="flex items-center justify-between p-3 border-b border-base-content/10 gap-3">
               <button onClick={() => { setSelectedEpisode(null); setDownloadLinks([]); }} className="flex items-center gap-1.5 text-base-content/80 hover:text-base-content text-[9px] font-black uppercase tracking-widest transition-colors"><ArrowLeft size={12} /> Hub</button>
               <div className="flex flex-col items-center">
@@ -444,16 +395,8 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
             {mode === 'watch' ? (
               <>
                 <div className="w-full aspect-video bg-black relative group/player overflow-hidden z-0">
-                  {playerMode === 'default' && m3u8Url ? (
-                    <NeuralPlayer 
-                      key={`neural-${m3u8Url}`}
-                      url={m3u8Url} 
-                      poster={selectedEpisode.snapshot || anime.image} 
-                      subtitle={subtitleTracks}
-                      onReady={() => setIsIframeLoading(false)} 
-                    />
-                  ) : playerMode === 'embed' && iframeUrl ? (
-                    <div className="w-full h-full relative" key={`embed-container-${iframeUrl}`}>
+                  {iframeUrl ? (
+                    <div className="w-full h-full relative" key={`embed-view-${iframeUrl}`}>
                       {isIframeLoading && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-10 gap-3">
                            <Loader2 size={32} className="animate-spin text-primary" />
@@ -461,9 +404,10 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
                         </div>
                       )}
                       <iframe 
-                        key={`iframe-${iframeUrl}`}
+                        key={`iframe-src-${iframeUrl}`}
                         src={iframeUrl} 
                         allowFullScreen 
+                        referrerPolicy="no-referrer"
                         className={`w-full h-full border-none transition-opacity duration-500 ${isIframeLoading ? 'opacity-0' : 'opacity-100'}`} 
                         onLoad={() => setIsIframeLoading(false)} 
                       />
@@ -486,77 +430,77 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
                 </div>
 
                 <div className="p-4 bg-base-100 border-t border-base-content/10 flex flex-col items-center gap-4 relative z-50">
-                    {/* Navigation Controls */}
-                    <div className="flex items-center justify-between w-full max-w-2xl">
+                    <AnimatePresence>
+                        {showAiringBar && airingData && timeRemaining > 0 && (
+                            <motion.div 
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                className="w-full max-w-2xl bg-emerald-500/5 rounded-2xl border border-emerald-500/30 p-3 flex items-center justify-center gap-3 shadow-[0_0_15px_-5px_rgba(16,185,129,0.4)] relative overflow-hidden"
+                            >
+                                <CalendarClock size={14} className="text-emerald-500" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500/90 pr-6">
+                                    Upcoming episode {airingData.episode} aired in {formatTimeUntil(timeRemaining)}
+                                </span>
+                                <button 
+                                    onClick={() => setShowAiringBar(false)}
+                                    className="absolute right-3 p-1 hover:bg-emerald-500/10 rounded-full transition-colors"
+                                    title="Hide Info"
+                                >
+                                    <X size={12} className="text-emerald-500/60" />
+                                </button>
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-500/5 to-transparent -translate-x-full animate-[shimmer_3s_infinite]" />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {!showAiringBar && airingData && timeRemaining > 0 && (
+                      <button 
+                        onClick={() => setShowAiringBar(true)}
+                        className="text-[8px] font-black uppercase text-emerald-500/40 hover:text-emerald-500 transition-colors tracking-widest"
+                      >
+                        [ Restore Airing Protocol ]
+                      </button>
+                    )}
+
+                    <div className="flex items-center justify-between w-full max-w-2xl px-2">
                         <button disabled={currentIndexInFlatList <= 0} onClick={() => handleNavigateEpisode('prev')} className="btn btn-xs h-8 px-4 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2"><ChevronLeft size={14} /><span className="text-[9px] font-black uppercase">Prev EP</span></button>
                         <div className="text-[10px] font-black uppercase tracking-widest text-base-content/40">EP {selectedEpisode.episode}</div>
                         <button disabled={currentIndexInFlatList >= episodes.length - 1} onClick={() => handleNavigateEpisode('next')} className="btn btn-xs h-8 px-4 rounded-xl border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content disabled:opacity-20 transition-all flex items-center gap-2"><span className="text-[9px] font-black uppercase">Next EP</span><ChevronRight size={14} /></button>
                     </div>
                     
-                    {/* Main Controls Row */}
                     <div className="flex flex-wrap items-center justify-center gap-3 w-full max-w-2xl relative z-40">
-                        {/* Audio Toggle */}
                         <div className="flex p-0.5 bg-base-content/5 rounded-full border border-base-content/10">
-                            <button onClick={() => setServerCategory('sub')} className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${serverCategory === 'sub' ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/60'}`}>Sub</button>
-                            <button onClick={() => setServerCategory('dub')} className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${serverCategory === 'dub' ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/60'}`}>Dub</button>
+                            <button 
+                                onClick={() => fetchMediaData(selectedEpisode.session, 'sub')} 
+                                className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${serverCategory === 'sub' ? 'bg-primary text-primary-content shadow-md' : 'text-base-content/60'}`}
+                            >
+                                Sub
+                            </button>
+                            <button 
+                                onClick={() => fetchMediaData(selectedEpisode.session, 'dub')} 
+                                className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${serverCategory === 'dub' ? 'bg-primary text-primary-content shadow-md' : 'text-base-content/60'}`}
+                            >
+                                Dub
+                            </button>
                         </div>
 
-                        {/* Server Selection */}
                         <div className="relative" ref={serverDropdownRef}>
                             <button onClick={() => setIsServerDropdownOpen(!isServerDropdownOpen)} className="flex items-center gap-2 px-4 py-2 bg-base-content/5 border border-base-content/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-base-content/10 transition-all">
-                               {activeWatchServer?.split('-')[1] || 'Select Node'} <ChevronDown size={12} />
+                               {watchServers.find(s => s.server_id === activeWatchServer && s.type === serverCategory)?.serverName || 'Select Node'} <ChevronDown size={12} />
                             </button>
                             <AnimatePresence>
                               {isServerDropdownOpen && (
                                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-base-100 border border-base-content/10 rounded-2xl p-2 z-[100] shadow-2xl max-h-48 overflow-y-auto custom-scrollbar">
                                     {watchServers.filter(s => s.type === serverCategory).map(srv => (
-                                      <button key={srv.data_id} onClick={() => { fetchStreamData(selectedEpisode.session, srv.serverName, serverCategory, selectedEpisode, true); setIsServerDropdownOpen(false); }} className={`w-full text-left px-3 py-2 rounded-xl text-[9px] font-black uppercase flex items-center justify-between ${activeWatchServer === `${serverCategory}-${srv.serverName}` ? 'bg-primary text-primary-content' : 'text-base-content hover:bg-base-content/5'}`}>
+                                      <button key={`${srv.type}-${srv.server_id}`} onClick={() => handleServerChange(srv)} className={`w-full text-left px-3 py-2 rounded-xl text-[9px] font-black uppercase flex items-center justify-between ${activeWatchServer === srv.server_id ? 'bg-primary text-primary-content' : 'text-base-content hover:bg-base-content/5'}`}>
                                         <span className="truncate">{srv.serverName}</span>
-                                        {srv.isHybrid && <Cpu size={10} />}
+                                        {srv.api_origin === 'iota' && <Cpu size={10} />}
                                       </button>
                                     ))}
                                 </motion.div>
                               )}
                             </AnimatePresence>
-                        </div>
-
-                        {/* Player Settings */}
-                        <div className="relative" ref={settingsRef}>
-                          <button 
-                             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                             className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${isSettingsOpen ? 'bg-base-content/10 border-primary/50 text-primary' : 'bg-base-content/5 border-base-content/10 text-base-content/70 hover:bg-base-content/10'}`}
-                          >
-                             <Settings size={14} className={isSettingsOpen ? 'animate-spin-slow' : ''} />
-                          </button>
-                          
-                          <AnimatePresence>
-                            {isSettingsOpen && (
-                              <motion.div 
-                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                className="absolute bottom-full right-0 mb-2 w-48 bg-base-100 border border-base-content/10 rounded-2xl p-2 shadow-2xl z-[100]"
-                              >
-                                <div className="text-[7px] font-black uppercase tracking-widest text-base-content/30 px-2 pb-1 border-b border-base-content/5 mb-1">Relay Protocol</div>
-                                <div className="space-y-1">
-                                    <button 
-                                      onClick={() => { setPlayerMode('embed'); setIsSettingsOpen(false); }}
-                                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all ${playerMode === 'embed' ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/70 hover:bg-base-content/10'}`}
-                                    >
-                                      <span className="text-[9px] font-black uppercase tracking-tighter">Embed Relay</span>
-                                      <Globe size={12} />
-                                    </button>
-                                    <button 
-                                      onClick={() => { setPlayerMode('default'); setIsSettingsOpen(false); }}
-                                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all ${playerMode === 'default' ? 'bg-primary text-primary-content shadow-lg' : 'text-base-content/70 hover:bg-base-content/10'}`}
-                                    >
-                                      <span className="text-[9px] font-black uppercase tracking-tighter">Neural Player</span>
-                                      <Monitor size={12} />
-                                    </button>
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
                         </div>
                     </div>
                 </div>
@@ -578,9 +522,9 @@ const AnimeModal: React.FC<AnimeModalProps> = ({ anime, onClose, mode = 'watch',
                            <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40">Syncing Direct Coordinates...</span>
                         </div>
                     ) : downloadLinks.map((link, idx) => (
-                        <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-outline border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content rounded-2xl p-4 h-auto flex flex-col items-center gap-1 transition-all group w-full">
+                        <a key={idx} href={(link as any).url || (link as any).link} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-outline border-base-content/10 text-base-content hover:bg-primary hover:text-primary-content rounded-2xl p-4 h-auto flex flex-col items-center gap-1 transition-all group w-full">
                             <span className="text-[9px] font-black uppercase tracking-widest opacity-40 group-hover:opacity-100">Downlink Coordinate</span>
-                            <span className="text-sm font-black italic tracking-tighter truncate w-full px-4">{link.quality}</span>
+                            <span className="text-sm font-black italic tracking-tighter truncate w-full px-4">{(link as any).quality || (link as any).name || 'Source Link'}</span>
                         </a>
                     ))}
                  </div>

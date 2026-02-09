@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { TMDBMedia, WatchHistoryItem, HistoryFilter } from '../types';
-import { Search, Download, Play, Star, ChevronLeft, ChevronRight, Flame, Trophy, Film, Tv, BarChart3, Loader2, X } from 'lucide-react';
+import { Search, Download, Play, Star, ChevronLeft, ChevronRight, Flame, Trophy, Film, Tv, BarChart3, Loader2, X, ImageOff } from 'lucide-react';
 import MediaCard from './MediaCard';
 import { SkeletonMediaCard, SkeletonBanner } from './Skeleton';
 import ContinueWatching from './ContinueWatching';
@@ -101,7 +101,10 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
   const handleSearch = async (e: React.FormEvent | string) => {
     if (typeof e !== 'string') e.preventDefault();
     const query = typeof e === 'string' ? e : searchQuery;
-    if (!query.trim()) return;
+    if (!query.trim()) {
+      clearSearch();
+      return;
+    }
     
     setIsSearching(true);
     setHasSearched(true);
@@ -114,6 +117,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
       setSearchResults(results);
     } catch (error) {
       console.error("Search Error:", error);
+      setSearchResults([]);
     } finally {
       setIsSearching(false);
     }
@@ -161,12 +165,18 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
           <p className="text-[10px] uppercase font-bold text-base-content/60 tracking-[0.2em]">Synchronized Database</p>
         </div>
 
-        <div className="flex p-0.5 bg-base-content/10 rounded-full border border-base-content/20">
-           <button onClick={() => setViewMode('watch')} className={`px-6 py-2 rounded-full transition-all flex items-center gap-2 ${viewMode === 'watch' ? 'btn-primary text-primary-content shadow-lg' : 'text-base-content/60 hover:text-base-content'}`}>
+        <div className="flex p-1 bg-base-content/5 rounded-full border border-base-content/10">
+           <button 
+             onClick={() => setViewMode('watch')} 
+             className={`btn btn-sm border-none rounded-full px-6 flex items-center gap-2 transition-all ${viewMode === 'watch' ? 'btn-primary text-primary-content shadow-lg' : 'btn-ghost text-base-content/60 hover:text-base-content'}`}
+           >
              <Play size={14} className={viewMode === 'watch' ? 'fill-current' : ''} />
              <span className="text-[10px] font-black uppercase tracking-widest">Watch</span>
            </button>
-           <button onClick={() => setViewMode('download')} className={`px-6 py-2 rounded-full transition-all flex items-center gap-2 ${viewMode === 'download' ? 'btn-primary text-primary-content shadow-lg' : 'text-base-content/60 hover:text-base-content'}`}>
+           <button 
+             onClick={() => setViewMode('download')} 
+             className={`btn btn-sm border-none rounded-full px-6 flex items-center gap-2 transition-all ${viewMode === 'download' ? 'btn-primary text-primary-content shadow-lg' : 'btn-ghost text-base-content/60 hover:text-base-content'}`}
+           >
              <Download size={14} />
              <span className="text-[10px] font-black uppercase tracking-widest">Download</span>
            </button>
@@ -207,7 +217,7 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
         <section className="space-y-4">
           <div className="flex items-center justify-between border-b border-base-content/10 pb-1">
             <h2 className="text-sm font-black text-base-content uppercase tracking-tighter italic">
-              {isSearching ? "Decrypting Results..." : searchResults.length > 0 ? `Search Results (${searchResults.length})` : "No Signals Found"}
+              {isSearching ? "Decrypting Results..." : searchResults.length > 0 ? `Search Results (${searchResults.length})` : "Null Signal Detected"}
             </h2>
             <button onClick={clearSearch} className="text-[8px] uppercase font-black text-base-content/50 hover:text-base-content">Clear</button>
           </div>
@@ -230,12 +240,12 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
                 <motion.div 
                   initial={{ opacity: 0 }} 
                   animate={{ opacity: 1 }} 
-                  className="col-span-full flex flex-col items-center justify-center py-12 text-base-content/40 space-y-3"
+                  className="col-span-full flex flex-col items-center justify-center py-24 text-base-content/30 space-y-4"
                 >
-                    <Search size={48} />
+                    <ImageOff size={64} className="opacity-20" />
                     <div className="text-center">
                         <p className="text-sm font-black uppercase tracking-tighter">Void Sector</p>
-                        <p className="text-[10px] font-bold uppercase tracking-widest">No results matching "{searchQuery}"</p>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.3em]">No results found for "{searchQuery}"</p>
                     </div>
                 </motion.div>
               )}
@@ -298,7 +308,6 @@ const GlobalTab: React.FC<GlobalTabProps> = ({ onSelectMedia, history, onHistory
             </AnimatePresence>
           ) : (
             <div className="space-y-8 md:space-y-12">
-               {/* Fix onHistoryRemove mapping to onRemove prop */}
                <ContinueWatching history={filteredHistory} onSelect={onHistorySelect} onRemove={onHistoryRemove} onViewAll={() => onViewAllHistory('global-download')} title="Archive Access" />
                <section className="space-y-4">
                  <h2 className="text-sm md:text-lg font-black text-base-content uppercase tracking-tighter border-l-2 border-primary pl-3">Archive Registry</h2>
